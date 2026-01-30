@@ -1,35 +1,73 @@
-name: Sync Upstream
+name: 🔄 Sync Upstream
+
 on:
   schedule:
-    - cron: '0 0 * * *'  # 每天 UTC 00:00 检查一次
-  workflow_dispatch:  # 允许手动触发
+    # 每天北京时间早上8点检查一次（UTC+8对应0点）
+    - cron: '0 0 * * *'
+  workflow_dispatch:  # 允许你手动点按钮运行
 
 jobs:
   sync:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout your fork
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          
-      - name: Configure Git
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Add upstream remote
         run: |
-          git config user.name "GitHub Action"
-          git config user.email "action@github.com"
-          
-      - name: Add Upstream
-        run: |
+          # ⚠️⚠️⚠️ 改成你的上游仓库地址！
           git remote add upstream https://github.com/anomalyco/opencode.git
           git fetch upstream
+
+      - name: Check for updates
+        id: check
+        run: |
+          # 获取上游最新提交的hash
+          UPSTREAM_SHA=$(git rev-parse upstream/dev)
+          # 获取你当前main分支的hash  
+          LOCAL_SHA=$(git rev-parse origin/dev)
           
-      - name: Create PR if updates exist
-        uses: repo-sync/pull-request@v2
+          if [ "$UPSTREAM_SHA" != "$LOCAL_SHA" ]; then
+            echo "has_update=true" >> $GITHUB_OUTPUT
+            echo "上游有新提交: $UPSTREAM_SHA"
+          else
+            echo "has_update=false" >> $GITHUB_OUTPUT
+            echo "暂无更新"
+          fi
+
+      - name: Create Pull Request
+        if: steps.check.outputs.has_update == 'true'
+        uses: peter-evans/create-pull-request@v5
         with:
-          source_branch: dev    # 上游分支
-          destination_branch: dev        # 你的分支
-          pr_title: "Upstream Sync: $(date +%Y-%m-%d)"
-          pr_body: |
-            检测到上游仓库更新，请审查以下变更：
-            - 查看 [对比差异](../../compare/main...upstream/main)
-            - 确认安全后合并
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: upstream-sync  # 临时分支名
+          delete-branch: true    # 合并后自动删除
+          title: '⬆️ Sync: 上游仓库更新 (${{ github.run_id }})'
+          body: |
+            ### 🔔 检测到上游仓库有更新
+            
+            **请审查以下变更后再合并：**
+            
+            1. 点击上方 **Files changed** 查看具体修改
+            2. 确认无误后点击 **Merge pull request**
+            3. 如有冲突，需要在本地解决
+            
+            <details>
+            <summary>📋 查看上游提交记录</summary>
+            
+            ```bash
+            # 本地执行查看差异
+            git fetch upstream
+            git log HEAD..upstream/dev --oneline
+            ```
+            </details>
+            
+            ---
+            *自动创建时间: ${{ github.event.repository.updated_at }}*
+          base: dev  # 如果上游用master分支，这里改成master
+          labels: |
+            upstream-sync
+            automated
