@@ -13,8 +13,8 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          # 使用 PAT 代替 GITHUB_TOKEN
-          token: ${{ secrets.PAT }}
+          # 改成你的 Secret 名称
+          token: ${{ secrets.UPSTREAM_SYNC_TOKEN }}
 
       - name: Add upstream remote
         run: |
@@ -52,7 +52,7 @@ jobs:
         if: steps.check.outputs.has_update == 'true'
         uses: peter-evans/create-pull-request@v5
         with:
-          # 这里也要用 UPSTREAM_SYNC_TOKEN
+          # 这里也要改成你的 Secret 名称
           token: ${{ secrets.UPSTREAM_SYNC_TOKEN }}
           branch: upstream-sync
           delete-branch: true
