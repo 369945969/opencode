@@ -52,8 +52,8 @@ jobs:
         if: steps.check.outputs.has_update == 'true'
         uses: peter-evans/create-pull-request@v5
         with:
-          # 这里也要用 PAT
-          token: ${{ secrets.PAT }}
+          # 这里也要用 UPSTREAM_SYNC_TOKEN
+          token: ${{ secrets.UPSTREAM_SYNC_TOKEN }}
           branch: upstream-sync
           delete-branch: true
           title: '⬆️ Sync: 上游仓库更新 (${{ github.run_id }})'
