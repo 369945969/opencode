@@ -18,21 +18,22 @@ jobs:
 
       - name: Add upstream remote
         run: |
-          # ⚠️⚠️⚠️ 改成你的上游仓库地址！
-          git remote add upstream https://github.com/anomalyco/opencode.git
+          git remote add upstream https://github.com/anomalyco/opencode.git 
           git fetch upstream
 
-      - name: Check for updates
+      - name: Check for updates and apply
         id: check
         run: |
-          # 获取上游最新提交的hash
           UPSTREAM_SHA=$(git rev-parse upstream/dev)
-          # 获取你当前main分支的hash  
           LOCAL_SHA=$(git rev-parse origin/dev)
           
           if [ "$UPSTREAM_SHA" != "$LOCAL_SHA" ]; then
             echo "has_update=true" >> $GITHUB_OUTPUT
             echo "上游有新提交: $UPSTREAM_SHA"
+            # ⚠️ 关键步骤：配置git并合并上游到工作目录（产生文件变更）
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git merge upstream/dev --no-edit --allow-unrelated-histories
           else
             echo "has_update=false" >> $GITHUB_OUTPUT
             echo "暂无更新"
@@ -67,7 +68,7 @@ jobs:
             
             ---
             *自动创建时间: ${{ github.event.repository.updated_at }}*
-          base: dev  # 如果上游用master分支，这里改成master
+          base: dev
           labels: |
             upstream-sync
             automated
