@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -10,60 +11,81 @@
             margin: 20px;
             background: #f0f0f0;
         }
+
         #container {
             max-width: 800px;
             margin: 0 auto;
             background: white;
             padding: 20px;
             border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
-        h1 { margin-top: 0; }
+
+        h1 {
+            margin-top: 0;
+        }
+
         #status {
             padding: 10px;
             margin-bottom: 20px;
             border-radius: 4px;
             background: #eee;
         }
-        .connected { background: #d4edda !important; color: #155724; }
-        .disconnected { background: #f8d7da !important; color: #721c24; }
+
+        .connected {
+            background: #d4edda !important;
+            color: #155724;
+        }
+
+        .disconnected {
+            background: #f8d7da !important;
+            color: #721c24;
+        }
+
         #events {
             border-top: 1px solid #eee;
         }
+
         .event {
             padding: 10px 0;
             border-bottom: 1px solid #eee;
             font-family: monospace;
             white-space: pre-wrap;
         }
+
         .event-type {
             font-weight: bold;
             color: #0066cc;
         }
+
         .timestamp {
             color: #999;
             font-size: 0.8em;
         }
+
         .input-area {
             margin-top: 20px;
             padding: 15px;
             background: #fff;
             border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
             display: flex;
             flex-direction: column;
             gap: 10px;
         }
+
         .input-row {
             display: flex;
             gap: 10px;
         }
+
         .input-area input {
             flex: 1;
             padding: 8px;
             border: 1px solid #ddd;
             border-radius: 4px;
         }
+
         .input-area button {
             padding: 8px 16px;
             background: #007bff;
@@ -73,17 +95,19 @@
             cursor: pointer;
             white-space: nowrap;
         }
+
         .input-area button:hover {
             background: #0056b3;
         }
     </style>
 </head>
+
 <body>
     <div class="header">
         <h1>OpenCode Monitor</h1>
         <div id="status" class="status">Disconnected</div>
     </div>
-    
+
     <div class="input-area">
         <div class="input-row">
             <input type="text" id="sessionId" placeholder="Session ID (must start with 'ses', e.g., ses_12345)" />
@@ -100,8 +124,8 @@
             </select>
         </div>
         <div class="input-row">
-            <input type="text" id="providerId" placeholder="Provider ID (e.g., openai, anthropic)" value="lmstudio" />
-            <input type="text" id="modelId" placeholder="Model ID (e.g., gpt-4o, claude-3-5-sonnet)" value="glm-4.7-flash" />
+            <input type="text" id="providerId" placeholder="Provider ID (e.g., openai, anthropic)" value="nvidia" />
+            <input type="text" id="modelId" placeholder="Model ID (e.g., gpt-4o, claude-3-5-sonnet)" value="glm-4.7" />
         </div>
         <div class="input-row">
             <input type="text" id="messageInput" placeholder="Enter message to send to OpenCode Server..." />
@@ -129,10 +153,10 @@
                 div = document.createElement('div');
                 div.className = 'event';
                 const time = new Date().toLocaleTimeString();
-                
+
                 let typeLabel = 'ai.stream';
                 let color = '#333';
-                
+
                 if (part.type === 'reasoning') {
                     typeLabel = 'ai.stream (reasoning)';
                     color = '#666';
@@ -142,7 +166,7 @@
                 } else {
                     typeLabel = 'ai.stream (text)';
                 }
-                
+
                 div.innerHTML = `
                     <div class="timestamp">[${time}]</div>
                     <div class="event-type">${typeLabel}</div>
@@ -153,22 +177,22 @@
             }
 
             const contentEl = div.querySelector('.content');
-            
+
             if (part.type === 'tool') {
-                 let toolContent = `Tool: ${part.tool}\nStatus: ${part.state.status}`;
-                 
-                 // Simplify display for question tool to avoid clutter
-                 if (part.tool === 'question' && part.state.status === 'running') {
-                     toolContent += `\n(Waiting for user input...)`;
-                 } else {
-                     if (part.state.input) {
-                         toolContent += `\nInput: ${JSON.stringify(part.state.input, null, 2)}`;
-                     }
-                     if (part.state.output) {
-                         toolContent += `\nOutput: ${JSON.stringify(part.state.output, null, 2)}`;
-                     }
-                 }
-                 contentEl.textContent = toolContent;
+                let toolContent = `Tool: ${part.tool}\nStatus: ${part.state.status}`;
+
+                // Simplify display for question tool to avoid clutter
+                if (part.tool === 'question' && part.state.status === 'running') {
+                    toolContent += `\n(Waiting for user input...)`;
+                } else {
+                    if (part.state.input) {
+                        toolContent += `\nInput: ${JSON.stringify(part.state.input, null, 2)}`;
+                    }
+                    if (part.state.output) {
+                        toolContent += `\nOutput: ${JSON.stringify(part.state.output, null, 2)}`;
+                    }
+                }
+                contentEl.textContent = toolContent;
             } else {
                 if (part.text) {
                     contentEl.textContent = part.text;
@@ -182,7 +206,7 @@
             const div = document.createElement('div');
             div.className = 'event question-event';
             const time = new Date().toLocaleTimeString();
-            
+
             let html = `
                 <div class="timestamp">[${time}]</div>
                 <div class="event-type">question.asked (Action Required)</div>
@@ -198,7 +222,7 @@
                 props.questions.forEach((q, qIndex) => {
                     html += `<div class="question-item" style="margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #eee;">
                         <div style="font-weight: 600; margin-bottom: 8px;">${qIndex + 1}. ${q.question}</div>`;
-                    
+
                     if (q.options && q.options.length > 0) {
                         q.options.forEach((opt, optIndex) => {
                             const inputType = q.multiple ? 'checkbox' : 'radio';
@@ -236,30 +260,30 @@
             eventsEl.insertBefore(div, eventsEl.firstChild);
         }
 
-        window.submitAnswers = async function(requestId, questionCount) {
+        window.submitAnswers = async function (requestId, questionCount) {
             const statusDiv = document.getElementById(`status-${requestId}`);
             const form = document.getElementById(`form-${requestId}`);
             const submitBtn = form.querySelector('button');
-            
+
             try {
                 const answers = [];
                 let allAnswered = true;
-                
+
                 for (let i = 0; i < questionCount; i++) {
                     const name = `q-${requestId}-${i}`;
                     const inputs = form.querySelectorAll(`input[name="${name}"]:checked`);
                     const selected = Array.from(inputs).map(input => input.value);
-                    
+
                     // Basic validation: ensure at least one option selected per question if strictly required
                     // For now, we allow empty answers if the backend allows it, but usually user should answer.
                     // Let's assume user must answer.
                     if (selected.length === 0) {
                         // allAnswered = false; // Uncomment to enforce validation
                     }
-                    
+
                     answers.push(selected);
                 }
-                
+
                 statusDiv.textContent = "Submitting answers...";
                 statusDiv.style.color = "#666";
                 submitBtn.disabled = true;
@@ -340,7 +364,7 @@
             const providerIdInput = document.getElementById('providerId');
             const modelIdInput = document.getElementById('modelId');
             const sendBtn = document.querySelector('button[onclick="sendMessage()"]');
-            
+
             const sessionId = sessionIdInput.value.trim();
             const text = input.value.trim();
             const providerId = providerIdInput.value.trim();
@@ -351,8 +375,8 @@
                 return;
             }
             if (!sessionId.startsWith('ses')) {
-                 addEvent('error', 'Invalid Session ID: Must start with "ses"');
-                 return;
+                addEvent('error', 'Invalid Session ID: Must start with "ses"');
+                return;
             }
             if (!text) return;
 
@@ -389,7 +413,7 @@
                     // Read and display the response from the AI
                     const data = await response.json();
                     console.log('AI Response Full Data:', data);
-                    
+
                     if (data.parts) {
                         data.parts.forEach(part => {
                             if (part.type === 'text') {
@@ -428,7 +452,7 @@
         function connect() {
             // Connect to local SSE stream (served by same server)
             const evtSource = new EventSource("/events");
-            
+
             evtSource.onopen = () => {
                 statusEl.textContent = "Connected";
                 statusEl.className = "connected";
@@ -438,19 +462,19 @@
             evtSource.onmessage = (event) => {
                 try {
                     const data = JSON.parse(event.data);
-                    
+
                     // Handle Backend Payload format
                     if (data.payload) {
                         const type = data.payload.type;
                         if (type === 'server.heartbeat') return; // Ignore heartbeats
-                        
+
                         const props = data.payload.properties || data.payload;
-                        
+
                         // Handle streaming text/reasoning/tool updates
-                        if (type === 'message.part.updated' && props.part && 
+                        if (type === 'message.part.updated' && props.part &&
                             (props.part.type === 'text' || props.part.type === 'reasoning' || props.part.type === 'tool')) {
                             handlePartUpdate(props.part, props.delta);
-                            return; 
+                            return;
                         }
 
                         // Handle Question Asked (User Input Request)
@@ -458,17 +482,17 @@
                             handleQuestionAsked(props);
                             return;
                         }
-                        
+
                         addEvent(type, props);
-                    } 
+                    }
                     // Handle Proxy Intercepted format OR Flat Backend format
                     else {
-                         // Check for flat Question Asked format
-                         if (data.type === 'question.asked' && data.properties) {
-                             handleQuestionAsked(data.properties);
-                             return;
-                         }
-                        
+                        // Check for flat Question Asked format
+                        if (data.type === 'question.asked' && data.properties) {
+                            handleQuestionAsked(data.properties);
+                            return;
+                        }
+
                         addEvent(data.type || "unknown", data.data || data);
                     }
                 } catch (e) {
@@ -487,4 +511,5 @@
         connect();
     </script>
 </body>
+
 </html>
