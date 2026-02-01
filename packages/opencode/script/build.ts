@@ -1,6 +1,8 @@
 #!/usr/bin/env bun
 
-import solidPlugin from "../node_modules/@opentui/solid/scripts/solid-plugin"
+import solidPlugin from "@opentui/solid/bun-plugin"
+
+
 import path from "path"
 import fs from "fs"
 import { $ } from "bun"
@@ -28,6 +30,7 @@ console.log("Generated models-snapshot.ts")
 const singleFlag = process.argv.includes("--single")
 const baselineFlag = process.argv.includes("--baseline")
 const skipInstall = process.argv.includes("--skip-install")
+const osFlag = process.argv.find((arg) => arg.startsWith("--os="))?.split("=")[1]
 
 const allTargets: {
   os: string
@@ -35,86 +38,89 @@ const allTargets: {
   abi?: "musl"
   avx2?: false
 }[] = [
-  {
-    os: "linux",
-    arch: "arm64",
-  },
-  {
-    os: "linux",
-    arch: "x64",
-  },
-  {
-    os: "linux",
-    arch: "x64",
-    avx2: false,
-  },
-  {
-    os: "linux",
-    arch: "arm64",
-    abi: "musl",
-  },
-  {
-    os: "linux",
-    arch: "x64",
-    abi: "musl",
-  },
-  {
-    os: "linux",
-    arch: "x64",
-    abi: "musl",
-    avx2: false,
-  },
-  {
-    os: "darwin",
-    arch: "arm64",
-  },
-  {
-    os: "darwin",
-    arch: "x64",
-  },
-  {
-    os: "darwin",
-    arch: "x64",
-    avx2: false,
-  },
-  {
-    os: "win32",
-    arch: "x64",
-  },
-  {
-    os: "win32",
-    arch: "x64",
-    avx2: false,
-  },
-]
+    {
+      os: "linux",
+      arch: "arm64",
+    },
+    {
+      os: "linux",
+      arch: "x64",
+    },
+    {
+      os: "linux",
+      arch: "x64",
+      avx2: false,
+    },
+    {
+      os: "linux",
+      arch: "arm64",
+      abi: "musl",
+    },
+    {
+      os: "linux",
+      arch: "x64",
+      abi: "musl",
+    },
+    {
+      os: "linux",
+      arch: "x64",
+      abi: "musl",
+      avx2: false,
+    },
+    {
+      os: "darwin",
+      arch: "arm64",
+    },
+    {
+      os: "darwin",
+      arch: "x64",
+    },
+    {
+      os: "darwin",
+      arch: "x64",
+      avx2: false,
+    },
+    {
+      os: "win32",
+      arch: "x64",
+    },
+    {
+      os: "win32",
+      arch: "x64",
+      avx2: false,
+    },
+  ]
 
-const targets = singleFlag
-  ? allTargets.filter((item) => {
-      if (item.os !== process.platform || item.arch !== process.arch) {
-        return false
-      }
+const targets = allTargets.filter((item) => {
+  if (osFlag && item.os !== osFlag) {
+    return false
+  }
 
-      // When building for the current platform, prefer a single native binary by default.
-      // Baseline binaries require additional Bun artifacts and can be flaky to download.
-      if (item.avx2 === false) {
-        return baselineFlag
-      }
+  if (singleFlag) {
+    if (item.os !== process.platform || item.arch !== process.arch) {
+      return false
+    }
 
-      // also skip abi-specific builds for the same reason
-      if (item.abi !== undefined) {
-        return false
-      }
+    // When building for the current platform, prefer a single native binary by default.
+    // Baseline binaries require additional Bun artifacts and can be flaky to download.
+    if (item.avx2 === false) {
+      return baselineFlag
+    }
 
-      return true
-    })
-  : allTargets
+    // also skip abi-specific builds for the same reason
+    if (item.abi !== undefined) {
+      return false
+    }
+  }
+
+  return true
+})
 
 await $`rm -rf dist`
 
 const binaries: Record<string, string> = {}
 if (!skipInstall) {
-  await $`bun install --os="*" --cpu="*" @opentui/core@${pkg.dependencies["@opentui/core"]}`
-  await $`bun install --os="*" --cpu="*" @parcel/watcher@${pkg.dependencies["@parcel/watcher"]}`
+  await $`bun install --os="*" --cpu="*" @opentui/core@${pkg.dependencies["@opentui/core"]} @parcel/watcher@${pkg.dependencies["@parcel/watcher"]}`
 }
 for (const item of targets) {
   const name = [
