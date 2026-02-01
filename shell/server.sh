@@ -15,4 +15,4 @@ sleep 1
 
 echo "PYF_DEBUG: Starting OpenCode server on port 4096 (Logs: server.log)..."
 # Run in foreground and pipe to tee for logging
-bun run --cwd packages/opencode --conditions=browser src/index.ts serve 2>&1 | tee server.log
+OPENCODE_DEFAULT_AGENT_SKILL=product_manager bun run --cwd packages/opencode --conditions=browser src/index.ts serve 2>&1 | tee server.log
