@@ -1,0 +1,293 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>五子棋</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        font-family: Arial, sans-serif;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        padding: 20px;
+      }
+      h1 {
+        color: white;
+        margin-bottom: 20px;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+      }
+      .game-info {
+        background: white;
+        padding: 15px 30px;
+        border-radius: 10px;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        text-align: center;
+      }
+      .game-info p {
+        font-size: 18px;
+        color: #333;
+        margin: 5px 0;
+      }
+      .current-player {
+        font-weight: bold;
+        color: #667eea;
+      }
+      .board-container {
+        background: #deb887;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+      }
+      #board {
+        display: grid;
+        grid-template-columns: repeat(15, 30px);
+        grid-template-rows: repeat(15, 30px);
+        gap: 0;
+        background: #deb887;
+        position: relative;
+      }
+      .cell {
+        width: 30px;
+        height: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        position: relative;
+        z-index: 1;
+      }
+      .cell::before {
+        content: "";
+        position: absolute;
+        top: 50%;
+        left: 0;
+        width: 100%;
+        height: 1px;
+        background: #8b4513;
+      }
+      .cell::after {
+        content: "";
+        position: absolute;
+        left: 50%;
+        top: 0;
+        width: 1px;
+        height: 100%;
+        background: #8b4513;
+      }
+      .piece {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        position: relative;
+        z-index: 2;
+      }
+      .piece.black {
+        background: radial-gradient(circle at 30% 30%, #666, #000);
+        box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+      }
+      .piece.white {
+        background: radial-gradient(circle at 30% 30%, #fff, #ccc);
+        box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+      }
+      .controls {
+        margin-top: 20px;
+        display: flex;
+        gap: 10px;
+      }
+      button {
+        padding: 10px 20px;
+        font-size: 16px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        background: white;
+        color: #667eea;
+        font-weight: bold;
+        transition: all 0.3s ease;
+      }
+      button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+      }
+      .winner {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: white;
+        padding: 30px;
+        border-radius: 10px;
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+        text-align: center;
+        z-index: 1000;
+        display: none;
+      }
+      .winner.show {
+        display: block;
+        animation: fadeIn 0.3s ease;
+      }
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translate(-50%, -50%) scale(0.9);
+        }
+        to {
+          opacity: 1;
+          transform: translate(-50%, -50%) scale(1);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <h1>五子棋</h1>
+    <div class="game-info">
+      <p>你是玩家 <span id="playerNum" class="current-player">-</span></p>
+      <p>当前回合: <span id="turn" class="current-player">-</span></p>
+      <p>连接状态: <span id="status">连接中...</span></p>
+    </div>
+    <div class="board-container">
+      <div id="board"></div>
+    </div>
+    <div class="controls">
+      <button onclick="resetGame()">重新开始</button>
+    </div>
+    <div class="winner" id="winner">
+      <h2 id="winnerText">玩家 X 获胜！</h2>
+      <br />
+      <button onclick="resetGame()">再来一局</button>
+    </div>
+
+    <script>
+      const BOARD_SIZE = 15
+      let ws
+      let myPlayer = 0
+      let currentTurn = 1
+      let board = []
+
+      function init() {
+        createBoard()
+        connect()
+      }
+
+      function createBoard() {
+        const boardEl = document.getElementById("board")
+        boardEl.innerHTML = ""
+        board = []
+
+        for (let y = 0; y < BOARD_SIZE; y++) {
+          board[y] = []
+          for (let x = 0; x < BOARD_SIZE; x++) {
+            board[y][x] = 0
+            const cell = document.createElement("div")
+            cell.className = "cell"
+            cell.dataset.x = x
+            cell.dataset.y = y
+            cell.onclick = () => makeMove(x, y)
+            boardEl.appendChild(cell)
+          }
+        }
+      }
+
+      function connect() {
+        const wsUrl = "ws://localhost:8080/ws?game=default"
+        ws = new WebSocket(wsUrl)
+
+        ws.onopen = () => {
+          document.getElementById("status").textContent = "已连接"
+        }
+
+        ws.onclose = () => {
+          document.getElementById("status").textContent = "连接断开"
+          setTimeout(connect, 3000)
+        }
+
+        ws.onerror = (error) => {
+          console.error("WebSocket error:", error)
+          document.getElementById("status").textContent = "连接错误"
+        }
+
+        ws.onmessage = (event) => {
+          const data = JSON.parse(event.data)
+          handleMessage(data)
+        }
+      }
+
+      function handleMessage(data) {
+        switch (data.type) {
+          case "connected":
+            myPlayer = data.player
+            document.getElementById("playerNum").textContent = myPlayer === 1 ? "黑棋" : "白棋"
+            if (data.board) {
+              board = data.board
+              renderBoard()
+            }
+            break
+
+          case "move":
+            if (data.move) {
+              board[data.move.y][data.move.x] = data.move.player
+            }
+            currentTurn = data.turn
+            document.getElementById("turn").textContent = data.turn === 1 ? "黑棋 (玩家1)" : "白棋 (玩家2)"
+            renderBoard()
+
+            if (data.won) {
+              const winnerText = data.winner === 1 ? "黑棋" : "白棋"
+              document.getElementById("winnerText").textContent = `${winnerText} (${data.winner}号玩家) 获胜！`
+              document.getElementById("winner").classList.add("show")
+            }
+            break
+
+          case "error":
+            alert(data.msg)
+            break
+        }
+      }
+
+      function renderBoard() {
+        const cells = document.querySelectorAll(".cell")
+        cells.forEach((cell) => {
+          const x = parseInt(cell.dataset.x)
+          const y = parseInt(cell.dataset.y)
+          const value = board[y][x]
+
+          cell.innerHTML = ""
+          if (value !== 0) {
+            const piece = document.createElement("div")
+            piece.className = `piece ${value === 1 ? "black" : "white"}`
+            cell.appendChild(piece)
+          }
+        })
+      }
+
+      function makeMove(x, y) {
+        if (myPlayer === 0 || currentTurn !== myPlayer) {
+          return
+        }
+        if (board[y][x] !== 0) {
+          return
+        }
+
+        ws.send(JSON.stringify({ x, y }))
+      }
+
+      function resetGame() {
+        document.getElementById("winner").classList.remove("show")
+        if (ws) {
+          ws.send(JSON.stringify({ type: "reset" }))
+        }
+      }
+
+      init()
+    </script>
+  </body>
+</html>

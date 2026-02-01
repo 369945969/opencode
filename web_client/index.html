@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenCode Event Client</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 20px;
+            background: #f0f0f0;
+        }
+
+        #container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            margin-top: 0;
+        }
+
+        #status {
+            padding: 10px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+            background: #eee;
+        }
+
+        .connected {
+            background: #d4edda !important;
+            color: #155724;
+        }
+
+        .disconnected {
+            background: #f8d7da !important;
+            color: #721c24;
+        }
+
+        #events {
+            border-top: 1px solid #eee;
+        }
+
+        .event {
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+
+        .event-type {
+            font-weight: bold;
+            color: #0066cc;
+        }
+
+        .timestamp {
+            color: #999;
+            font-size: 0.8em;
+        }
+
+        .input-area {
+            margin-top: 20px;
+            padding: 15px;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .input-row {
+            display: flex;
+            gap: 10px;
+        }
+
+        .input-area input {
+            flex: 1;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        .input-area button {
+            padding: 8px 16px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .input-area button:hover {
+            background: #0056b3;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <h1>OpenCode Monitor</h1>
+        <div id="status" class="status">Disconnected</div>
+    </div>
+
+    <div class="input-area">
+        <div class="input-row">
+            <input type="text" id="sessionId" placeholder="Session ID (must start with 'ses', e.g., ses_12345)" />
+            <button onclick="createSession()">Create New Session</button>
+        </div>
+        <div class="input-row">
+            <select id="agentSelect" style="flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                <option value="build">Build (Execute)</option>
+                <option value="plan">Plan (Research)</option>
+            </select>
+            <select id="permissionSelect" style="flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                <!--<option value="default">Default Permissions</option>-->
+                <option value="full">Full Access (Edit/Bash/Read)</option>
+            </select>
+        </div>
+        <div class="input-row">
+            <input type="text" id="providerId" placeholder="Provider ID (e.g., openai, anthropic)" value="nvidia" />
+            <input type="text" id="modelId" placeholder="Model ID (e.g., gpt-4o, claude-3-5-sonnet)" value="glm-4.7" />
+        </div>
+        <div class="input-row">
+            <input type="text" id="messageInput" placeholder="Enter message to send to OpenCode Server..." />
+            <button onclick="sendMessage()">Send</button>
+        </div>
+    </div>
+
+    <div id="events"></div>
+    </div>
+
+    <script>
+        const statusEl = document.getElementById("status");
+        const eventsEl = document.getElementById("events");
+        const partElements = new Map(); // Store active part elements by ID
+
+        // Hardcoded server password
+        const SERVER_PASSWORD = "123"; // Replace with your actual password
+
+        function handlePartUpdate(part, delta) {
+            const partId = part.id;
+            let div = partElements.get(partId);
+
+            if (!div) {
+                // Create new event div for this part
+                div = document.createElement('div');
+                div.className = 'event';
+                const time = new Date().toLocaleTimeString();
+
+                let typeLabel = 'ai.stream';
+                let color = '#333';
+
+                if (part.type === 'reasoning') {
+                    typeLabel = 'ai.stream (reasoning)';
+                    color = '#666';
+                } else if (part.type === 'tool') {
+                    typeLabel = 'ai.stream (tool)';
+                    color = '#005cc5';
+                } else {
+                    typeLabel = 'ai.stream (text)';
+                }
+
+                div.innerHTML = `
+                    <div class="timestamp">[${time}]</div>
+                    <div class="event-type">${typeLabel}</div>
+                    <div class="content" style="white-space: pre-wrap; font-family: monospace; color: ${color}; margin-top: 5px;"></div>
+                `;
+                eventsEl.insertBefore(div, eventsEl.firstChild);
+                partElements.set(partId, div);
+            }
+
+            const contentEl = div.querySelector('.content');
+
+            if (part.type === 'tool') {
+                let toolContent = `Tool: ${part.tool}\nStatus: ${part.state.status}`;
+
+                // Simplify display for question tool to avoid clutter
+                if (part.tool === 'question' && part.state.status === 'running') {
+                    toolContent += `\n(Waiting for user input...)`;
+                } else {
+                    if (part.state.input) {
+                        toolContent += `\nInput: ${JSON.stringify(part.state.input, null, 2)}`;
+                    }
+                    if (part.state.output) {
+                        toolContent += `\nOutput: ${JSON.stringify(part.state.output, null, 2)}`;
+                    }
+                }
+                contentEl.textContent = toolContent;
+            } else {
+                if (part.text) {
+                    contentEl.textContent = part.text;
+                } else if (delta) {
+                    contentEl.textContent += delta;
+                }
+            }
+        }
+
+        function handleQuestionAsked(props) {
+            const div = document.createElement('div');
+            div.className = 'event question-event';
+            const time = new Date().toLocaleTimeString();
+
+            let html = `
+                <div class="timestamp">[${time}]</div>
+                <div class="event-type">question.asked (Action Required)</div>
+                <div class="question-container" style="background: #f0f7ff; padding: 15px; border-radius: 8px; border: 1px solid #1890ff; margin-top: 10px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <div style="font-weight: bold; color: #005cc5;">The AI needs your input:</div>
+                        <div style="font-size: 0.8em; color: #999;">Call ID: ${props.tool?.callID || 'N/A'}</div>
+                    </div>
+                    <form id="form-${props.id}" onsubmit="return false;" data-call-id="${props.tool?.callID || ''}">
+            `;
+
+            if (props.questions && Array.isArray(props.questions)) {
+                props.questions.forEach((q, qIndex) => {
+                    html += `<div class="question-item" style="margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #eee;">
+                        <div style="font-weight: 600; margin-bottom: 8px;">${qIndex + 1}. ${q.question}</div>`;
+
+                    if (q.options && q.options.length > 0) {
+                        q.options.forEach((opt, optIndex) => {
+                            const inputType = q.multiple ? 'checkbox' : 'radio';
+                            const name = `q-${props.id}-${qIndex}`;
+                            html += `
+                                <div style="margin-left: 10px; margin-bottom: 8px;">
+                                    <label style="cursor: pointer; display: flex; align-items: flex-start;">
+                                        <input type="${inputType}" name="${name}" value="${opt.label}" style="margin-right: 8px; margin-top: 3px;">
+                                        <div>
+                                            <div style="font-weight: 500;">${opt.label}</div>
+                                            ${opt.description ? `<div style="font-size: 0.85em; color: #666;">${opt.description}</div>` : ''}
+                                        </div>
+                                    </label>
+                                </div>
+                            `;
+                        });
+                    }
+                    html += `</div>`;
+                });
+            }
+
+            html += `
+                    <div style="margin-top: 15px;">
+                        <button onclick="submitAnswers('${props.id}', ${props.questions ? props.questions.length : 0})" 
+                            style="background: #1890ff; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 14px;">
+                            Submit Answers
+                        </button>
+                    </div>
+                    </form>
+                    <div id="status-${props.id}" style="margin-top: 10px; font-style: italic; color: #666;"></div>
+                </div>
+            `;
+
+            div.innerHTML = html;
+            eventsEl.insertBefore(div, eventsEl.firstChild);
+        }
+
+        window.submitAnswers = async function (requestId, questionCount) {
+            const statusDiv = document.getElementById(`status-${requestId}`);
+            const form = document.getElementById(`form-${requestId}`);
+            const submitBtn = form.querySelector('button');
+
+            try {
+                const answers = [];
+                let allAnswered = true;
+
+                for (let i = 0; i < questionCount; i++) {
+                    const name = `q-${requestId}-${i}`;
+                    const inputs = form.querySelectorAll(`input[name="${name}"]:checked`);
+                    const selected = Array.from(inputs).map(input => input.value);
+
+                    // Basic validation: ensure at least one option selected per question if strictly required
+                    // For now, we allow empty answers if the backend allows it, but usually user should answer.
+                    // Let's assume user must answer.
+                    if (selected.length === 0) {
+                        // allAnswered = false; // Uncomment to enforce validation
+                    }
+
+                    answers.push(selected);
+                }
+
+                statusDiv.textContent = "Submitting answers...";
+                statusDiv.style.color = "#666";
+                submitBtn.disabled = true;
+
+                const headers = {
+                    'Content-Type': 'application/json'
+                };
+                if (SERVER_PASSWORD) {
+                    headers['Authorization'] = 'Basic ' + btoa('opencode:' + SERVER_PASSWORD);
+                }
+
+                // POST to /question/:requestID/reply
+                const response = await fetch(`/question/${requestId}/reply`, {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify({ answers: answers })
+                });
+
+                if (response.ok) {
+                    statusDiv.textContent = "✓ Answers submitted successfully. AI will resume shortly.";
+                    statusDiv.style.color = "green";
+                    form.style.opacity = "0.7";
+                    // form.style.pointerEvents = "none"; // Disable further changes
+                } else {
+                    const errText = await response.text();
+                    throw new Error(`Server returned ${response.status}: ${errText}`);
+                }
+            } catch (e) {
+                console.error("Submit error:", e);
+                statusDiv.textContent = "Error submitting: " + e.message;
+                statusDiv.style.color = "red";
+                submitBtn.disabled = false;
+            }
+        };
+
+
+        async function createSession() {
+            try {
+                const headers = {
+                    'Content-Type': 'application/json'
+                };
+                if (SERVER_PASSWORD) {
+                    headers['Authorization'] = 'Basic ' + btoa('opencode:' + SERVER_PASSWORD);
+                }
+
+                const permissionType = document.getElementById('permissionSelect').value;
+                const body = {};
+
+                if (permissionType === 'full') {
+                    body.permission = [
+                        { permission: "edit", pattern: "*", action: "allow" },
+                        { permission: "bash", pattern: "*", action: "allow" },
+                        { permission: "read", pattern: "*", action: "allow" }
+                    ];
+                }
+
+                const response = await fetch('/session', {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify(body)
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById('sessionId').value = data.id;
+                    addEvent('system', `Created new session: ${data.id}`);
+                } else {
+                    addEvent('error', `Failed to create session: ${response.statusText}`);
+                }
+            } catch (e) {
+                addEvent('error', `Error creating session: ${e.message}`);
+            }
+        }
+
+        async function sendMessage() {
+            const sessionIdInput = document.getElementById('sessionId');
+            const input = document.getElementById('messageInput');
+            const providerIdInput = document.getElementById('providerId');
+            const modelIdInput = document.getElementById('modelId');
+            const sendBtn = document.querySelector('button[onclick="sendMessage()"]');
+
+            const sessionId = sessionIdInput.value.trim();
+            const text = input.value.trim();
+            const providerId = providerIdInput.value.trim();
+            const modelId = modelIdInput.value.trim();
+
+            if (!sessionId) {
+                addEvent('error', 'Please enter a Session ID');
+                return;
+            }
+            if (!sessionId.startsWith('ses')) {
+                addEvent('error', 'Invalid Session ID: Must start with "ses"');
+                return;
+            }
+            if (!text) return;
+
+            try {
+                // Post to Proxy, which forwards to OpenCode Backend
+                const headers = {
+                    'Content-Type': 'application/json'
+                };
+
+                if (SERVER_PASSWORD) {
+                    headers['Authorization'] = 'Basic ' + btoa('opencode:' + SERVER_PASSWORD);
+                }
+
+                const response = await fetch(`/session/${sessionId}/message`, {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify({
+                        parts: [{
+                            type: 'text',
+                            text: text
+                        }],
+                        agent: document.getElementById('agentSelect').value,
+                        model: {
+                            providerID: providerId,
+                            modelID: modelId
+                        }
+                    })
+                });
+
+                if (response.ok) {
+                    addEvent('system', `Sent message: "${text}"`);
+                    input.value = '';
+
+                    // Read and display the response from the AI
+                    const data = await response.json();
+                    console.log('AI Response Full Data:', data);
+
+                    if (data.parts) {
+                        data.parts.forEach(part => {
+                            if (part.type === 'text') {
+                                console.log('AI Response Text:', part.text);
+                                addEvent('ai', part.text);
+                            } else {
+                                console.log('AI Response Part (non-text):', part);
+                                addEvent('ai', `[${part.type}]`);
+                            }
+                        });
+                    } else {
+                        console.warn('Received response but no parts found:', data);
+                        addEvent('system', 'Received response but no parts found: ' + JSON.stringify(data));
+                    }
+
+                } else {
+                    addEvent('error', `Failed to send: ${response.statusText}`);
+                }
+            } catch (e) {
+                addEvent('error', `Error sending message: ${e.message}`);
+            }
+        }
+
+        function addEvent(type, data) {
+            const div = document.createElement('div');
+            div.className = 'event';
+            const time = new Date().toLocaleTimeString();
+            div.innerHTML = `
+                <div class="timestamp">[${time}]</div>
+                <div class="event-type">${type}</div>
+                <div>${JSON.stringify(data, null, 2)}</div>
+            `;
+            eventsEl.insertBefore(div, eventsEl.firstChild);
+        }
+
+        function connect() {
+            // Connect to local SSE stream (served by same server)
+            const evtSource = new EventSource("/events");
+
+            evtSource.onopen = () => {
+                statusEl.textContent = "Connected";
+                statusEl.className = "connected";
+                addEvent("system", "Connected to event stream");
+            };
+
+            evtSource.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+
+                    // Handle Backend Payload format
+                    if (data.payload) {
+                        const type = data.payload.type;
+                        if (type === 'server.heartbeat') return; // Ignore heartbeats
+
+                        const props = data.payload.properties || data.payload;
+
+                        // Handle streaming text/reasoning/tool updates
+                        if (type === 'message.part.updated' && props.part &&
+                            (props.part.type === 'text' || props.part.type === 'reasoning' || props.part.type === 'tool')) {
+                            handlePartUpdate(props.part, props.delta);
+                            return;
+                        }
+
+                        // Handle Question Asked (User Input Request)
+                        if (type === 'question.asked') {
+                            handleQuestionAsked(props);
+                            return;
+                        }
+
+                        addEvent(type, props);
+                    }
+                    // Handle Proxy Intercepted format OR Flat Backend format
+                    else {
+                        // Check for flat Question Asked format
+                        if (data.type === 'question.asked' && data.properties) {
+                            handleQuestionAsked(data.properties);
+                            return;
+                        }
+
+                        addEvent(data.type || "unknown", data.data || data);
+                    }
+                } catch (e) {
+                    addEvent("error", "Failed to parse: " + event.data);
+                }
+            };
+
+            evtSource.onerror = (err) => {
+                statusEl.textContent = "Disconnected (Retrying...)";
+                statusEl.className = "disconnected";
+                addEvent("system", "Connection lost");
+                // EventSource automatically retries
+            };
+        }
+
+        connect();
+    </script>
+</body>
+
+</html>

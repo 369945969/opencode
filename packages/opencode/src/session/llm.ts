@@ -11,6 +11,7 @@ import {
   tool,
   jsonSchema,
 } from "ai"
+import { iife } from "@/util/iife"
 import { clone, mergeDeep, pipe } from "remeda"
 import { ProviderTransform } from "@/provider/transform"
 import { Config } from "@/config/config"
@@ -64,8 +65,8 @@ export namespace LLM {
     ])
     const isCodex = provider.id === "openai" && auth?.type === "oauth"
 
-    const system = []
-    system.push(
+    const systemPrompts: string[] = []
+    systemPrompts.push(
       [
         // use agent prompt otherwise provider prompt
         // For Codex sessions, skip SystemPrompt.provider() since it's sent via options.instructions
@@ -79,21 +80,21 @@ export namespace LLM {
         .join("\n"),
     )
 
-    const header = system[0]
-    const original = clone(system)
+    const header = systemPrompts[0]
+    const original = clone(systemPrompts)
     await Plugin.trigger(
       "experimental.chat.system.transform",
       { sessionID: input.sessionID, model: input.model },
-      { system },
+      { system: systemPrompts },
     )
-    if (system.length === 0) {
-      system.push(...original)
+    if (systemPrompts.length === 0) {
+      systemPrompts.push(...original)
     }
     // rejoin to maintain 2-part structure for caching if header unchanged
-    if (system.length > 2 && system[0] === header) {
-      const rest = system.slice(1)
-      system.length = 0
-      system.push(header, rest.join("\n"))
+    if (systemPrompts.length > 2 && systemPrompts[0] === header) {
+      const rest = systemPrompts.slice(1)
+      systemPrompts.length = 0
+      systemPrompts.push(header, rest.join("\n"))
     }
 
     const variant =
@@ -101,10 +102,10 @@ export namespace LLM {
     const base = input.small
       ? ProviderTransform.smallOptions(input.model)
       : ProviderTransform.options({
-          model: input.model,
-          sessionID: input.sessionID,
-          providerOptions: provider.options,
-        })
+        model: input.model,
+        sessionID: input.sessionID,
+        providerOptions: provider.options,
+      })
     const options: Record<string, any> = pipe(
       base,
       mergeDeep(input.model.options),
@@ -152,11 +153,11 @@ export namespace LLM {
       isCodex || provider.id.includes("github-copilot")
         ? undefined
         : ProviderTransform.maxOutputTokens(
-            input.model.api.npm,
-            params.options,
-            input.model.limit.output,
-            OUTPUT_TOKEN_MAX,
-          )
+          input.model.api.npm,
+          params.options,
+          input.model.limit.output,
+          OUTPUT_TOKEN_MAX,
+        )
 
     const tools = await resolveTools(input)
 
@@ -218,36 +219,52 @@ export namespace LLM {
       headers: {
         ...(input.model.providerID.startsWith("opencode")
           ? {
-              "x-opencode-project": Instance.project.id,
-              "x-opencode-session": input.sessionID,
-              "x-opencode-request": input.user.id,
-              "x-opencode-client": Flag.OPENCODE_CLIENT,
-            }
+            "x-opencode-project": Instance.project.id,
+            "x-opencode-session": input.sessionID,
+            "x-opencode-request": input.user.id,
+            "x-opencode-client": Flag.OPENCODE_CLIENT,
+          }
           : input.model.providerID !== "anthropic"
             ? {
-                "User-Agent": `opencode/${Installation.VERSION}`,
-              }
+              "User-Agent": `opencode/${Installation.VERSION}`,
+            }
             : undefined),
         ...input.model.headers,
         ...headers,
       },
+      onFinish(event) {
+        console.log("PYF_DEBUG [Assistant Response]:", JSON.stringify({
+          text: event.text,
+          toolCalls: event.toolCalls,
+          finishReason: event.finishReason,
+          usage: event.usage
+        }, null, 2));
+      },
       maxRetries: input.retries ?? 0,
-      messages: [
-        ...(isCodex
-          ? [
+      messages: iife(() => {
+        const fullMessages = [
+          ...(isCodex
+            ? [
               {
                 role: "user",
-                content: system.join("\n\n"),
+                content: systemPrompts.join("\n\n"),
               } as ModelMessage,
             ]
-          : system.map(
+            : systemPrompts.map(
               (x): ModelMessage => ({
                 role: "system",
                 content: x,
               }),
             )),
-        ...input.messages,
-      ],
+          ...input.messages,
+        ];
+
+        console.log("PYF_DEBUG [User Message Original]:", JSON.stringify(input.user, null, 2));
+        console.log("PYF_DEBUG [Wrapped System/Env Prompt]:", JSON.stringify(systemPrompts, null, 2));
+        console.log("PYF_DEBUG [Full Payload to Model]:", JSON.stringify(fullMessages, null, 2));
+
+        return fullMessages;
+      }),
       model: wrapLanguageModel({
         model: language,
         middleware: [
