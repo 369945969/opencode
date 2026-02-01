@@ -33,15 +33,21 @@ opencode server listening on http://127.0.0.1:4096
 
 **用户消息内容**: "hi"
 
-**发送给模型的完整消息**:
+**发送给模型的完整消息上下文**:
+
 ```json
-{
-  "role": "user",
-  "content": [{
-    "type": "text",
-    "text": "hi"
-  }]
-}
+[
+  {
+    "role": "system",
+    "content": "You are opencode, an interactive CLI tool that helps users with software engineering tasks... [完整的 system prompt]"
+  },
+  {
+    "role": "user",
+    "content": [{
+      {"type": "text", "text": "hi"}
+    }]
+  }
+]
 ```
 
 ---
@@ -65,9 +71,7 @@ I should keep my response very short, ideally 1-2 lines or even just a friendly 
     "inputTokens": 12368,
     "outputTokens": 48,
     "totalTokens": 12416
-  }
-}
-```
+  }```
 
 **说明**: 大模型返回纯文本响应，不需要调用任何工具。
 
@@ -76,15 +80,21 @@ I should keep my response very short, ideally 1-2 lines or even just a friendly 
 #### 用户消息 2
 **用户消息内容**: "hi"
 
-**发送给模型的完整消息**:
+**发送给模型的完整消息上下文**:
+
 ```json
-{
-  "role": "user",
-  "content": [{
-    "type": "text",
-    "text": "hi"
-  }]
-}
+[
+  {
+    "role": "system",
+    "content": "You are opencode, an interactive CLI tool that helps users with software engineering tasks... [完整的 system prompt]"
+  },
+  {
+    "role": "user",
+    "content": [{
+      {"type": "text", "text": "hi"}
+    }]
+  }
+]
 ```
 
 ---
@@ -106,9 +116,7 @@ The user just said "hi" again. I should respond briefly and concisely, just like
     "inputTokens": 12398,
     "outputTokens": 48,
     "totalTokens": 12446
-  }
-}
-```
+  }```
 
 **说明**: 大模型返回纯文本响应，不需要调用任何工具。
 
@@ -134,9 +142,7 @@ The user just said "hi" again. I should respond briefly and concisely, just like
     "totalTokens": 545,
     "reasoningTokens": 0,
     "cachedInputTokens": 0
-  }
-}
-```
+  }```
 
 ---
 
@@ -156,9 +162,7 @@ The user just said "hi" again. I should respond briefly and concisely, just like
     "totalTokens": 544,
     "reasoningTokens": 0,
     "cachedInputTokens": 0
-  }
-}
-```
+  }```
 
 ---
 
@@ -169,15 +173,21 @@ The user just said "hi" again. I should respond briefly and concisely, just like
 
 **用户消息内容**: "帮我写一个五子棋的小游戏，后端用 Go，前端用 Web。"
 
-**发送给模型的完整消息**:
+**发送给模型的完整消息上下文**:
+
 ```json
-{
-  "role": "user",
-  "content": [{
-    "type": "text",
-    "text": "帮我写一个五子棋的小游戏，后端用 Go，前端用 Web。"
-  }]
-}
+[
+  {
+    "role": "system",
+    "content": "You are opencode, an interactive CLI tool that helps users with software engineering tasks... [完整的 system prompt]"
+  },
+  {
+    "role": "user",
+    "content": [{
+      {"type": "text", "text": "hi"}
+    }]
+  }
+]
 ```
 
 ---
@@ -218,9 +228,7 @@ The user just said "hi" again. I should respond briefly and concisely, just like
     "inputTokens": 12398,
     "outputTokens": 150,
     "totalTokens": 12548
-  }
-}
-```
+  }```
 
 **关键解读**: 
 - 大模型返回了 `text`（"我来帮你实现..."）
@@ -307,9 +315,7 @@ drwxr-xr-x  28 jack  staff    896  2月  1 09:09 test
     "inputTokens": 12308,
     "outputTokens": 261,
     "totalTokens": 12569
-  }
-}
-```
+  }```
 
 **关键解读**: 
 - 大模型 `text` 为空，直接调用工具
@@ -368,9 +374,7 @@ drwxr-xr-x  28 jack  staff    896  2月  1 09:09 test
     "inputTokens": 12572,
     "outputTokens": 1328,
     "totalTokens": 13900
-  }
-}
-```
+  }```
 
 **关键解读**: 
 - 大模型 **生成了完整的 Go 代码** 并决策调用 `write` 工具创建文件
@@ -427,9 +431,7 @@ ERROR [9:2] could not import github.com/gorilla/websocket (cannot find package "
     "inputTokens": 13980,
     "outputTokens": 100,
     "totalTokens": 14080
-  }
-}
-```
+  }```
 
 **关键解读**: 
 - 大模型**识别到 LSP 错误**，并**主动决策**创建 go.mod 文件来解决问题
@@ -482,9 +484,7 @@ ERROR [9:2] could not import github.com/gorilla/websocket (cannot find package "
     "inputTokens": 14157,
     "outputTokens": 2070,
     "totalTokens": 16227
-  }
-}
-```
+  }```
 
 **关键解读**: 
 - 大模型**生成了完整的前端代码**（HTML + CSS + JavaScript）
@@ -538,9 +538,7 @@ ERROR [9:2] could not import github.com/gorilla/websocket (cannot find package "
     "inputTokens": 16304,
     "outputTokens": 286,
     "totalTokens": 16590
-  }
-}
-```
+  }```
 
 **关键解读**: 
 - 大模型**生成了完整的 README 文档**
@@ -577,9 +575,7 @@ ERROR [9:2] could not import github.com/gorilla/websocket (cannot find package "
     "inputTokens": 16667,
     "outputTokens": 282,
     "totalTokens": 16949
-  }
-}
-```
+  }```
 
 **关键解读**: 
 - 大模型返回最终的文本总结
@@ -620,9 +616,7 @@ ERROR [9:2] could not import github.com/gorilla/websocket (cannot find package "
       }
     }
   ],
-  "finishReason": "tool-calls"
-}
-```
+  "finishReason": "tool-calls"```
 
 #### 第2步：系统执行工具
 
@@ -657,9 +651,7 @@ drw-r--r--   1 jack  staff    593  2月  1  09:09 Dockerfile
         "value": "total 96\ndrwxr-xr-x  18 jack  staff    576  2月  1 10:45 .\ndrwxr-xr-x  19 jack  staff    608  2月  1  09:09 ..\n-rw-r--r--   1 jack  staff     58  2月  1 09:09 .gitignore\ndrwxr-xr-x@  3 jack  staff     96  2月  1 09:40 .turbo\n-rw-r--r--   1 jack  staff   1404  2月  1 09:09 AGENTS.md\ndrwxr-xr-x   3 jack  staff     96  2月  1 09:09 bin\n-rw-r--r--   1 jack  staff    127  2月  1 09:09 bunfig.toml\ndrwxr-xr-x@  5 jack  staff    160  2月  1 10:45 dist\n-rw-r--r--   1 jack  staff    593  2月  1 09:09 Dockerfile\ndrwxr-xr-x@ 56 jack  staff   1792  2月  1 09:15 node_modules\n-rw-r--r--@  1 jack  staff   4373  2月  1 10:45 package.json\n-rw-r--r--   1 jack  staff  10748  2月  1 09:09 parsers-config.ts\n-rw-r--r--   1 jack  staff    217  2月  1 09:09 README.md\ndrwxr-xr-x   7 jack  staff    224  2月  1 09:09 script\ndrwxr-xr-x  40 jack  staff   1280  2月  1 09:43 src\n-rw-r--r--   1 jack  staff    192  2月  1 09:09 sst-env.d.ts\ndrwxr-xr-x  28 jack  staff    896  2月  1 09:09 test\n-rw-r--r--   1 jack  staff    419  2月  1 09:09 tsconfig.json\n"
       }
     }
-  ]
-}
-```
+  ]```
 
 **关键点解析**:
 - `"role": "tool"` - 标识这是一个工具执行结果，不是普通消息
@@ -738,9 +730,7 @@ drw-r--r--   1 jack  staff    593  2月  1  09:09 Dockerfile
         "description": "Create directories for gomoku game"
       }
     }
-  ]
-}
-```
+  ]```
 
 **关键观察**：
 - 大模型的 reasoning 明确提到"看起来这是一个TypeScript/Bun项目，不是Go项目"
@@ -856,9 +846,7 @@ drw-r--r--   1 jack  staff    593  2月  1  09:09 Dockerfile
       "type": "text",
       "value": "Wrote file successfully.\n\nLSP errors detected in this file, please fix:\n<diagnostics file=\"/Users/jack/typescript/opencode/packages/opencode/gomoku/backend/main.go\">\nERROR [9:2] could not import github.com/gorilla/websocket (cannot find package \"github.com/gorilla/websocket\" in GOROOT)\n</diagnostics>"
     }
-  }]
-}
-```
+  }]```
 
 **大模型看到 LSP 错误后**，在 reasoning 中说：
 > "我收到了一个LSP错误，说找不到gorilla/websocket包。这是因为Go模块还没有初始化。我需要创建go.mod文件并安装依赖。"
@@ -1055,9 +1043,7 @@ gomoku/
     "workingDirectory": "/Users/jack/typescript/opencode/packages/opencode",
     "platform": "darwin",
     "date": "Sun Feb 01 2026"
-  }
-}
-```
+  }```
 
 ### 关键点解析
 

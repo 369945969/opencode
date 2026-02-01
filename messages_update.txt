@@ -1,0 +1,24 @@
+
+**发送给模型的完整消息上下文**:
+```json
+[
+  {
+    "role": "system",
+    "content": "You are opencode, an interactive CLI tool that helps users with software engineering tasks... [完整的 system prompt]"
+  },
+  {
+    "role": "user",
+    "content": [{
+      "type": "text",
+      "text": "hi"
+    }]
+  }
+]
+```
+
+**说明**: 实际发送给大模型的是**完整的消息数组**，包括：
+1. `role: "system"` - 系统提示词（包含 opencode 的完整指令、风格指南、代码规范等）
+2. `role: "user"` - 当前用户消息
+
+这确保大模型能看到所有必要的上下文信息。
+
