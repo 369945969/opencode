@@ -1,5 +1,5 @@
 import type { Component } from "solid-js"
-import { For, Show, createSignal, onCleanup, onMount } from "solid-js"
+import { For, Show, createEffect, createSignal, onCleanup, onMount } from "solid-js"
 
 interface SidebarProps {
   width: number
@@ -12,6 +12,8 @@ type Msg = {
   role: "user" | "assistant"
   text: string
   ts: number
+  thinkText?: string
+  thinkDone?: boolean
 }
 
 type Part = {
@@ -24,6 +26,11 @@ type EventPayload = {
   payload?: {
     type?: string
     properties?: {
+      info?: {
+        id?: string
+        role?: string
+        sessionID?: string
+      }
       part?: {
         type?: string
         text?: string
@@ -37,6 +44,11 @@ type EventPayload = {
     }
   }
   properties?: {
+    info?: {
+      id?: string
+      role?: string
+      sessionID?: string
+    }
     part?: {
       type?: string
       text?: string
@@ -71,6 +83,11 @@ type EventPayload = {
   }
   delta?: string
   connected?: boolean
+  info?: {
+    id?: string
+    role?: string
+    sessionID?: string
+  }
   status?: {
     type?: string
     message?: string
@@ -100,8 +117,11 @@ const Sidebar: Component<SidebarProps> = (props) => {
   ])
   const [sid, setSid] = createSignal("")
   const [busy, setBusy] = createSignal(false)
+  const [streaming, setStreaming] = createSignal(false)
   let busyTimer: number | undefined
   let lastRetryKey = ""
+  const userMessageIds = new Set<string>()
+  let messagesRef: HTMLDivElement | undefined
   let resizerRef: HTMLDivElement | undefined
   let startY = 0
   let startHeight = 0
@@ -147,6 +167,26 @@ const Sidebar: Component<SidebarProps> = (props) => {
     return new Date(ts).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })
   }
 
+  const splitThink = (textValue: string) => {
+    const openTag = "<think>"
+    const closeTag = "</think>"
+    const openIndex = textValue.indexOf(openTag)
+    const closeIndex = textValue.indexOf(closeTag)
+    if (closeIndex !== -1) {
+      const start = openIndex !== -1 ? openIndex + openTag.length : 0
+      const think = textValue.slice(start, closeIndex)
+      const before = openIndex > 0 ? textValue.slice(0, openIndex) : ""
+      const after = textValue.slice(closeIndex + closeTag.length)
+      return { hasThink: true, think, answer: (before + after).trim(), done: true }
+    }
+    if (openIndex !== -1) {
+      const before = textValue.slice(0, openIndex)
+      const think = textValue.slice(openIndex + openTag.length)
+      return { hasThink: true, think, answer: before.trim(), done: false }
+    }
+    return { hasThink: false, think: "", answer: textValue, done: false }
+  }
+
   const ensureSession = async () => {
     if (sid()) return sid()
     const res = await fetch(`${base}/session`, {
@@ -173,15 +213,16 @@ const Sidebar: Component<SidebarProps> = (props) => {
       ])
       return
     }
-    setText("")
     setMsgs((list) => [
       ...list,
       { id: makeId(), role: "user", text: value, ts: Date.now() },
     ])
     setBusy(true)
+    setStreaming(true)
     const finalSessionId = sessionId || (await ensureSession())
     if (!finalSessionId) {
       setBusy(false)
+      setStreaming(false)
       setMsgs((list) => [
         ...list,
         { id: makeId(), role: "assistant", text: "创建会话失败，请检查代理服务", ts: Date.now() },
@@ -199,6 +240,7 @@ const Sidebar: Component<SidebarProps> = (props) => {
     if (!res.ok) {
       const errText = await res.text().catch(() => "")
       setBusy(false)
+      setStreaming(false)
       setMsgs((list) => [
         ...list,
         {
@@ -210,10 +252,21 @@ const Sidebar: Component<SidebarProps> = (props) => {
       ])
       return
     }
+    setText("")
     if (busyTimer) window.clearTimeout(busyTimer)
     busyTimer = window.setTimeout(() => {
       setBusy(false)
+      setStreaming(false)
     }, 30000)
+  }
+
+  const stopStream = async () => {
+    const sessionId = sid() || cookieValue("app_session")
+    if (!sessionId) return
+    await fetch(`${base}/session/${sessionId}/abort`, { method: "POST" }).catch(() => null)
+    if (busyTimer) window.clearTimeout(busyTimer)
+    setBusy(false)
+    setStreaming(false)
   }
 
   onMount(() => {
@@ -272,14 +325,18 @@ const Sidebar: Component<SidebarProps> = (props) => {
           const props = payload.properties ?? payload
           const sessionId = props.sessionID
           if (!sessionId || sessionId !== (sid() || cookieValue("app_session"))) return
+          const errorName = props.error?.name || ""
           const errorMessage =
-            props.error?.message || props.error?.name || "会话错误"
+            errorName === "MessageAbortedError"
+              ? "用户已取消"
+              : props.error?.message || errorName || "会话错误"
           setMsgs((list) => [
             ...list,
             { id: makeId(), role: "assistant", text: errorMessage, ts: Date.now() },
           ])
           if (busyTimer) window.clearTimeout(busyTimer)
           setBusy(false)
+          setStreaming(false)
           return
         }
         if (type === "session.status") {
@@ -300,19 +357,74 @@ const Sidebar: Component<SidebarProps> = (props) => {
           }
           return
         }
+        if (type === "message.updated") {
+          const props = payload.properties ?? payload
+          const info = props.info
+          if (!info?.id || !info?.sessionID) return
+          if (info.sessionID !== (sid() || cookieValue("app_session"))) return
+          if (info.role === "user") {
+            userMessageIds.add(info.id)
+          }
+          return
+        }
         if (type !== "message.part.updated") return
         const props = payload.properties ?? payload
         const part = props.part
-        if (!part || part.type !== "text") return
+        if (!part) return
         const sessionId = part.sessionID
         if (!sessionId || sessionId !== (sid() || cookieValue("app_session"))) return
         const messageId = part.messageID
         if (!messageId) return
+        if (userMessageIds.has(messageId)) return
+        if (part.type === "reasoning") {
+          const reasoningId = `${messageId}:reasoning`
+          setMsgs((list) => {
+            const index = list.findIndex((item) => item.id === reasoningId)
+            const nextText = part.time?.end ? "思考完成" : "思考中..."
+            if (index >= 0) {
+              const next = list.slice()
+              next[index] = { ...next[index], text: nextText, ts: Date.now() }
+              return next
+            }
+            return [...list, { id: reasoningId, role: "assistant", text: nextText, ts: Date.now() }]
+          })
+          return
+        }
+        if (part.type !== "text") return
         const delta = props.delta ?? ""
+        const rawText = part.text ?? ""
+        const split = rawText ? splitThink(rawText) : { hasThink: false, answer: "", think: "", done: false }
+        if (split.hasThink) {
+          setMsgs((list) => {
+            const index = list.findIndex((item) => item.id === messageId)
+            if (index >= 0) {
+              const next = list.slice()
+              next[index] = {
+                ...next[index],
+                thinkText: split.think.trim(),
+                thinkDone: split.done,
+                ts: Date.now(),
+              }
+              return next
+            }
+            return [
+              ...list,
+              {
+                id: messageId,
+                role: "assistant",
+                text: "",
+                ts: Date.now(),
+                thinkText: split.think.trim(),
+                thinkDone: split.done,
+              },
+            ]
+          })
+        }
+        if (split.hasThink && !split.done) return
         setMsgs((list) => {
           const index = list.findIndex((item) => item.id === messageId)
           const prev = index >= 0 ? list[index] : undefined
-          const nextText = part.text ?? (prev ? prev.text + delta : delta)
+          const nextText = split.hasThink ? split.answer : part.text ?? (prev ? prev.text + delta : delta)
           if (!nextText) return list
           if (index >= 0 && prev) {
             const next = list.slice()
@@ -324,6 +436,7 @@ const Sidebar: Component<SidebarProps> = (props) => {
         if (part.time?.end) {
           if (busyTimer) window.clearTimeout(busyTimer)
           setBusy(false)
+          setStreaming(false)
         }
       }
     } catch {}
@@ -347,6 +460,14 @@ const Sidebar: Component<SidebarProps> = (props) => {
   onCleanup(() => {
     document.removeEventListener("mousemove", doDrag)
     document.removeEventListener("mouseup", stopDrag)
+  })
+
+  createEffect(() => {
+    msgs()
+    requestAnimationFrame(() => {
+      if (!messagesRef) return
+      messagesRef.scrollTo({ top: messagesRef.scrollHeight, behavior: "smooth" })
+    })
   })
 
   return (
@@ -400,10 +521,16 @@ const Sidebar: Component<SidebarProps> = (props) => {
         </div>
 
         <Show when={!props.isCollapsed}>
-          <div id="12:96" class="overflow-y-auto grow shrink" style="padding: 1rem 1.5rem;">
+          <div
+            ref={messagesRef}
+            id="12:96"
+            class="overflow-y-auto grow shrink geek-scroll"
+            style="padding: 1rem 1.5rem;"
+          >
             <For each={msgs()}>
               {(msg) => {
                 const isUser = msg.role === "user"
+                const hasThink = !!msg.thinkText
                 return (
                   <div class={`flex gap-x-3 mb-4 ${isUser ? "justify-end" : ""}`}>
                     <Show when={!isUser}>
@@ -421,6 +548,26 @@ const Sidebar: Component<SidebarProps> = (props) => {
                       </div>
                     </Show>
                     <div style="flex-basis: 0%;" class={`${isUser ? "max-w-[80%]" : "grow shrink"}`}>
+                      <Show when={hasThink}>
+                        <details
+                          class="p-3 border-[1px] border-solid rounded-2xl mb-2"
+                          style={{
+                            "background-color": "color-mix( in oklab , #1A1F3A 90% , transparent )",
+                            "border-color": "color-mix( in oklab , #00F0FF 10% , transparent )",
+                          }}
+                          open={!msg.thinkDone}
+                        >
+                          <summary style="color: rgba(140, 150, 160, 1);" class="text-xs cursor-pointer">
+                            {msg.thinkDone ? "思考完成" : "思考中..."}
+                          </summary>
+                          <p
+                            style="color: rgba(140, 150, 160, 1);"
+                            class="text-xs whitespace-pre-wrap mt-2"
+                          >
+                            {msg.thinkText || "思考中..."}
+                          </p>
+                        </details>
+                      </Show>
                       <div
                         style={{
                           "background-color": isUser
@@ -494,15 +641,15 @@ const Sidebar: Component<SidebarProps> = (props) => {
               </span>
               <button
                 id="12:128"
-                class={`hover:shadow-[0_0_20px_rgba(0,240,255,0.4)] flex justify-center items-center w-8 h-8 rounded-lg ${busy() ? "opacity-60 cursor-not-allowed" : ""}`}
-                style="background-color: rgba(0, 240, 255, 1);"
-                onClick={() => send()}
+                class={`hover:shadow-[0_0_20px_rgba(0,240,255,0.4)] flex justify-center items-center w-8 h-8 rounded-lg ${busy() && !streaming() ? "opacity-60 cursor-not-allowed" : ""}`}
+                style={`background-color: ${streaming() ? "rgba(255, 90, 90, 1)" : "rgba(0, 240, 255, 1)"};`}
+                onClick={() => (streaming() ? stopStream() : send())}
               >
                 <div id="12:129" class="bg-transparent flex justify-center items-center w-4 h-4">
                   <iconify-icon
                     id="12:130"
-                    style="color: rgba(10, 14, 26, 1);"
-                    icon="lucide:send"
+                    style={`color: ${streaming() ? "rgba(10, 14, 26, 1)" : "rgba(10, 14, 26, 1)"};`}
+                    icon={streaming() ? "lucide:square" : "lucide:send"}
                     class="text-sm"
                   ></iconify-icon>
                 </div>
