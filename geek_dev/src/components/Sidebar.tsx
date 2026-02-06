@@ -29,6 +29,9 @@ type EventPayload = {
         text?: string
         sessionID?: string
         messageID?: string
+        time?: {
+          end?: number
+        }
       }
       delta?: string
     }
@@ -39,16 +42,46 @@ type EventPayload = {
       text?: string
       sessionID?: string
       messageID?: string
+      time?: {
+        end?: number
+      }
     }
     delta?: string
+    connected?: boolean
+    status?: {
+      type?: string
+      message?: string
+      attempt?: number
+      next?: number
+    }
+    sessionID?: string
+    error?: {
+      message?: string
+      name?: string
+    }
   }
   part?: {
     type?: string
     text?: string
     sessionID?: string
     messageID?: string
+    time?: {
+      end?: number
+    }
   }
   delta?: string
+  connected?: boolean
+  status?: {
+    type?: string
+    message?: string
+    attempt?: number
+    next?: number
+  }
+  sessionID?: string
+  error?: {
+    message?: string
+    name?: string
+  }
 }
 
 const Sidebar: Component<SidebarProps> = (props) => {
@@ -57,7 +90,6 @@ const Sidebar: Component<SidebarProps> = (props) => {
   const [isDragging, setIsDragging] = createSignal(false)
   const [text, setText] = createSignal("")
   const [connected, setConnected] = createSignal(false)
-  const [lastEventAt, setLastEventAt] = createSignal(0)
   const [msgs, setMsgs] = createSignal<Msg[]>([
     {
       id: "welcome",
@@ -68,6 +100,8 @@ const Sidebar: Component<SidebarProps> = (props) => {
   ])
   const [sid, setSid] = createSignal("")
   const [busy, setBusy] = createSignal(false)
+  let busyTimer: number | undefined
+  let lastRetryKey = ""
   let resizerRef: HTMLDivElement | undefined
   let startY = 0
   let startHeight = 0
@@ -131,7 +165,8 @@ const Sidebar: Component<SidebarProps> = (props) => {
     const value = text().trim()
     if (!value) return
     const cookieSession = cookieValue("app_session")
-    if (!cookieSession) {
+    const sessionId = sid() || cookieSession
+    if (!sessionId) {
       setMsgs((list) => [
         ...list,
         { id: makeId(), role: "assistant", text: "当前未创建App，请点击右侧开始创建App", ts: Date.now() },
@@ -144,8 +179,8 @@ const Sidebar: Component<SidebarProps> = (props) => {
       { id: makeId(), role: "user", text: value, ts: Date.now() },
     ])
     setBusy(true)
-    const sessionId = sid() || cookieSession || (await ensureSession())
-    if (!sessionId) {
+    const finalSessionId = sessionId || (await ensureSession())
+    if (!finalSessionId) {
       setBusy(false)
       setMsgs((list) => [
         ...list,
@@ -153,28 +188,32 @@ const Sidebar: Component<SidebarProps> = (props) => {
       ])
       return
     }
-    const res = await fetch(`${base}/session/${sessionId}/message`, {
+    const res = await fetch(`${base}/session/${finalSessionId}/prompt_async`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ parts: [{ type: "text", text: value }] }),
+      body: JSON.stringify({
+        parts: [{ type: "text", text: value }],
+        agent: "build",
+      }),
     })
-    const data = await res.json().catch(() => null)
     if (!res.ok) {
+      const errText = await res.text().catch(() => "")
       setBusy(false)
       setMsgs((list) => [
         ...list,
-        { id: makeId(), role: "assistant", text: "请求失败，请检查代理或服务端", ts: Date.now() },
+        {
+          id: makeId(),
+          role: "assistant",
+          text: errText ? `请求失败：${errText}` : "请求失败，请检查代理或服务端",
+          ts: Date.now(),
+        },
       ])
       return
     }
-    const parts = Array.isArray(data?.parts) ? (data.parts as Part[]) : []
-    const out = parts
-      .filter((part: Part) => part.type === "text")
-      .map((part: Part) => part.text ?? "")
-      .join("")
-    const reply = out || data?.info?.content || "已收到请求，等待响应"
-    setMsgs((list) => [...list, { id: makeId(), role: "assistant", text: reply, ts: Date.now() }])
-    setBusy(false)
+    if (busyTimer) window.clearTimeout(busyTimer)
+    busyTimer = window.setTimeout(() => {
+      setBusy(false)
+    }, 30000)
   }
 
   onMount(() => {
@@ -208,14 +247,12 @@ const Sidebar: Component<SidebarProps> = (props) => {
     try {
       source = new EventSource(`${base}/events`)
       source.onopen = () => {
-        setConnected(true)
-        setLastEventAt(Date.now())
+        setConnected(false)
       }
       source.onerror = () => {
         setConnected(false)
       }
       source.onmessage = (evt) => {
-        setLastEventAt(Date.now())
         const data = (() => {
           try {
             return JSON.parse(evt.data) as EventPayload
@@ -224,27 +261,45 @@ const Sidebar: Component<SidebarProps> = (props) => {
           }
         })()
         if (!data) return
-        const payload =
-          (data.payload ?? data) as {
-            type?: string
-            properties?: {
-              part?: {
-                type?: string
-                text?: string
-                sessionID?: string
-                messageID?: string
-              }
-              delta?: string
-            }
-            part?: {
-              type?: string
-              text?: string
-              sessionID?: string
-              messageID?: string
-            }
-            delta?: string
-          }
+        const payload = (data.payload ?? data) as EventPayload
         const type = payload.type ?? ""
+        if (type === "proxy.status") {
+          const props = payload.properties ?? payload
+          setConnected(Boolean(props.connected))
+          return
+        }
+        if (type === "session.error") {
+          const props = payload.properties ?? payload
+          const sessionId = props.sessionID
+          if (!sessionId || sessionId !== (sid() || cookieValue("app_session"))) return
+          const errorMessage =
+            props.error?.message || props.error?.name || "会话错误"
+          setMsgs((list) => [
+            ...list,
+            { id: makeId(), role: "assistant", text: errorMessage, ts: Date.now() },
+          ])
+          if (busyTimer) window.clearTimeout(busyTimer)
+          setBusy(false)
+          return
+        }
+        if (type === "session.status") {
+          const props = payload.properties ?? payload
+          const sessionId = props.sessionID
+          if (!sessionId || sessionId !== (sid() || cookieValue("app_session"))) return
+          const status = props.status
+          if (status?.type === "retry") {
+            const key = `${sessionId}:${status.attempt ?? ""}:${status.message ?? ""}`
+            if (key !== lastRetryKey) {
+              lastRetryKey = key
+              const hint = status.message ? `重试中：${status.message}` : "重试中"
+              setMsgs((list) => [
+                ...list,
+                { id: makeId(), role: "assistant", text: hint, ts: Date.now() },
+              ])
+            }
+          }
+          return
+        }
         if (type !== "message.part.updated") return
         const props = payload.properties ?? payload
         const part = props.part
@@ -266,17 +321,24 @@ const Sidebar: Component<SidebarProps> = (props) => {
           }
           return [...list, { id: messageId, role: "assistant", text: nextText, ts: Date.now() }]
         })
+        if (part.time?.end) {
+          if (busyTimer) window.clearTimeout(busyTimer)
+          setBusy(false)
+        }
       }
     } catch {}
-    const heartbeat = setInterval(() => {
-      if (!lastEventAt()) {
+    const poll = setInterval(async () => {
+      const res = await fetch(`${base}/proxy/status`).catch(() => null)
+      if (!res || !res.ok) {
         setConnected(false)
         return
       }
-      setConnected(Date.now() - lastEventAt() < 4000)
+      const data = await res.json().catch(() => null)
+      setConnected(Boolean(data?.connected))
     }, 2000)
     onCleanup(() => {
-      clearInterval(heartbeat)
+      clearInterval(poll)
+      if (busyTimer) window.clearTimeout(busyTimer)
       window.removeEventListener("app_created", handleCreated as EventListener)
       source?.close()
     })

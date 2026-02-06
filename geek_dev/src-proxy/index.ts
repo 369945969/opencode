@@ -49,17 +49,21 @@ const defaults = {
   baseUrl: process.env.OPENCODE_BASE_URL ?? "http://127.0.0.1:4096",
   host: process.env.PROXY_HOST ?? "0.0.0.0",
   port: Number(process.env.PROXY_PORT ?? "4097"),
-  username: process.env.OPENCODE_SERVER_USERNAME ?? "",
-  password: process.env.OPENCODE_SERVER_PASSWORD ?? "",
+  username: process.env.OPENCODE_SERVER_USERNAME ?? "opencode",
+  password: process.env.OPENCODE_SERVER_PASSWORD ?? "123",
   pmRoot: process.env.PM_ROOT ?? process.cwd(),
   pmDepth: Number(process.env.PM_DEPTH ?? "3"),
   pmMaxBytes: Number(process.env.PM_MAX_BYTES ?? "1048576"),
 }
+const defaultProviderID = process.env.OPENCODE_DEFAULT_PROVIDER_ID ?? "local"
+const defaultModelID = process.env.OPENCODE_DEFAULT_MODEL_ID ?? "zai-org/glm-4.7-flash"
 
 const text = new TextEncoder()
 const dbPath = path.join(process.cwd(), "src-proxy", "store.sqlite")
 const appsBase = path.join(process.cwd(), "apps")
 const db = new Database(dbPath, { create: true })
+const webLogPath = path.join(process.cwd(), "web.log")
+const appLogPath = path.join(process.cwd(), "app.log")
 
 db.exec(
   "create table if not exists users (id text primary key, root text not null, current_uuid text)",
@@ -144,6 +148,75 @@ const createAuth = (username: string, password: string) => {
   return `Basic ${Buffer.from(`${username}:${password}`).toString("base64")}`
 }
 
+const stamp = () => new Date().toISOString()
+
+const logLine = async (filePath: string, line: string) => {
+  await fs.appendFile(filePath, line + "\n").catch(() => {})
+}
+
+const logWeb = async (line: string) => logLine(webLogPath, line)
+const logApp = async (line: string) => logLine(appLogPath, line)
+
+const readBodySnippet = async (req: Request, limit = 2000) => {
+  if (req.method === "GET" || req.method === "HEAD") return ""
+  const clone = req.clone()
+  const textBody = await clone.text().catch(() => "")
+  if (!textBody) return ""
+  if (textBody.length <= limit) return textBody
+  return textBody.slice(0, limit) + "..."
+}
+
+const readResponseSnippet = async (res: Response, limit = 2000) => {
+  const clone = res.clone()
+  const textBody = await clone.text().catch(() => "")
+  if (!textBody) return ""
+  if (textBody.length <= limit) return textBody
+  return textBody.slice(0, limit) + "..."
+}
+
+const createLoggedStream = (res: Response, label: string) => {
+  if (!res.body) {
+    void logApp(`${stamp()} ${label} EMPTY`)
+    return null
+  }
+  const reader = res.body.getReader()
+  const decoder = new TextDecoder()
+  return new ReadableStream<Uint8Array>({
+    async pull(controller) {
+      const result = await reader.read().catch(() => null)
+      if (!result || result.done) {
+        controller.close()
+        void logApp(`${stamp()} ${label} DONE`)
+        return
+      }
+      const chunkText = decoder.decode(result.value, { stream: true })
+      if (chunkText) void logApp(`${stamp()} ${label} ${chunkText}`)
+      controller.enqueue(result.value)
+    },
+    cancel() {
+      reader.cancel().catch(() => {})
+    },
+  })
+}
+
+const consumeAndLogStream = async (res: Response, label: string) => {
+  if (!res.body) {
+    await logApp(`${stamp()} ${label} EMPTY`)
+    return
+  }
+  const reader = res.body.getReader()
+  const decoder = new TextDecoder()
+  for (;;) {
+    const result = await reader.read().catch(() => null)
+    if (!result || result.done) {
+      await logApp(`${stamp()} ${label} DONE`)
+      return
+    }
+    const chunkText = decoder.decode(result.value, { stream: true })
+    if (chunkText) await logApp(`${stamp()} ${label} ${chunkText}`)
+  }
+}
+
 const baseHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
@@ -183,25 +256,32 @@ export const createProxy = (input: ProxyConfig = {}) => {
     const headers = new Headers({ Accept: "text/event-stream" })
     if (auth) headers.set("Authorization", auth)
     try {
+      await logApp(`${stamp()} CONNECT ${config.baseUrl}/event`)
       const res = await fetch(`${config.baseUrl}/event`, { headers })
       if (!res.ok || !res.body) {
+        await logApp(`${stamp()} CONNECT_ERROR ${config.baseUrl}/event ${res.status}`)
         setBackendConnected(false)
         setTimeout(connectEvents, 2000)
         return
       }
+      await logApp(`${stamp()} CONNECTED ${config.baseUrl}/event`)
       setBackendConnected(true)
       const reader = res.body.getReader()
       for (;;) {
         const result = await reader.read().catch(() => null)
         if (!result || result.done) {
+          await logApp(`${stamp()} DISCONNECTED ${config.baseUrl}/event`)
           setBackendConnected(false)
           setTimeout(connectEvents, 2000)
           return
         }
         const chunk = new TextDecoder().decode(result.value)
+        const snippet = chunk.length > 2000 ? chunk.slice(0, 2000) + "..." : chunk
+        await logApp(`${stamp()} EVENT_IN ${snippet}`)
         broadcast(chunk)
       }
     } catch {
+      await logApp(`${stamp()} CONNECT_ERROR ${config.baseUrl}/event`)
       setBackendConnected(false)
       setTimeout(connectEvents, 2000)
     }
@@ -211,6 +291,7 @@ export const createProxy = (input: ProxyConfig = {}) => {
     const stream = new ReadableStream<Uint8Array>({
       start(controller) {
         clients.add(controller)
+        logWeb(`${stamp()} SSE_CONNECT /events`)
         try {
           controller.enqueue(text.encode(`data: ${JSON.stringify({ type: "connected" })}\n\n`))
           controller.enqueue(
@@ -233,6 +314,7 @@ export const createProxy = (input: ProxyConfig = {}) => {
         return () => {
           clearInterval(timer)
           clients.delete(controller)
+          logWeb(`${stamp()} SSE_DISCONNECT /events`)
         }
       },
       cancel() {},
@@ -312,6 +394,7 @@ export const createProxy = (input: ProxyConfig = {}) => {
     if (!appName) {
       return Response.json({ error: "appName required" }, { status: 400, headers: baseHeaders })
     }
+    await logApp(`${stamp()} APP_CREATE_REQ ${JSON.stringify({ appName })}`)
     const cookies = parseCookies(req.headers.get("cookie") ?? "")
     const user = cookies.user ?? "default"
     const userRow = await ensureUser(user)
@@ -324,12 +407,16 @@ export const createProxy = (input: ProxyConfig = {}) => {
     ]
     const headers = new Headers({ "Content-Type": "application/json" })
     if (auth) headers.set("Authorization", auth)
+    const sessionBody = { title: `${appName} (${seed})`, permission: perm }
+    await logApp(`${stamp()} SESSION_CREATE_REQ ${JSON.stringify(sessionBody)}`)
     const res = await fetch(`${config.baseUrl}/session`, {
       method: "POST",
       headers,
-      body: JSON.stringify({ title: `${appName} (${seed})`, permission: perm }),
+      body: JSON.stringify(sessionBody),
     })
-    const data = await res.json().catch(() => null)
+    const dataText = await res.text().catch(() => "")
+    await logApp(`${stamp()} SESSION_CREATE_RES ${res.status} ${dataText}`)
+    const data = dataText ? JSON.parse(dataText) : null
     if (!res.ok || !data?.id) {
       return Response.json({ error: "session create failed" }, { status: 500, headers: baseHeaders })
     }
@@ -341,6 +428,7 @@ export const createProxy = (input: ProxyConfig = {}) => {
       appName,
       path: appPath,
     }
+    await logApp(`${stamp()} APP_CREATE_SESSION ${JSON.stringify({ uuid: app.uuid, sessionId: app.sessionId })}`)
     db.query(
       "insert into apps (uuid, user_id, session_id, app_name, path, created_at) values (?, ?, ?, ?, ?, ?)",
     ).run(app.uuid, user, app.sessionId, app.appName, app.path, Date.now())
@@ -358,24 +446,62 @@ export const createProxy = (input: ProxyConfig = {}) => {
     const headers = new Headers(req.headers)
     headers.delete("host")
     headers.delete("connection")
+    headers.delete("content-length")
     if (auth && !headers.get("authorization")) headers.set("authorization", auth)
-    const body = req.method === "GET" || req.method === "HEAD" ? undefined : req.body
-    const res = await fetch(target, {
-      method: req.method,
-      headers,
-      body,
-      redirect: "manual",
-    })
-    const out = new Headers(res.headers)
-    out.set("Access-Control-Allow-Origin", "*")
-    out.set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-    out.set("Access-Control-Allow-Headers", "*")
-    return new Response(res.body, { status: res.status, headers: out })
+    let bodyText = ""
+    if (req.method !== "GET" && req.method !== "HEAD") {
+      bodyText = await req.clone().text().catch(() => "")
+    }
+    const contentType = headers.get("content-type") ?? ""
+    if (bodyText && contentType.includes("application/json")) {
+      try {
+        const parsed = JSON.parse(bodyText)
+        const isMessage =
+          req.method === "POST" &&
+          target.pathname.startsWith("/session/") &&
+          (target.pathname.endsWith("/message") || target.pathname.endsWith("/prompt_async"))
+        if (isMessage && !parsed?.model) {
+          parsed.model = { providerID: defaultProviderID, modelID: defaultModelID }
+        }
+        bodyText = JSON.stringify(parsed)
+      } catch {}
+    }
+    const bodySnippet =
+      bodyText.length > 2000 ? bodyText.slice(0, 2000) + "..." : bodyText
+    await logApp(`${stamp()} REQ ${req.method} ${target.pathname}${target.search} ${bodySnippet}`)
+    try {
+      const res = await fetch(target, {
+        method: req.method,
+        headers,
+        body: bodyText || undefined,
+        redirect: "manual",
+      })
+      await logApp(`${stamp()} RES ${req.method} ${target.pathname}${target.search} ${res.status}`)
+      const out = new Headers(res.headers)
+      out.set("Access-Control-Allow-Origin", "*")
+      out.set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+      out.set("Access-Control-Allow-Headers", "*")
+      const stream = createLoggedStream(res, `RES_STREAM ${req.method} ${target.pathname}${target.search}`)
+      return new Response(stream ?? res.body, { status: res.status, headers: out })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "unknown error"
+      await logApp(
+        `${stamp()} RES_ERROR ${req.method} ${target.pathname}${target.search} ${message}`,
+      )
+      return Response.json({ error: message }, { status: 502, headers: baseHeaders })
+    }
   }
 
   const fetchHandler = async (req: Request) => {
     if (req.method === "OPTIONS") return new Response(null, { status: 200, headers: baseHeaders })
     const url = new URL(req.url)
+    await logWeb(`${stamp()} REQ ${req.method} ${url.pathname}${url.search}`)
+    if (url.pathname === "/proxy/status" && req.method === "GET") {
+      return Response.json(
+        { connected: backendConnected, ts: Date.now() },
+        { headers: baseHeaders },
+      )
+    }
     if (url.pathname === "/events") return sseResponse()
     if (url.pathname === "/pm/dirs") return pmResponse()
     if (url.pathname === "/apps" && req.method === "GET") return appsList(req)
@@ -385,6 +511,7 @@ export const createProxy = (input: ProxyConfig = {}) => {
 
   const start = () => {
     connectEvents()
+    setInterval(() => sendStatus(), 2000)
     return Bun.serve({
       port: config.port,
       hostname: config.host,

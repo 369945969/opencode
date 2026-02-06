@@ -10,4 +10,5 @@ fi
 
 OPENCODE_SERVER_USERNAME=${OPENCODE_SERVER_USERNAME:-opencode} \
 OPENCODE_SERVER_PASSWORD=${OPENCODE_SERVER_PASSWORD:-123} \
+OPENCODE_CONFIG=${OPENCODE_CONFIG:-/Users/jack/typescript/opencode/geek_dev/opencode.json} \
 opencode serve --hostname=$HOST --port=$PORT
