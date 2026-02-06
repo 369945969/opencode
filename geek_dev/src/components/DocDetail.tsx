@@ -65,208 +65,178 @@ const DocDetail: Component<DocDetailProps> = (props) => {
   }
 
   return (
-    <div class="flex grow min-w-0 h-full overflow-hidden">
-      <aside id="15:31" class="shrink-0 min-w-fit h-full">
-        <div
-          id="15:32"
-          style="background: linear-gradient(135deg, rgba(22, 33, 62, 1) 0%, rgba(15, 22, 36, 1) 100%);"
-          class="flex flex-col w-64 h-full border-r border-[#00F0FF]/15"
-        >
-          <div
-            id="15:33"
-            style="border-bottom-style: solid; padding: 1rem 1.5rem; border-color: color-mix( in oklab , #00F0FF 15% , transparent );"
-            class="flex items-center border-b-[1px]"
+    <div class="flex flex-col grow min-w-0 h-full overflow-hidden">
+      {/* Top Header */}
+      <div
+        class="shrink-0 flex justify-between items-center px-6 py-4 border-b border-[#00F0FF]/15"
+        style="background: linear-gradient(90deg, rgba(22, 33, 62, 0.95) 0%, rgba(15, 22, 36, 0.95) 100%); backdrop-filter: blur(10px);"
+      >
+        <div class="flex items-center gap-x-4">
+          <button
+            onClick={props.onBack}
+            class="hover:bg-[#00F0FF]/15 hover:shadow-[0_0_12px_rgba(0,240,255,0.25)] flex items-center justify-center rounded-lg cursor-pointer transition-all duration-300"
+            style="background-color: color-mix( in oklab , #1A1F3A 90% , transparent ); padding: 0.5rem;"
           >
-            <div id="15:34" class="flex items-center gap-y-3 gap-x-3">
-              <div id="15:35" class="bg-transparent flex justify-center items-center w-6 h-6">
-                <iconify-icon
-                  id="15:36"
-                  style="color: rgba(0, 240, 255, 1);"
-                  icon="lucide:folder"
-                  class="text-xl"
-                ></iconify-icon>
-              </div>
-              <h2 id="15:37" style="color: rgba(232, 240, 255, 1);" class="text-lg font-semibold">
-                文件列表
-              </h2>
-            </div>
-          </div>
-
-          <div id="15:50" style="flex-basis: 0%; padding: 1rem 1.5rem;" class="overflow-y-auto grow shrink">
-            <div id="15:51" class="flex flex-col gap-y-2 gap-x-2">
-              <div
-                id="15:52"
-                style="background-color: color-mix( in oklab , #00F0FF 15% , transparent ); border-color: color-mix( in oklab , #00F0FF 30% , transparent );"
-                class="flex items-center gap-y-3 gap-x-3 p-3 rounded-lg cursor-pointer"
+            <iconify-icon
+              style="color: rgba(0, 240, 255, 1);"
+              icon="lucide:arrow-left"
+              class="text-xl"
+            ></iconify-icon>
+          </button>
+          <h1 style="color: rgba(232, 240, 255, 1);" class="text-xl font-bold">
+            {props.doc?.title || "产品需求文档"}
+          </h1>
+        </div>
+        <div class="flex items-center gap-x-2">
+          <Show
+            when={!isEditing()}
+            fallback={
+              <button
+                onClick={saveEdit}
+                class="hover:shadow-[0_0_20px_rgba(0,240,255,0.4)] flex items-center gap-x-2 rounded-lg cursor-pointer transition-all duration-300"
+                style="background-color: rgba(0, 240, 255, 1); color: rgba(10, 14, 26, 1); padding: 0.5rem 1rem;"
               >
+                <iconify-icon
+                  style="color: rgba(10, 14, 26, 1);"
+                  icon="lucide:save"
+                  class="text-sm"
+                ></iconify-icon>
+                <span style="color: rgba(10, 14, 26, 1);" class="text-sm font-semibold">
+                  保存
+                </span>
+              </button>
+            }
+          >
+            <button
+              onClick={startEdit}
+              class="hover:bg-[#00F0FF]/15 hover:shadow-[0_0_12px_rgba(0,240,255,0.25)] flex items-center gap-x-2 rounded-lg cursor-pointer transition-all duration-300"
+              style="background-color: color-mix( in oklab , #1A1F3A 90% , transparent ); padding: 0.5rem 0.75rem;"
+            >
+              <iconify-icon
+                style="color: rgba(0, 240, 255, 1);"
+                icon="lucide:edit"
+                class="text-sm"
+              ></iconify-icon>
+              <span style="color: rgba(232, 240, 255, 1);" class="text-sm">
+                编辑
+              </span>
+            </button>
+          </Show>
+        </div>
+      </div>
+
+      <div class="flex grow overflow-hidden">
+        {/* Document List - Moved inside */}
+        <aside class="shrink-0 min-w-fit h-full">
+          <div
+            style="background: linear-gradient(135deg, rgba(22, 33, 62, 0.5) 0%, rgba(15, 22, 36, 0.5) 100%);"
+            class="flex flex-col w-64 h-full border-r border-[#00F0FF]/15"
+          >
+            <div
+              style="border-bottom-style: solid; padding: 1rem 1.5rem; border-color: color-mix( in oklab , #00F0FF 15% , transparent );"
+              class="flex items-center border-b-[1px]"
+            >
+              <div class="flex items-center gap-x-3">
+                <div class="bg-transparent flex justify-center items-center w-6 h-6">
+                  <iconify-icon
+                    style="color: rgba(0, 240, 255, 1);"
+                    icon="lucide:folder"
+                    class="text-xl"
+                  ></iconify-icon>
+                </div>
+                <h2 style="color: rgba(232, 240, 255, 1);" class="text-lg font-semibold">
+                  文件列表
+                </h2>
+              </div>
+            </div>
+
+            <div style="flex-basis: 0%; padding: 1rem 1.5rem;" class="overflow-y-auto grow shrink">
+              <div class="flex flex-col gap-y-2">
                 <div
-                  id="15:53"
-                  style="background-color: color-mix( in oklab , #00F0FF 20% , transparent ); border-color: color-mix( in oklab , #00F0FF 40% , transparent );"
-                  class="flex justify-center items-center w-10 h-10 border-[1px] border-solid rounded-lg"
+                  style="background-color: color-mix( in oklab , #00F0FF 15% , transparent ); border-color: color-mix( in oklab , #00F0FF 30% , transparent );"
+                  class="flex items-center gap-x-3 p-3 rounded-lg cursor-pointer border-[1px] border-solid"
                 >
-                  <div id="15:54" class="bg-transparent flex justify-center items-center w-5 h-5">
+                  <div
+                    style="background-color: color-mix( in oklab , #00F0FF 20% , transparent ); border-color: color-mix( in oklab , #00F0FF 40% , transparent );"
+                    class="flex justify-center items-center w-10 h-10 border-[1px] border-solid rounded-lg shrink-0"
+                  >
                     <iconify-icon
-                      id="15:55"
                       style="color: rgba(0, 240, 255, 1);"
                       icon="lucide:file-text"
                       class="text-base"
                     ></iconify-icon>
                   </div>
+                  <div class="flex flex-col overflow-hidden">
+                    <span
+                      style="color: rgba(232, 240, 255, 1);"
+                      class="text-sm font-semibold truncate"
+                    >
+                      {props.doc?.title || "产品需求文档"}
+                    </span>
+                    <span style="color: rgba(138, 151, 170, 1);" class="text-xs">
+                      文档
+                    </span>
+                  </div>
                 </div>
-                <div id="15:56" class="flex flex-col">
-                  <span
-                    id="15:57"
-                    style="color: rgba(232, 240, 255, 1);"
-                    class="text-sm font-semibold truncate max-w-[120px]"
-                  >
-                    {props.doc?.title || "产品需求文档"}
-                  </span>
-                  <span id="15:58" style="color: rgba(138, 151, 170, 1);" class="text-xs">
-                    文档
-                  </span>
-                </div>
-              </div>
 
-              <button
-                id="15:59"
-                class="hover:bg-[#00F0FF]/10 flex items-center gap-y-3 gap-x-3 p-3 rounded-lg cursor-pointer"
-              >
-                <div
-                  id="15:60"
-                  style="background-color: color-mix( in oklab , #B026FF 10% , transparent ); border-color: color-mix( in oklab , #B026FF 20% , transparent );"
-                  class="flex justify-center items-center w-10 h-10 border-[1px] border-solid rounded-lg"
+                <button
+                  class="hover:bg-[#00F0FF]/10 flex items-center gap-x-3 p-3 rounded-lg cursor-pointer transition-colors w-full"
                 >
-                  <div id="15:61" class="bg-transparent flex justify-center items-center w-5 h-5">
+                  <div
+                    style="background-color: color-mix( in oklab , #B026FF 10% , transparent ); border-color: color-mix( in oklab , #B026FF 20% , transparent );"
+                    class="flex justify-center items-center w-10 h-10 border-[1px] border-solid rounded-lg shrink-0"
+                  >
                     <iconify-icon
-                      id="15:62"
                       style="color: rgba(176, 38, 255, 1);"
                       icon="lucide:image"
                       class="text-base"
                     ></iconify-icon>
                   </div>
-                </div>
-                <div id="15:63" class="text-left flex flex-col">
-                  <span id="15:64" style="color: rgba(232, 240, 255, 1);" class="text-sm font-semibold">
-                    登录界面设计
-                  </span>
-                  <span id="15:65" style="color: rgba(138, 151, 170, 1);" class="text-xs">
-                    设计稿
-                  </span>
-                </div>
-              </button>
-              <button
-                id="15:66"
-                class="hover:bg-[#00F0FF]/10 flex items-center gap-y-3 gap-x-3 p-3 rounded-lg cursor-pointer"
-              >
-                <div
-                  id="15:67"
-                  style="background-color: color-mix( in oklab , #FF006E 10% , transparent ); border-color: color-mix( in oklab , #FF006E 20% , transparent );"
-                  class="flex justify-center items-center w-10 h-10 border-[1px] border-solid rounded-lg"
+                  <div class="text-left flex flex-col overflow-hidden">
+                    <span style="color: rgba(232, 240, 255, 1);" class="text-sm font-semibold truncate">
+                      登录界面设计
+                    </span>
+                    <span style="color: rgba(138, 151, 170, 1);" class="text-xs">
+                      设计稿
+                    </span>
+                  </div>
+                </button>
+                <button
+                  class="hover:bg-[#00F0FF]/10 flex items-center gap-x-3 p-3 rounded-lg cursor-pointer transition-colors w-full"
                 >
-                  <div id="15:68" class="bg-transparent flex justify-center items-center w-5 h-5">
+                  <div
+                    style="background-color: color-mix( in oklab , #FF006E 10% , transparent ); border-color: color-mix( in oklab , #FF006E 20% , transparent );"
+                    class="flex justify-center items-center w-10 h-10 border-[1px] border-solid rounded-lg shrink-0"
+                  >
                     <iconify-icon
-                      id="15:69"
                       style="color: rgba(255, 0, 110, 1);"
                       icon="lucide:layout"
                       class="text-base"
                     ></iconify-icon>
                   </div>
-                </div>
-                <div id="15:70" class="text-left flex flex-col">
-                  <span id="15:71" style="color: rgba(232, 240, 255, 1);" class="text-sm font-semibold">
-                    主界面线框图
-                  </span>
-                  <span id="15:72" style="color: rgba(138, 151, 170, 1);" class="text-xs">
-                    线框图
-                  </span>
-                </div>
-              </button>
+                  <div class="text-left flex flex-col overflow-hidden">
+                    <span style="color: rgba(232, 240, 255, 1);" class="text-sm font-semibold truncate">
+                      主界面线框图
+                    </span>
+                    <span style="color: rgba(138, 151, 170, 1);" class="text-xs">
+                      线框图
+                    </span>
+                  </div>
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      </aside>
+        </aside>
 
-      <main
-        id="15:73"
-        style="flex-basis: 0%; padding: 1.5rem 2rem;"
-        class="overflow-x-hidden overflow-y-auto flex flex-col grow shrink"
-      >
-        <div id="15:74" class="flex justify-between items-center mb-6">
-          <div id="15:75" class="flex items-center gap-y-4 gap-x-4">
-            <button
-              id="15:76"
-              onClick={props.onBack}
-              class="hover:bg-[#00F0FF]/15 hover:shadow-[0_0_12px_rgba(0,240,255,0.25)] flex items-center gap-y-2 gap-x-2 rounded-lg cursor-pointer"
-              style="background-color: color-mix( in oklab , #1A1F3A 90% , transparent ); padding: 0.5rem 0.75rem;"
-            >
-              <div id="15:77" class="bg-transparent flex justify-center items-center w-4 h-4">
-                <iconify-icon
-                  id="15:78"
-                  style="color: rgba(0, 240, 255, 1);"
-                  icon="lucide:arrow-left"
-                  class="text-sm"
-                ></iconify-icon>
-              </div>
-              <span id="15:79" style="color: rgba(232, 240, 255, 1);" class="text-sm">
-                返回画布
-              </span>
-            </button>
-            <h1 id="15:80" style="color: rgba(232, 240, 255, 1);" class="text-2xl font-bold">
-              {props.doc?.title || "产品需求文档"}
-            </h1>
-          </div>
-          <div id="15:81" class="flex items-center gap-y-2 gap-x-2">
-            <Show
-              when={!isEditing()}
-              fallback={
-                <button
-                  id="15:82-save"
-                  onClick={saveEdit}
-                  class="hover:shadow-[0_0_20px_rgba(0,240,255,0.4)] flex items-center gap-y-2 gap-x-2 rounded-lg cursor-pointer"
-                  style="background-color: rgba(0, 240, 255, 1); color: rgba(10, 14, 26, 1); padding: 0.5rem 1rem;"
-                >
-                  <div id="15:83-save" class="bg-transparent flex justify-center items-center w-4 h-4">
-                    <iconify-icon
-                      id="15:84-save"
-                      style="color: rgba(10, 14, 26, 1);"
-                      icon="lucide:save"
-                      class="text-sm"
-                    ></iconify-icon>
-                  </div>
-                  <span id="15:85-save" style="color: rgba(10, 14, 26, 1);" class="text-sm font-semibold">
-                    保存
-                  </span>
-                </button>
-              }
-            >
-              <button
-                id="15:82"
-                onClick={startEdit}
-                class="hover:bg-[#00F0FF]/15 hover:shadow-[0_0_12px_rgba(0,240,255,0.25)] flex items-center gap-y-2 gap-x-2 rounded-lg cursor-pointer"
-                style="background-color: color-mix( in oklab , #1A1F3A 90% , transparent ); padding: 0.5rem 0.75rem;"
-              >
-                <div id="15:83" class="bg-transparent flex justify-center items-center w-4 h-4">
-                  <iconify-icon
-                    id="15:84"
-                    style="color: rgba(0, 240, 255, 1);"
-                    icon="lucide:edit"
-                    class="text-sm"
-                  ></iconify-icon>
-                </div>
-                <span id="15:85" style="color: rgba(232, 240, 255, 1);" class="text-sm">
-                  编辑
-                </span>
-              </button>
-            </Show>
-          </div>
-        </div>
-
-        <div
-          id="15:89"
-          style="background-color: color-mix( in oklab , #141829 80% , transparent ); flex-basis: 0%; border-color: color-mix( in oklab , #00F0FF 10% , transparent );"
-          class="overflow-y-auto grow shrink border-[1px] border-solid rounded-2xl"
+        <main
+          style="flex-basis: 0%; padding: 0;"
+          class="overflow-x-hidden overflow-y-auto flex flex-col grow shrink bg-[#0A0E1A]/50"
         >
-          <div id="15:90" class="p-8">
+          <div
+            style="background-color: color-mix( in oklab , #141829 80% , transparent ); flex-basis: 0%;"
+            class="overflow-y-auto grow shrink"
+          >
+            <div class="p-8">
             <Show
               when={isEditing()}
               fallback={
@@ -386,6 +356,7 @@ const DocDetail: Component<DocDetailProps> = (props) => {
         </div>
       </main>
     </div>
+  </div>
   )
 }
 

@@ -1,13 +1,73 @@
 import type { Component } from "solid-js"
-import { createSignal, onMount, onCleanup } from "solid-js"
+import { For, Show, createSignal, onCleanup, onMount } from "solid-js"
 
 interface SidebarProps {
   width: number
+  isCollapsed?: boolean
+  onToggle?: () => void
+}
+
+type Msg = {
+  id: string
+  role: "user" | "assistant"
+  text: string
+  ts: number
+}
+
+type Part = {
+  type: string
+  text?: string
+}
+
+type EventPayload = {
+  type?: string
+  payload?: {
+    type?: string
+    properties?: {
+      part?: {
+        type?: string
+        text?: string
+        sessionID?: string
+        messageID?: string
+      }
+      delta?: string
+    }
+  }
+  properties?: {
+    part?: {
+      type?: string
+      text?: string
+      sessionID?: string
+      messageID?: string
+    }
+    delta?: string
+  }
+  part?: {
+    type?: string
+    text?: string
+    sessionID?: string
+    messageID?: string
+  }
+  delta?: string
 }
 
 const Sidebar: Component<SidebarProps> = (props) => {
+  const base = import.meta.env.VITE_PROXY_URL ?? "http://localhost:4097"
   const [inputHeight, setInputHeight] = createSignal(120)
   const [isDragging, setIsDragging] = createSignal(false)
+  const [text, setText] = createSignal("")
+  const [connected, setConnected] = createSignal(false)
+  const [lastEventAt, setLastEventAt] = createSignal(0)
+  const [msgs, setMsgs] = createSignal<Msg[]>([
+    {
+      id: "welcome",
+      role: "assistant",
+      text: "你好！我是你的AI设计助手。我可以帮你创建文档、生成界面设计稿，或者分析你的设计需求。你想要我帮你做什么？",
+      ts: Date.now(),
+    },
+  ])
+  const [sid, setSid] = createSignal("")
+  const [busy, setBusy] = createSignal(false)
   let resizerRef: HTMLDivElement | undefined
   let startY = 0
   let startHeight = 0
@@ -33,9 +93,193 @@ const Sidebar: Component<SidebarProps> = (props) => {
     document.body.style.userSelect = ""
   }
 
+  const makeId = () => {
+    const id = globalThis.crypto?.randomUUID?.()
+    if (id) return id
+    return String(Date.now())
+  }
+
+  const cookieValue = (key: string) => {
+    const source = document.cookie || ""
+    const list = source.split(";").map((part) => part.trim())
+    for (const item of list) {
+      if (!item.startsWith(`${key}=`)) continue
+      return decodeURIComponent(item.slice(key.length + 1))
+    }
+    return ""
+  }
+
+  const formatTime = (ts: number) => {
+    return new Date(ts).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })
+  }
+
+  const ensureSession = async () => {
+    if (sid()) return sid()
+    const res = await fetch(`${base}/session`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    })
+    const data = await res.json().catch(() => null)
+    if (!res.ok || !data?.id) return ""
+    setSid(data.id)
+    return data.id
+  }
+
+  const send = async () => {
+    if (busy()) return
+    const value = text().trim()
+    if (!value) return
+    const cookieSession = cookieValue("app_session")
+    if (!cookieSession) {
+      setMsgs((list) => [
+        ...list,
+        { id: makeId(), role: "assistant", text: "当前未创建App，请点击右侧开始创建App", ts: Date.now() },
+      ])
+      return
+    }
+    setText("")
+    setMsgs((list) => [
+      ...list,
+      { id: makeId(), role: "user", text: value, ts: Date.now() },
+    ])
+    setBusy(true)
+    const sessionId = sid() || cookieSession || (await ensureSession())
+    if (!sessionId) {
+      setBusy(false)
+      setMsgs((list) => [
+        ...list,
+        { id: makeId(), role: "assistant", text: "创建会话失败，请检查代理服务", ts: Date.now() },
+      ])
+      return
+    }
+    const res = await fetch(`${base}/session/${sessionId}/message`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ parts: [{ type: "text", text: value }] }),
+    })
+    const data = await res.json().catch(() => null)
+    if (!res.ok) {
+      setBusy(false)
+      setMsgs((list) => [
+        ...list,
+        { id: makeId(), role: "assistant", text: "请求失败，请检查代理或服务端", ts: Date.now() },
+      ])
+      return
+    }
+    const parts = Array.isArray(data?.parts) ? (data.parts as Part[]) : []
+    const out = parts
+      .filter((part: Part) => part.type === "text")
+      .map((part: Part) => part.text ?? "")
+      .join("")
+    const reply = out || data?.info?.content || "已收到请求，等待响应"
+    setMsgs((list) => [...list, { id: makeId(), role: "assistant", text: reply, ts: Date.now() }])
+    setBusy(false)
+  }
+
   onMount(() => {
     document.addEventListener("mousemove", doDrag)
     document.addEventListener("mouseup", stopDrag)
+    const cookieSession = cookieValue("app_session")
+    if (!cookieSession) {
+      setMsgs((list) => [
+        ...list,
+        { id: makeId(), role: "assistant", text: "当前未创建App，请点击右侧开始创建App", ts: Date.now() },
+      ])
+    } else {
+      setSid(cookieSession)
+    }
+    const handleCreated = (evt: Event) => {
+      const detail = (evt as CustomEvent).detail as { sessionId?: string; appName?: string } | undefined
+      if (!detail?.sessionId) return
+      setSid(detail.sessionId)
+      setMsgs((list) => [
+        ...list,
+        {
+          id: makeId(),
+          role: "assistant",
+          text: `App已创建：${detail.appName ?? ""}`,
+          ts: Date.now(),
+        },
+      ])
+    }
+    window.addEventListener("app_created", handleCreated as EventListener)
+    let source: EventSource | undefined
+    try {
+      source = new EventSource(`${base}/events`)
+      source.onopen = () => {
+        setConnected(true)
+        setLastEventAt(Date.now())
+      }
+      source.onerror = () => {
+        setConnected(false)
+      }
+      source.onmessage = (evt) => {
+        setLastEventAt(Date.now())
+        const data = (() => {
+          try {
+            return JSON.parse(evt.data) as EventPayload
+          } catch {
+            return null
+          }
+        })()
+        if (!data) return
+        const payload =
+          (data.payload ?? data) as {
+            type?: string
+            properties?: {
+              part?: {
+                type?: string
+                text?: string
+                sessionID?: string
+                messageID?: string
+              }
+              delta?: string
+            }
+            part?: {
+              type?: string
+              text?: string
+              sessionID?: string
+              messageID?: string
+            }
+            delta?: string
+          }
+        const type = payload.type ?? ""
+        if (type !== "message.part.updated") return
+        const props = payload.properties ?? payload
+        const part = props.part
+        if (!part || part.type !== "text") return
+        const sessionId = part.sessionID
+        if (!sessionId || sessionId !== (sid() || cookieValue("app_session"))) return
+        const messageId = part.messageID
+        if (!messageId) return
+        const delta = props.delta ?? ""
+        setMsgs((list) => {
+          const index = list.findIndex((item) => item.id === messageId)
+          const prev = index >= 0 ? list[index] : undefined
+          const nextText = part.text ?? (prev ? prev.text + delta : delta)
+          if (!nextText) return list
+          if (index >= 0 && prev) {
+            const next = list.slice()
+            next[index] = { ...prev, text: nextText, ts: Date.now() }
+            return next
+          }
+          return [...list, { id: messageId, role: "assistant", text: nextText, ts: Date.now() }]
+        })
+      }
+    } catch {}
+    const heartbeat = setInterval(() => {
+      if (!lastEventAt()) {
+        setConnected(false)
+        return
+      }
+      setConnected(Date.now() - lastEventAt() < 4000)
+    }, 2000)
+    onCleanup(() => {
+      clearInterval(heartbeat)
+      window.removeEventListener("app_created", handleCreated as EventListener)
+      source?.close()
+    })
   })
 
   onCleanup(() => {
@@ -52,10 +296,10 @@ const Sidebar: Component<SidebarProps> = (props) => {
       <div id="12:89" class="flex flex-col h-full" style={`width: ${props.width}px`}>
         <div
           id="12:90"
-          style="border-bottom-style: solid; padding: 1rem 1.5rem; border-color: color-mix( in oklab , #00F0FF 15% , transparent );"
-          class="flex justify-between items-center border-b-[1px] shrink-0"
+          style={`border-bottom-style: solid; padding: ${props.isCollapsed ? '1rem 0' : '1rem 1.5rem'}; border-color: color-mix( in oklab , #00F0FF 15% , transparent );`}
+          class={`flex ${props.isCollapsed ? 'flex-col gap-y-4 justify-center' : 'justify-between'} items-center border-b-[1px] shrink-0`}
         >
-          <div id="12:91" class="flex items-center gap-x-3">
+          <div id="12:91" class={`flex items-center ${props.isCollapsed ? 'justify-center' : 'gap-x-3'}`}>
             <div id="12:92" class="bg-transparent flex justify-center items-center w-6 h-6">
               <iconify-icon
                 id="12:93"
@@ -64,129 +308,97 @@ const Sidebar: Component<SidebarProps> = (props) => {
                 class="text-xl"
               ></iconify-icon>
             </div>
-            <h2 id="12:94" style="color: rgba(232, 240, 255, 1);" class="text-lg font-semibold">
-              极客开发区
-            </h2>
+            <Show when={!props.isCollapsed}>
+              <h2 id="12:94" style="color: rgba(232, 240, 255, 1);" class="text-lg font-semibold">
+                极客开发区
+              </h2>
+            </Show>
           </div>
-          <div
-            id="12:95"
-            style="background-color: rgba(0, 255, 159, 1); box-shadow: 0 0 rgba(0, 0, 0, 0), 0 0 rgba(0, 0, 0, 0), 0 0 rgba(0, 0, 0, 0), 0 0 rgba(0, 0, 0, 0), 0 0 8px rgba(0, 255, 159, 0.5);"
-            class="w-3 h-3 rounded-full"
-          ></div>
+          <div class={`flex items-center ${props.isCollapsed ? 'flex-col gap-y-3' : 'gap-x-3'}`}>
+            <div
+              id="12:95"
+              style={{
+                "background-color": connected() ? "rgba(0, 255, 159, 1)" : "rgba(255, 90, 90, 1)",
+                "box-shadow": connected()
+                  ? "0 0 rgba(0, 0, 0, 0), 0 0 rgba(0, 0, 0, 0), 0 0 rgba(0, 0, 0, 0), 0 0 rgba(0, 0, 0, 0), 0 0 8px rgba(0, 255, 159, 0.5)"
+                  : "0 0 rgba(0, 0, 0, 0), 0 0 rgba(0, 0, 0, 0), 0 0 rgba(0, 0, 0, 0), 0 0 rgba(0, 0, 0, 0), 0 0 8px rgba(255, 90, 90, 0.5)",
+              }}
+              class="w-3 h-3 rounded-full"
+            ></div>
+            <button
+              onClick={props.onToggle}
+              class="hover:text-[#00F0FF] text-[#5C6876] transition-colors flex items-center justify-center"
+            >
+              <iconify-icon
+                icon={props.isCollapsed ? "lucide:chevrons-right" : "lucide:chevrons-left"}
+                class="text-lg"
+              ></iconify-icon>
+            </button>
+          </div>
         </div>
 
-        <div id="12:96" class="overflow-y-auto grow shrink" style="padding: 1rem 1.5rem;">
-          <div id="12:97" style="margin-top: 0;" class="flex gap-x-3 mb-4">
-            <div
-              id="12:98"
-              style="background-color: color-mix( in oklab , #00F0FF 20% , transparent ); border-color: color-mix( in oklab , #00F0FF 40% , transparent );"
-              class="flex shrink-0 justify-center items-center w-8 h-8 border-[1px] border-solid rounded-full"
-            >
-              <div id="12:99" class="bg-transparent flex justify-center items-center w-4 h-4">
-                <iconify-icon
-                  id="12:100"
-                  style="color: rgba(0, 240, 255, 1);"
-                  icon="lucide:brain-circuit"
-                  class="text-sm"
-                ></iconify-icon>
-              </div>
-            </div>
-            <div id="12:101" style="flex-basis: 0%;" class="grow shrink">
-              <div
-                id="12:102"
-                style="background-color: color-mix( in oklab , #1A1F3A 90% , transparent ); border-color: color-mix( in oklab , #00F0FF 10% , transparent );"
-                class="p-4 border-[1px] border-solid rounded-2xl"
-              >
-                <p id="12:103" style="color: rgba(232, 240, 255, 1);" class="text-sm">
-                  你好！我是你的AI设计助手。我可以帮你创建文档、生成界面设计稿，或者分析你的设计需求。你想要我帮你做什么？
-                </p>
-              </div>
-              <span id="12:104" style="color: rgba(92, 104, 118, 1);" class="text-xs block mt-1 ml-4">
-                刚刚
-              </span>
-            </div>
+        <Show when={!props.isCollapsed}>
+          <div id="12:96" class="overflow-y-auto grow shrink" style="padding: 1rem 1.5rem;">
+            <For each={msgs()}>
+              {(msg) => {
+                const isUser = msg.role === "user"
+                return (
+                  <div class={`flex gap-x-3 mb-4 ${isUser ? "justify-end" : ""}`}>
+                    <Show when={!isUser}>
+                      <div
+                        style="background-color: color-mix( in oklab , #00F0FF 20% , transparent ); border-color: color-mix( in oklab , #00F0FF 40% , transparent );"
+                        class="flex shrink-0 justify-center items-center w-8 h-8 border-[1px] border-solid rounded-full"
+                      >
+                        <div class="bg-transparent flex justify-center items-center w-4 h-4">
+                          <iconify-icon
+                            style="color: rgba(0, 240, 255, 1);"
+                            icon="lucide:brain-circuit"
+                            class="text-sm"
+                          ></iconify-icon>
+                        </div>
+                      </div>
+                    </Show>
+                    <div style="flex-basis: 0%;" class={`${isUser ? "max-w-[80%]" : "grow shrink"}`}>
+                      <div
+                        style={{
+                          "background-color": isUser
+                            ? "color-mix( in oklab , #00F0FF 15% , transparent )"
+                            : "color-mix( in oklab , #1A1F3A 90% , transparent )",
+                          "border-color": isUser
+                            ? "color-mix( in oklab , #00F0FF 30% , transparent )"
+                            : "color-mix( in oklab , #00F0FF 10% , transparent )",
+                          "margin-left": isUser ? "auto" : undefined,
+                        }}
+                        class="p-4 border-[1px] border-solid rounded-2xl"
+                      >
+                        <p style="color: rgba(232, 240, 255, 1);" class="text-sm whitespace-pre-wrap">
+                          {msg.text}
+                        </p>
+                      </div>
+                      <span
+                        style="color: rgba(92, 104, 118, 1);"
+                        class={`text-xs block mt-1 ${isUser ? "text-right mr-4" : "ml-4"}`}
+                      >
+                        {formatTime(msg.ts)}
+                      </span>
+                    </div>
+                    <Show when={isUser}>
+                      <div
+                        style="background-color: color-mix( in oklab , #00F0FF 10% , transparent );"
+                        class="flex shrink-0 justify-center items-center w-8 h-8 rounded-full"
+                      >
+                        <img
+                          alt="User profile picture with friendly expression"
+                          src="https://static.paraflowcontent.com/public/resource/image/c0613487-2f97-4453-8e91-a50f025afcec.jpeg"
+                          class="w-full h-full object-cover rounded-full"
+                        />
+                      </div>
+                    </Show>
+                  </div>
+                )
+              }}
+            </For>
           </div>
-
-          <div id="12:105" style="margin-top: 0;" class="flex justify-end gap-x-3 mb-4">
-            <div id="12:106" style="flex-basis: 0%; max-width: 80%;" class="grow shrink">
-              <div
-                id="12:107"
-                style="background-color: color-mix( in oklab , #00F0FF 15% , transparent ); margin-left: auto; border-color: color-mix( in oklab , #00F0FF 30% , transparent );"
-                class="p-4 border-[1px] border-solid rounded-2xl"
-              >
-                <p id="12:108" style="color: rgba(232, 240, 255, 1);" class="text-sm">
-                  帮我设计一个用户注册页面，风格要和现在的界面保持一致
-                </p>
-              </div>
-              <span id="12:109" style="color: rgba(92, 104, 118, 1);" class="text-xs text-right block mt-1 mr-4">
-                2分钟前
-              </span>
-            </div>
-            <div
-              id="12:110"
-              style="background-color: color-mix( in oklab , #00F0FF 10% , transparent );"
-              class="flex shrink-0 justify-center items-center w-8 h-8 rounded-full"
-            >
-              <img
-                id="12:111"
-                alt="User profile picture with friendly expression"
-                src="https://static.paraflowcontent.com/public/resource/image/c0613487-2f97-4453-8e91-a50f025afcec.jpeg"
-                class="w-full h-full object-cover rounded-full"
-              />
-            </div>
-          </div>
-
-          <div id="12:112" class="flex gap-x-3">
-            <div
-              id="12:113"
-              style="background-color: color-mix( in oklab , #00F0FF 20% , transparent ); border-color: color-mix( in oklab , #00F0FF 40% , transparent );"
-              class="flex shrink-0 justify-center items-center w-8 h-8 border-[1px] border-solid rounded-full"
-            >
-              <div id="12:114" class="bg-transparent flex justify-center items-center w-4 h-4">
-                <iconify-icon
-                  id="12:115"
-                  style="color: rgba(0, 240, 255, 1);"
-                  icon="lucide:brain-circuit"
-                  class="text-sm"
-                ></iconify-icon>
-              </div>
-            </div>
-            <div id="12:116" style="flex-basis: 0%;" class="grow shrink">
-              <div
-                id="12:117"
-                style="background-color: color-mix( in oklab , #1A1F3A 90% , transparent ); border-color: color-mix( in oklab , #00F0FF 10% , transparent );"
-                class="p-4 border-[1px] border-solid rounded-2xl"
-              >
-                <p id="12:118" style="color: rgba(232, 240, 255, 1);" class="text-sm mb-3">
-                  好的！我为你设计了一个注册页面，保持了赛博朋克风格。页面包含了用户名、邮箱、密码输入框和注册按钮。
-                </p>
-                <div id="12:119" class="flex gap-x-2">
-                  <button
-                    id="12:120"
-                    class="hover:shadow-[0_0_20px_rgba(0,240,255,0.4)] text-xs flex items-center rounded-lg"
-                    style="background-color: rgba(0, 240, 255, 1); color: rgba(10, 14, 26, 1); padding: 0.5rem 0.75rem;"
-                  >
-                    <span id="12:121" class="whitespace-nowrap font-semibold">
-                      添加到画布
-                    </span>
-                  </button>
-                  <button
-                    id="12:122"
-                    class="hover:bg-[#00F0FF]/10 hover:shadow-[0_0_15px_rgba(0,240,255,0.3)] text-xs bg-transparent flex items-center border-[1px] border-solid rounded-lg"
-                    style="color: rgba(0, 240, 255, 1); padding: 0.5rem 0.75rem; border-color: color-mix( in oklab , #00F0FF 60% , transparent );"
-                  >
-                    <span id="12:123" class="whitespace-nowrap">
-                      预览
-                    </span>
-                  </button>
-                </div>
-              </div>
-              <span id="12:124" style="color: rgba(92, 104, 118, 1);" class="text-xs block mt-1 ml-4">
-                1分钟前
-              </span>
-            </div>
-          </div>
-        </div>
 
         <div
           ref={resizerRef}
@@ -206,6 +418,13 @@ const Sidebar: Component<SidebarProps> = (props) => {
               style="color: rgba(232, 240, 255, 1); resize: none;"
               placeholder="向AI助手描述你的需求..."
               class="flex-grow w-full bg-transparent outline-none text-sm"
+              value={text()}
+              onInput={(e) => setText(e.currentTarget.value)}
+              onKeyDown={(e) => {
+                if (e.key !== "Enter" || e.shiftKey) return
+                e.preventDefault()
+                send()
+              }}
             ></textarea>
             <div class="flex justify-between items-center mt-3">
               <span class="text-xs" style="color: rgba(92, 104, 118, 1);">
@@ -213,8 +432,9 @@ const Sidebar: Component<SidebarProps> = (props) => {
               </span>
               <button
                 id="12:128"
-                class="hover:shadow-[0_0_20px_rgba(0,240,255,0.4)] flex justify-center items-center w-8 h-8 rounded-lg"
+                class={`hover:shadow-[0_0_20px_rgba(0,240,255,0.4)] flex justify-center items-center w-8 h-8 rounded-lg ${busy() ? "opacity-60 cursor-not-allowed" : ""}`}
                 style="background-color: rgba(0, 240, 255, 1);"
+                onClick={() => send()}
               >
                 <div id="12:129" class="bg-transparent flex justify-center items-center w-4 h-4">
                   <iconify-icon
@@ -228,6 +448,7 @@ const Sidebar: Component<SidebarProps> = (props) => {
             </div>
           </div>
         </div>
+        </Show>
       </div>
     </aside>
   )

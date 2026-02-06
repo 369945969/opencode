@@ -77,7 +77,7 @@ const Header: Component<HeaderProps> = (props) => {
               }}
             >
               <span id="14:11" class="font-semibold">
-                工作区
+                Apps
               </span>
             </a>
             <a
@@ -98,7 +98,7 @@ const Header: Component<HeaderProps> = (props) => {
         </div>
         <div id="14:16" class="flex items-center gap-x-4">
           <div id="14:26" class="flex items-center gap-x-2 relative" ref={dropdownRef}>
-            <button id="14:27-button" onClick={toggleDropdown} class="bg-transparent p-0 border-0 cursor-pointer">
+            <button id="14:27-button" onClick={() => window.location.href = '/login'} class="bg-transparent p-0 border-0 cursor-pointer">
               <img
                 id="14:27"
                 style="border-color: color-mix( in oklab , #00F0FF 40% , transparent );"
@@ -107,23 +107,36 @@ const Header: Component<HeaderProps> = (props) => {
                 class="w-9 h-9 object-cover border-[2px] border-solid rounded-full"
               />
             </button>
-            <div id="14:28" class="bg-transparent flex justify-center items-center w-4 h-4">
+            <button 
+              onClick={toggleDropdown}
+              class="bg-transparent p-0 border-0 cursor-pointer flex justify-center items-center w-6 h-6 hover:bg-[#00F0FF]/10 rounded-full transition-colors"
+            >
               <iconify-icon
                 id="14:29"
                 style="color: rgba(0, 240, 255, 1);"
                 icon="lucide:chevron-down"
                 class="text-sm"
               ></iconify-icon>
-            </div>
+            </button>
             {showDropdown() && (
               <div
                 id="dropdown-menu"
-                class="absolute top-full right-0 mt-2 w-48 rounded-lg shadow-lg z-50"
-                style="background-color: rgba(26, 31, 58, 0.95); border: 1px solid color-mix(in oklab, #00F0FF 30%, transparent);"
+                class="absolute top-full right-0 mt-2 w-48 rounded-lg shadow-lg z-50 overflow-hidden"
+                style="background-color: rgba(26, 31, 58, 0.95); border: 1px solid color-mix(in oklab, #00F0FF 30%, transparent); backdrop-filter: blur(10px);"
               >
                 <button
+                  class="w-full flex items-center gap-x-2 px-4 py-3 text-left hover:bg-[#00F0FF]/10 transition-colors border-b border-[#00F0FF]/10"
+                  style="color: rgba(232, 240, 255, 1);"
+                >
+                  <iconify-icon
+                    icon="lucide:settings"
+                    class="text-base text-[#00F0FF]"
+                  ></iconify-icon>
+                  <span class="text-sm">设置</span>
+                </button>
+                <button
                   onClick={handleLogout}
-                  class="w-full flex items-center gap-x-2 px-4 py-3 text-left hover:bg-[#00F0FF]/10 rounded-lg transition-colors"
+                  class="w-full flex items-center gap-x-2 px-4 py-3 text-left hover:bg-[#00F0FF]/10 transition-colors"
                   style="color: rgba(232, 240, 255, 1);"
                 >
                   <iconify-icon

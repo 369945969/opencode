@@ -19,6 +19,7 @@ declare module "solid-js" {
 
 function App() {
   const [sidebarWidth, setSidebarWidth] = createSignal(window.innerWidth * 0.36)
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = createSignal(false)
   const [currentView, setCurrentView] = createSignal("home")
   const [selectedDoc, setSelectedDoc] = createSignal<any>(null)
   let isResizing = false
@@ -33,7 +34,7 @@ function App() {
 
   const handleMouseMove = (e: MouseEvent) => {
     if (!isResizing) return
-    const newWidth = window.innerWidth - e.clientX
+    const newWidth = e.clientX
     // Min 250px, Max 80% screen
     if (newWidth > 250 && newWidth < window.innerWidth * 0.8) {
       setSidebarWidth(newWidth)
@@ -64,6 +65,21 @@ function App() {
         style="background: linear-gradient(135deg, rgba(10, 14, 26, 1) 0%, rgba(26, 19, 50, 1) 50%, rgba(13, 27, 42, 1) 100%), radial-gradient(circle at 20% 30%, rgba(0, 240, 255, 0.101961) 0%, transparent 50%), radial-gradient(circle at 80% 70%, rgba(255, 0, 110, 0.101961) 0%, transparent 50%);"
         class="flex w-full grow overflow-hidden"
       >
+        <Show when={currentView() !== "project-list"}>
+          <Sidebar 
+            width={isSidebarCollapsed() ? 60 : sidebarWidth()} 
+            isCollapsed={isSidebarCollapsed()}
+            onToggle={() => setIsSidebarCollapsed(!isSidebarCollapsed())}
+          />
+          <Show when={!isSidebarCollapsed()}>
+            <div
+              class="w-1 hover:bg-[#00F0FF] cursor-col-resize transition-colors duration-150 flex-shrink-0"
+              style="background-color: rgba(0, 240, 255, 0.05);"
+              onMouseDown={startResizing}
+            />
+          </Show>
+        </Show>
+
         <Show when={currentView() === "home"}>
           <Home onNavigate={(page) => setCurrentView(page)} />
         </Show>
@@ -91,16 +107,6 @@ function App() {
 
         <Show when={currentView() === "style-comparison"}>
           <StyleComparison onBack={() => setCurrentView("workspace")} />
-        </Show>
-
-        <Show when={currentView() !== "project-list"}>
-          <div
-            class="w-1 hover:bg-[#00F0FF] cursor-col-resize transition-colors duration-150 flex-shrink-0"
-            style="background-color: rgba(0, 240, 255, 0.05);"
-            onMouseDown={startResizing}
-          />
-
-          <Sidebar width={sidebarWidth()} />
         </Show>
       </div>
     </div>

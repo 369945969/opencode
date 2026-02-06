@@ -12,6 +12,3 @@ if [ -n "$PROXY_PID" ]; then
   echo "Port $PROXY_PORT is occupied by PID $PROXY_PID. Killing it..."
   kill -9 $PROXY_PID
 fi
-
-bun run dev &
-bun run proxy

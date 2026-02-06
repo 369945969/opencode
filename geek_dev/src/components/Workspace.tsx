@@ -473,8 +473,13 @@ const Workspace: Component<WorkspaceProps> = (props) => {
               class="hover:bg-[#00F0FF]/15 hover:shadow-[0_0_12px_rgba(0,240,255,0.25)] flex justify-center items-center w-10 h-10 rounded-lg text-[#00F0FF]"
               style="background-color: color-mix( in oklab , #1A1F3A 90% , transparent );"
             >
-              <iconify-icon icon="lucide:arrow-left" class="text-base"></iconify-icon>
+              <iconify-icon icon="lucide:arrow-left" class="text-xl"></iconify-icon>
             </button>
+            <Show when={currentView() === "folder" && activeFolder() === "wireframe"}>
+              <h1 style="color: rgba(232, 240, 255, 1);" class="text-2xl font-bold ml-2">
+                交互流程图
+              </h1>
+            </Show>
           </Show>
           <Show when={isCanvasOrDesign()}>
             <button
@@ -865,36 +870,40 @@ const Workspace: Component<WorkspaceProps> = (props) => {
 
         {/* Wireframe Folder View */}
         <Show when={currentView() === "folder" && activeFolder() === "wireframe"}>
-          <div class="w-full h-full p-8 overflow-y-auto">
-            <div class="mb-8">
-              <h2 class="text-3xl font-bold text-[#E8F0FF] mb-2">交互流程图</h2>
-              <p class="text-[#8A97AA]">页面跳转与交互逻辑</p>
-            </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              <For each={mockWireframeFiles}>
-                {(file) => (
-                  <div
-                    onClick={() => openFile(file)}
-                    class="group cursor-pointer p-4 rounded-xl border border-[#FF006E]/10 bg-[#1A1F3A]/90 hover:border-[#FF006E]/50 hover:bg-[#FF006E]/5 transition-all flex flex-col gap-4"
-                  >
-                    <div class="flex items-center gap-3">
-                      <div class="w-10 h-10 rounded-lg bg-[#FF006E]/10 flex items-center justify-center text-[#FF006E]">
-                        <iconify-icon icon="lucide:workflow" class="text-xl"></iconify-icon>
+          <div
+            style="background: linear-gradient(135deg, rgba(10, 14, 26, 1) 0%, rgba(26, 19, 50, 1) 50%, rgba(13, 27, 42, 1) 100%), radial-gradient(circle at 20% 30%, rgba(0, 240, 255, 0.101961) 0%, transparent 50%), radial-gradient(circle at 80% 70%, rgba(255, 0, 110, 0.101961) 0%, transparent 50%);"
+            class="flex grow min-w-0 h-full overflow-y-auto"
+          >
+            <main
+              style="flex-basis: 0%; padding: 1.5rem 2rem;"
+              class="overflow-x-hidden flex flex-col grow shrink"
+            >
+              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mt-4">
+                <For each={mockWireframeFiles}>
+                  {(file) => (
+                    <div
+                      onClick={() => openFile(file)}
+                      class="group cursor-pointer p-4 rounded-xl border border-[#FF006E]/10 bg-[#1A1F3A]/90 hover:border-[#FF006E]/50 hover:bg-[#FF006E]/5 transition-all flex flex-col gap-4"
+                    >
+                      <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-lg bg-[#FF006E]/10 flex items-center justify-center text-[#FF006E]">
+                          <iconify-icon icon="lucide:workflow" class="text-xl"></iconify-icon>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                          <h3 class="text-[#E8F0FF] font-medium truncate">{file.filename}</h3>
+                          <p class="text-[#8A97AA] text-xs">{file.lastModified}</p>
+                        </div>
                       </div>
-                      <div class="flex-1 min-w-0">
-                        <h3 class="text-[#E8F0FF] font-medium truncate">{file.filename}</h3>
-                        <p class="text-[#8A97AA] text-xs">{file.lastModified}</p>
+                      <div class="h-32 bg-[#141829] rounded-lg p-3 overflow-hidden opacity-60 group-hover:opacity-100 transition-opacity">
+                        <div class="w-full h-full overflow-hidden text-[10px] font-mono text-[#8A97AA] leading-tight whitespace-pre-wrap">
+                          {file.content}
+                        </div>
                       </div>
                     </div>
-                    <div class="h-32 bg-[#141829] rounded-lg p-3 overflow-hidden opacity-60 group-hover:opacity-100 transition-opacity">
-                      <div class="w-full h-full overflow-hidden text-[10px] font-mono text-[#8A97AA] leading-tight whitespace-pre-wrap">
-                        {file.content}
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </For>
-            </div>
+                  )}
+                </For>
+              </div>
+            </main>
           </div>
         </Show>
 
@@ -937,16 +946,39 @@ const Workspace: Component<WorkspaceProps> = (props) => {
               </Show>
 
               <Show when={activeFile().type === "flowchart"}>
-                <div class="w-full h-full bg-[#141829] relative overflow-hidden">
-                  <iframe 
-                    srcdoc={getMermaidHtml(activeFile().content)} 
-                    class="w-full h-full border-none" 
-                    title="Flowchart" 
-                  />
-                  <div class="absolute bottom-4 right-4 p-2 bg-[#1A1F3A]/80 backdrop-blur rounded-lg border border-[#00F0FF]/20 text-[#00F0FF] text-xs flex items-center gap-2">
-                    <iconify-icon icon="simple-icons:mermaid"></iconify-icon>
-                    <span>Mermaid Renderer</span>
-                  </div>
+                <div
+                  style="background: linear-gradient(135deg, rgba(10, 14, 26, 1) 0%, rgba(26, 19, 50, 1) 50%, rgba(13, 27, 42, 1) 100%), radial-gradient(circle at 20% 30%, rgba(0, 240, 255, 0.101961) 0%, transparent 50%), radial-gradient(circle at 80% 70%, rgba(255, 0, 110, 0.101961) 0%, transparent 50%);"
+                  class="flex grow min-w-0 h-full overflow-y-auto"
+                >
+                  <main
+                    style="flex-basis: 0%; padding: 1.5rem 2rem;"
+                    class="overflow-x-hidden flex flex-col grow shrink"
+                  >
+                    <div class="flex justify-between items-center mb-8">
+                      <div class="flex items-center gap-y-4 gap-x-4">
+                        <button 
+                          onClick={() => setActiveFile(null)}
+                          class="hover:bg-[#00F0FF]/10 p-2 rounded-lg transition-colors text-[#00F0FF]"
+                        >
+                          <iconify-icon icon="lucide:arrow-left" class="text-xl"></iconify-icon>
+                        </button>
+                        <h1 style="color: rgba(232, 240, 255, 1);" class="text-2xl font-bold">
+                          交互流程图
+                        </h1>
+                      </div>
+                    </div>
+                    <div class="w-full flex-1 bg-[#141829] relative overflow-hidden rounded-xl border border-[#00F0FF]/20 min-h-[500px]">
+                      <iframe 
+                        srcdoc={getMermaidHtml(activeFile().content)} 
+                        class="w-full h-full border-none" 
+                        title="Flowchart" 
+                      />
+                      <div class="absolute bottom-4 right-4 p-2 bg-[#1A1F3A]/80 backdrop-blur rounded-lg border border-[#00F0FF]/20 text-[#00F0FF] text-xs flex items-center gap-2">
+                        <iconify-icon icon="simple-icons:mermaid"></iconify-icon>
+                        <span>Mermaid Renderer</span>
+                      </div>
+                    </div>
+                  </main>
                 </div>
               </Show>
 

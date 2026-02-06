@@ -29,13 +29,6 @@ const StyleComparison: Component<StyleComparisonProps> = (props) => {
             <h1 id="16:34" style="color: rgba(232, 240, 255, 1);" class="text-2xl font-bold">
               风格选择对比
             </h1>
-            <div
-              id="16:35"
-              style="background-color: color-mix( in oklab , #00F0FF 15% , transparent ); color: rgba(0, 240, 255, 1); padding: 0.25rem 0.75rem; border-color: color-mix( in oklab , #00F0FF 30% , transparent );"
-              class="text-xs border-[1px] border-solid rounded-lg"
-            >
-              AI生成的设计方案
-            </div>
           </div>
         </div>
 
