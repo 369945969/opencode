@@ -1,4 +1,4 @@
-import { createSignal, onCleanup, Show } from "solid-js"
+import { createEffect, createSignal, onCleanup, Show } from "solid-js"
 import "./App.css"
 import Header from "./components/Header"
 import Sidebar from "./components/Sidebar"
@@ -17,17 +17,38 @@ declare module "solid-js" {
   }
 }
 
-const base = import.meta.env.VITE_PROXY_URL ?? "http://localhost:4097"
+const cookieValue = (key: string) => {
+  const source = document.cookie || ""
+  const list = source.split(";").map((part) => part.trim())
+  for (const item of list) {
+    if (!item.startsWith(`${key}=`)) continue
+    return decodeURIComponent(item.slice(key.length + 1))
+  }
+  return ""
+}
+
+const setCookie = (key: string, value: string) => {
+  document.cookie = `${key}=${encodeURIComponent(value)}; path=/`
+}
 
 function App() {
   const [sidebarWidth, setSidebarWidth] = createSignal(window.innerWidth * 0.36)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = createSignal(false)
-  const [currentView, setCurrentView] = createSignal("home")
+  const [currentView, setCurrentView] = createSignal(cookieValue("app_name") ? "workspace" : "home")
   const [selectedDoc, setSelectedDoc] = createSignal<any>(null)
   const [transitioning, setTransitioning] = createSignal(false)
   const [transitionTitle, setTransitionTitle] = createSignal("Analyzing Input...")
-  const [projectTitle, setProjectTitle] = createSignal("")
+  const [projectTitle, setProjectTitle] = createSignal(cookieValue("app_name") || "")
   let isResizing = false
+  createEffect(() => {
+    if (!transitioning()) return
+    const timer = window.setTimeout(() => {
+      if (!transitioning()) return
+      setTransitioning(false)
+      if (currentView() === "home") setCurrentView("workspace")
+    }, 5000)
+    onCleanup(() => window.clearTimeout(timer))
+  })
 
   const handleChatStart = async (text: string): Promise<void> => {
     if (currentView() !== "home") return
@@ -39,6 +60,7 @@ function App() {
     
     setTransitionTitle(`Project: ${title}`)
     setProjectTitle(title)
+    setCookie("app_name", title)
 
     return new Promise((resolve) => {
       setTimeout(() => {

@@ -236,7 +236,6 @@ const Workspace: Component<WorkspaceProps> = (props) => {
 
   // Preview Modal State
   const [previewFile, setPreviewFile] = createSignal<any | null>(null)
-  const [isInspectorActive, setIsInspectorActive] = createSignal(true)
   const [selectedHtml, setSelectedHtml] = createSignal<string | null>(null)
 
   onMount(() => {
@@ -800,7 +799,6 @@ const Workspace: Component<WorkspaceProps> = (props) => {
                           onClick={(e) => {
                              e.stopPropagation()
                              setPreviewFile(file)
-                             setIsInspectorActive(true)
                           }}
                           class="group cursor-pointer relative w-full aspect-[4/3] rounded-2xl border border-[#B026FF]/20 bg-[#1A1F3A] hover:border-[#B026FF]/60 hover:shadow-[0_0_30px_rgba(176,38,255,0.3)] hover:scale-105 transition-all duration-300"
                         >

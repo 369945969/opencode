@@ -1,11 +1,11 @@
 import type { Component } from "solid-js"
-import { Show, createSignal, onMount } from "solid-js"
+import { createSignal, onMount } from "solid-js"
 
 interface HomeProps {
   onNavigate: (page: string) => void
 }
 
-const Home: Component<HomeProps> = (props) => {
+const Home: Component<HomeProps> = () => {
   const base = import.meta.env.VITE_PROXY_URL ?? "http://localhost:4097"
   const [creating, setCreating] = createSignal(false)
 

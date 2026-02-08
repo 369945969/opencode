@@ -65,22 +65,6 @@ const Header: Component<HeaderProps> = (props) => {
           </div>
           <div id="14:9" class="flex items-center gap-x-6">
             <a
-              id="14:10"
-              class="hover:shadow-[0_0_8px_rgba(0,240,255,0.2)] flex items-center gap-x-2 rounded-lg cursor-pointer"
-              style={{
-                color: props.currentView === "workspace" ? "#00F0FF" : "rgba(0, 240, 255, 1)",
-                padding: "0.5rem 0.75rem",
-              }}
-              onClick={(e) => {
-                e.preventDefault()
-                props.onNavigate?.("workspace")
-              }}
-            >
-              <span id="14:11" class="font-semibold">
-                Apps
-              </span>
-            </a>
-            <a
               id="14:12"
               class="hover:text-[#00F0FF] hover:shadow-[0_0_8px_rgba(0,240,255,0.2)] flex items-center gap-x-2 rounded-lg cursor-pointer"
               style={{

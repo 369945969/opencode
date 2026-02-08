@@ -57,7 +57,7 @@ const defaults = {
   pmMaxBytes: Number(process.env.PM_MAX_BYTES ?? "1048576"),
   workspace: process.env.OPENCODE_WORKSPACE ?? path.join(process.cwd(), "workspace"),
 }
-const defaultProviderID = process.env.OPENCODE_DEFAULT_PROVIDER_ID ?? "nvidia"
+const defaultProviderID = process.env.OPENCODE_DEFAULT_PROVIDER_ID ?? "local"
 const defaultModelID = process.env.OPENCODE_DEFAULT_MODEL_ID ?? "glm-4.7"
 
 const text = new TextEncoder()
@@ -162,23 +162,6 @@ const logLine = async (filePath: string, line: string) => {
 const logWeb = async (line: string) => logLine(webLogPath, line)
 const logApp = async (line: string) => logLine(appLogPath, line)
 
-const readBodySnippet = async (req: Request, limit = 2000) => {
-  if (req.method === "GET" || req.method === "HEAD") return ""
-  const clone = req.clone()
-  const textBody = await clone.text().catch(() => "")
-  if (!textBody) return ""
-  if (textBody.length <= limit) return textBody
-  return textBody.slice(0, limit) + "..."
-}
-
-const readResponseSnippet = async (res: Response, limit = 2000) => {
-  const clone = res.clone()
-  const textBody = await clone.text().catch(() => "")
-  if (!textBody) return ""
-  if (textBody.length <= limit) return textBody
-  return textBody.slice(0, limit) + "..."
-}
-
 const createLoggedStream = (res: Response, label: string) => {
   if (!res.body) {
     void logApp(`${stamp()} ${label} EMPTY`)
@@ -202,24 +185,6 @@ const createLoggedStream = (res: Response, label: string) => {
       reader.cancel().catch(() => {})
     },
   })
-}
-
-const consumeAndLogStream = async (res: Response, label: string) => {
-  if (!res.body) {
-    await logApp(`${stamp()} ${label} EMPTY`)
-    return
-  }
-  const reader = res.body.getReader()
-  const decoder = new TextDecoder()
-  for (;;) {
-    const result = await reader.read().catch(() => null)
-    if (!result || result.done) {
-      await logApp(`${stamp()} ${label} DONE`)
-      return
-    }
-    const chunkText = decoder.decode(result.value, { stream: true })
-    if (chunkText) await logApp(`${stamp()} ${label} ${chunkText}`)
-  }
 }
 
 const baseHeaders = {
@@ -402,7 +367,7 @@ export const createProxy = (input: ProxyConfig = {}) => {
     await logApp(`${stamp()} APP_CREATE_REQ ${JSON.stringify({ appName })}`)
     const cookies = parseCookies(req.headers.get("cookie") ?? "")
     const user = cookies.user ?? "default"
-    const userRow = await ensureUser(user)
+    await ensureUser(user)
     const uuid = crypto.randomUUID()
     const seed = `ses_${uuid}`
     const perm = [

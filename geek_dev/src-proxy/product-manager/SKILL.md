@@ -61,7 +61,18 @@ Generate high-fidelity HTML for each User Story under `[project_name]/Screen&Pro
 **CRITICAL**: Generate prototypes sequentially. **Automatically proceed** to the next prototype without asking the user until all screens are complete.
 
 - **Technical Requirements**: (Same as before)
-- **Action**: After all prototypes are generated, conclude with a summary.
+- **Action**: Immediately proceed to Phase 5 after all prototypes are generated.
+
+### Phase 5: Final Verification & Handover
+**Mandatory Step**: You must verify the completeness of your work before handing over to the user.
+
+1.  **Directory Check**: Run a file listing command (e.g., `ls -R` or `tree`) to inspect the generated `[project_name]` directory.
+2.  **Completeness Validation**: Ensure the following structure exists and is populated:
+    - `[project_name]/Global&Context/`: Contains `PRD.md`, `Architecture.md`.
+    - `[project_name]/Feature&Plan/`: Contains all User Story Markdown files.
+    - `[project_name]/Style&Guide/`: Contains `StyleGuide.md`, `FlowLogic.md`.
+    - `[project_name]/Screen&Prototype/`: Contains all `.html` prototypes.
+3.  **Final Report**: Output a summary table listing all generated files and their status (✅ Created / ❌ Missing). If any critical file is missing, **create it immediately** before finishing.
 
 ## Execution Guidelines
 

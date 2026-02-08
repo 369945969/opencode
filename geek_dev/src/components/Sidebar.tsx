@@ -21,6 +21,7 @@ type Msg = {
   thinkDuration?: number
   toolStatus?: string
   filePaths?: string[]
+  rawText?: string
 }
 
 interface QuestionOption {
@@ -48,6 +49,15 @@ interface QuestionPayload {
 type EventPayload = {
   type?: string
   file?: string
+  info?: {
+    id?: string
+    role?: string
+    sessionID?: string
+    time?: {
+      created?: number
+      completed?: number
+    }
+  }
   payload?: {
     type?: string
     properties?: {
@@ -55,6 +65,10 @@ type EventPayload = {
         id?: string
         role?: string
         sessionID?: string
+        time?: {
+          created?: number
+          completed?: number
+        }
       }
       part?: {
         type?: string
@@ -80,6 +94,10 @@ type EventPayload = {
       id?: string
       role?: string
       sessionID?: string
+      time?: {
+        created?: number
+        completed?: number
+      }
     }
     part?: {
       type?: string
@@ -129,11 +147,6 @@ type EventPayload = {
   }
   delta?: string
   connected?: boolean
-  info?: {
-    id?: string
-    role?: string
-    sessionID?: string
-  }
   status?: {
     type?: string
     message?: string
@@ -165,17 +178,24 @@ const Sidebar: Component<SidebarProps> = (props) => {
   const [sid, setSid] = createSignal("")
   const [busy, setBusy] = createSignal(false)
   const [streaming, setStreaming] = createSignal(false)
+  const [showHistory, setShowHistory] = createSignal(false)
+  const [history, setHistory] = createSignal<{ id: string; title: string; ts: number }[]>([])
+
   const [questionState, setQuestionState] = createStore<{
     activeQuestion: QuestionPayload | null
-    answers: Record<number, { selected: string[]; customInputs: Record<string, string> }>
+    answers: Record<number, { selected: string[]; customInput: string }>
   }>({
     activeQuestion: null,
     answers: {},
   })
+  const [questionIndex, setQuestionIndex] = createSignal(0)
 
   let busyTimer: number | undefined
   let lastRetryKey = ""
   const userMessageIds = new Set<string>()
+  const assistantMessageIds = new Set<string>()
+  const pendingText = new Map<string, string>()
+  const pendingReasoning = new Map<string, string>()
   let messagesRef: HTMLDivElement | undefined
   let resizerRef: HTMLDivElement | undefined
   let textareaRef: HTMLTextAreaElement | undefined
@@ -219,6 +239,71 @@ const Sidebar: Component<SidebarProps> = (props) => {
     return ""
   }
 
+  const setCookie = (key: string, value: string) => {
+    document.cookie = `${key}=${encodeURIComponent(value)}; path=/`
+  }
+
+  const loadHistory = () => {
+    try {
+      const json = cookieValue("chat_history")
+      if (!json) return
+      const list = JSON.parse(json)
+      if (Array.isArray(list)) {
+        setHistory(list)
+      }
+    } catch {}
+  }
+
+  const addToHistory = (id: string, title: string) => {
+    const current = history()
+    const now = Date.now()
+    const existingIndex = current.findIndex((h) => h.id === id)
+    let next = [...current]
+    if (existingIndex >= 0) {
+      next[existingIndex] = { ...next[existingIndex], title, ts: now }
+      // Move to top
+      const item = next.splice(existingIndex, 1)[0]
+      next.unshift(item)
+    } else {
+      next.unshift({ id, title, ts: now })
+    }
+    setHistory(next)
+    setCookie("chat_history", JSON.stringify(next))
+  }
+
+  const handleNewSession = () => {
+    setCookie("app_session", "")
+    setCookie("app_name", "")
+    window.location.reload()
+  }
+
+  const handleSwitchSession = async (id: string, title: string) => {
+    try {
+      await fetch(`${base}/session/${id}/ensure`, {
+        method: "POST",
+      })
+    } catch (e) {
+      console.error("Ensure session error:", e)
+    }
+    setCookie("app_session", id)
+    setCookie("app_name", title)
+    window.location.reload()
+  }
+
+  const deleteHistoryItem = (e: MouseEvent, id: string) => {
+    e.stopPropagation()
+    const next = history().filter((h) => h.id !== id)
+    setHistory(next)
+    setCookie("chat_history", JSON.stringify(next))
+  }
+
+  createEffect(() => {
+    const id = sid()
+    const t = props.title
+    if (id && t && t !== "Analyzing Input..." && t !== "极客开发区") {
+      addToHistory(id, t)
+    }
+  })
 
   const formatDuration = (ms: number) => {
     if (ms < 1000) return `${ms}ms`
@@ -236,12 +321,12 @@ const Sidebar: Component<SidebarProps> = (props) => {
       const think = textValue.slice(start, closeIndex)
       const before = openIndex > 0 ? textValue.slice(0, openIndex) : ""
       const after = textValue.slice(closeIndex + closeTag.length)
-      return { hasThink: true, think, answer: (before + after).trim(), done: true }
+      return { hasThink: true, think, answer: before + after, done: true }
     }
     if (openIndex !== -1) {
       const before = textValue.slice(0, openIndex)
       const think = textValue.slice(openIndex + openTag.length)
-      return { hasThink: true, think, answer: before.trim(), done: false }
+      return { hasThink: true, think, answer: before, done: false }
     }
     return { hasThink: false, think: "", answer: textValue, done: false }
   }
@@ -345,12 +430,12 @@ const Sidebar: Component<SidebarProps> = (props) => {
           {
             id: "error-" + Date.now(),
             role: "assistant",
-            text: "Error: Request timed out after 120 seconds. The model might be busy or the context is too large.",
+            text: "Error: Request timed out after 10 minutes. The model might be busy or the context is too large.",
             ts: Date.now(),
           },
         ])
       }
-    }, 120000)
+    }, 600000)
   }
 
   const toggleOption = (qIndex: number, label: string, multiple: boolean) => {
@@ -368,8 +453,30 @@ const Sidebar: Component<SidebarProps> = (props) => {
     setQuestionState("answers", qIndex, "selected", next)
   }
 
-  const updateCustomInput = (qIndex: number, label: string, value: string) => {
-    setQuestionState("answers", qIndex, "customInputs", label, value)
+  const updateCustomInput = (qIndex: number, value: string) => {
+    setQuestionState("answers", qIndex, "customInput", value)
+  }
+
+  const currentQuestion = () => questionState.activeQuestion?.questions[questionIndex()]
+  const totalQuestions = () => questionState.activeQuestion?.questions.length || 0
+  const isLastQuestion = () => questionIndex() >= totalQuestions() - 1
+
+  const nextQuestion = () => {
+    const q = questionState.activeQuestion
+    if (!q) return
+    const total = q.questions.length
+    const next = questionIndex() + 1
+    if (next >= total) {
+      submitQuestions()
+      return
+    }
+    setQuestionIndex(next)
+  }
+
+  const prevQuestion = () => {
+    const next = questionIndex() - 1
+    if (next < 0) return
+    setQuestionIndex(next)
   }
 
   const submitQuestions = () => {
@@ -386,18 +493,18 @@ const Sidebar: Component<SidebarProps> = (props) => {
         responseText += "*(未选择)*\n"
       } else {
         ans.selected.forEach((label) => {
-          const customInput = ans.customInputs[label]
           responseText += `- **${label}**`
-          if (customInput) {
-            responseText += `: ${customInput}`
-          }
           responseText += "\n"
         })
+      }
+      if (ans.customInput) {
+        responseText += `补充说明：${ans.customInput}\n`
       }
     })
 
     send(responseText)
     setQuestionState({ activeQuestion: null, answers: {} })
+    setQuestionIndex(0)
   }
 
   const stopStream = async () => {
@@ -410,6 +517,7 @@ const Sidebar: Component<SidebarProps> = (props) => {
   }
 
   onMount(() => {
+    loadHistory()
     document.addEventListener("mousemove", doDrag)
     document.addEventListener("mouseup", stopDrag)
     const cookieSession = cookieValue("app_session")
@@ -504,11 +612,12 @@ const Sidebar: Component<SidebarProps> = (props) => {
             batch(() => {
               setQuestionState("activeQuestion", props as QuestionPayload)
               // Initialize answers
-              const initialAnswers: Record<number, { selected: string[]; customInputs: Record<string, string> }> = {}
+              const initialAnswers: Record<number, { selected: string[]; customInput: string }> = {}
               ;(props.questions as QuestionItem[]).forEach((_: any, index: number) => {
-                initialAnswers[index] = { selected: [], customInputs: {} }
+                initialAnswers[index] = { selected: [], customInput: "" }
               })
               setQuestionState("answers", initialAnswers)
+              setQuestionIndex(0)
             })
             // Scroll to bottom to show question
             requestAnimationFrame(() => {
@@ -522,8 +631,104 @@ const Sidebar: Component<SidebarProps> = (props) => {
           const info = props.info
           if (!info?.id || !info?.sessionID) return
           if (info.sessionID !== (sid() || cookieValue("app_session"))) return
+
           if (info.role === "user") {
             userMessageIds.add(info.id)
+            if (pendingText.has(info.id)) pendingText.delete(info.id)
+            if (pendingReasoning.has(info.id)) pendingReasoning.delete(info.id)
+          }
+
+          const messageId = info.id
+          const messageText = (info as any).text
+          const toolStatus =
+            (info as any).status === "pending" || (info as any).status === "running"
+              ? "running"
+              : (info as any).status === "success" || (info as any).status === "done"
+              ? "done"
+              : (info as any).status === "failed" || (info as any).status === "error"
+              ? "error"
+              : undefined
+
+          if (info.role === "assistant") {
+            assistantMessageIds.add(messageId)
+            const pendingRaw = pendingText.get(messageId) ?? ""
+            const pendingThink = pendingReasoning.get(messageId) ?? ""
+            if (pendingRaw) pendingText.delete(messageId)
+            if (pendingThink) pendingReasoning.delete(messageId)
+            if (info.time?.completed) {
+              if (busyTimer) window.clearTimeout(busyTimer)
+              setBusy(false)
+              setStreaming(false)
+            }
+
+            setMsgs((list) => {
+              const index = list.findIndex((item) => item.id === messageId)
+              if (index < 0 && (messageText === undefined || messageText === "") && !pendingRaw) {
+                if (!toolStatus) return list
+              }
+              if (index >= 0) {
+                const prev = list[index]
+                const next = list.slice()
+                const newText =
+                  messageText === "" ? prev.text ?? "" : messageText ?? prev.text ?? ""
+                const nextMsg: Msg = { ...prev, toolStatus, text: newText, ts: Date.now() }
+                if (!messageText && pendingRaw) {
+                  const split = splitThink(pendingRaw)
+                  nextMsg.rawText = pendingRaw
+                  if (split.hasThink) {
+                    nextMsg.thinkText = split.think.trim()
+                    nextMsg.thinkDone = split.done
+                    nextMsg.text = split.answer
+                  } else {
+                    nextMsg.text = split.answer
+                  }
+                }
+                if (pendingThink) {
+                  nextMsg.thinkText = (nextMsg.thinkText || "") + pendingThink
+                }
+                next[index] = nextMsg
+                return next
+              }
+              if (pendingRaw) {
+                const split = splitThink(pendingRaw)
+                return [
+                  ...list,
+                  {
+                    id: messageId,
+                    role: "assistant",
+                    text: split.answer,
+                    ts: Date.now(),
+                    toolStatus,
+                    rawText: pendingRaw,
+                    thinkText: split.hasThink ? split.think.trim() : undefined,
+                    thinkDone: split.hasThink ? split.done : undefined,
+                  },
+                ]
+              }
+              if (pendingThink) {
+                return [
+                  ...list,
+                  {
+                    id: messageId,
+                    role: "assistant",
+                    text: messageText ?? "",
+                    ts: Date.now(),
+                    toolStatus,
+                    thinkText: pendingThink,
+                  },
+                ]
+              }
+              return [
+                ...list,
+                {
+                  id: messageId,
+                  role: "assistant",
+                text: messageText ?? "",
+                  ts: Date.now(),
+                  toolStatus,
+                },
+              ]
+            })
           }
           return
         }
@@ -561,7 +766,34 @@ const Sidebar: Component<SidebarProps> = (props) => {
             const index = list.findIndex((item) => item.id === messageId)
             const toolStatus = part.state?.status || "pending"
             const toolName = part.tool || "unknown tool"
-            const messageText = `正在执行${toolName}工具: ${toolStatus}`
+            let detail = ""
+            
+            const input = part.state?.input as any
+            if (input) {
+              if (toolName === "write" || toolName === "write_file") {
+                const p = input.file_path || input.path
+                if (p) detail = ` 📄 写入文件: ${p}`
+              } else if (toolName === "read" || toolName === "read_file") {
+                const p = input.file_path || input.path
+                if (p) detail = ` 📖 读取文件: ${p}`
+              } else if (toolName === "execute" || toolName === "run_command" || toolName === "command") {
+                const c = input.command || input.cmd
+                if (c) detail = ` 💻 执行命令: ${c}`
+              } else if (toolName === "search_codebase" || toolName === "glob" || toolName === "grep") {
+                 const p = input.query || input.pattern
+                 if (p) detail = ` 🔍 搜索: ${p}`
+              }
+            }
+
+            const output = part.state?.output
+            let resultText = ""
+            if (output) {
+                const outStr = typeof output === 'string' ? output : JSON.stringify(output, null, 2)
+                const truncated = outStr.length > 500 ? outStr.slice(0, 500) + "..." : outStr
+                resultText = `\n结果:\n${truncated}`
+            }
+            
+            const messageText = `正在执行 ${toolName} 工具: ${toolStatus}${detail ? "\n" + detail : ""}${resultText}`
             if (index >= 0) {
               const prev = list[index]
               const next = list.slice()
@@ -582,13 +814,42 @@ const Sidebar: Component<SidebarProps> = (props) => {
           return
         }
         if (part.type === "reasoning") {
+          if (!assistantMessageIds.has(messageId) && !userMessageIds.has(messageId)) {
+            const chunk = part.text ?? props.delta ?? ""
+            if (!chunk) return
+            const prevPending = pendingReasoning.get(messageId) ?? ""
+            let nextPending = prevPending
+            if (part.text !== undefined && part.text !== "") {
+              const textValue = part.text
+              if (!prevPending || textValue.startsWith(prevPending) || textValue.length >= prevPending.length) {
+                nextPending = textValue
+              } else {
+                nextPending = prevPending + textValue
+              }
+            } else {
+              nextPending = prevPending + chunk
+            }
+            pendingReasoning.set(messageId, nextPending)
+            return
+          }
           setMsgs((list) => {
             const index = list.findIndex((item) => item.id === messageId)
             const delta = props.delta ?? ""
             const now = Date.now()
             if (index >= 0) {
               const prev = list[index]
-              const nextThink = part.text !== undefined ? part.text : (prev.thinkText || "") + delta
+              const prevThink = prev.thinkText || ""
+              let nextThink = prevThink
+              if (part.text !== undefined && part.text !== "") {
+                const textValue = part.text
+                if (!prevThink || textValue.startsWith(prevThink) || textValue.length >= prevThink.length) {
+                  nextThink = textValue
+                } else {
+                  nextThink = prevThink + textValue
+                }
+              } else if (delta) {
+                nextThink = prevThink + delta
+              }
               const thinkDone = !!part.time?.end
               const thinkStart = prev.thinkStart || now
               const thinkDuration = thinkDone ? now - thinkStart : undefined
@@ -613,47 +874,80 @@ const Sidebar: Component<SidebarProps> = (props) => {
         }
         if (part.type !== "text") return
         const delta = props.delta ?? ""
-        const rawText = part.text ?? ""
-        const split = rawText ? splitThink(rawText) : { hasThink: false, answer: "", think: "", done: false }
-        if (split.hasThink) {
-          setMsgs((list) => {
-            const index = list.findIndex((item) => item.id === messageId)
-            if (index >= 0) {
-              const next = list.slice()
-              next[index] = {
-                ...next[index],
-                thinkText: split.think.trim(),
-                thinkDone: split.done,
-                ts: Date.now(),
-              }
-              return next
+        if (!assistantMessageIds.has(messageId) && !userMessageIds.has(messageId)) {
+          const chunk = part.text ?? delta ?? ""
+          if (!chunk) return
+          const prevPending = pendingText.get(messageId) ?? ""
+          let nextPending = prevPending
+          if (part.text !== undefined && part.text !== "") {
+            const textValue = part.text
+            if (!prevPending || textValue.startsWith(prevPending) || textValue.length >= prevPending.length) {
+              nextPending = textValue
+            } else {
+              nextPending = prevPending + textValue
             }
-            return [
-              ...list,
-              {
-                id: messageId,
-                role: "assistant",
-                text: "",
-                ts: Date.now(),
-                thinkText: split.think.trim(),
-                thinkDone: split.done,
-              },
-            ]
-          })
+          } else {
+            nextPending = prevPending + chunk
+          }
+          pendingText.set(messageId, nextPending)
+          return
         }
-        if (split.hasThink && !split.done) return
+        
         setMsgs((list) => {
           const index = list.findIndex((item) => item.id === messageId)
+          let currentRaw = ""
           const prev = index >= 0 ? list[index] : undefined
-          const nextText = split.hasThink ? split.answer : part.text ?? (prev ? prev.text + delta : delta)
-          if (!nextText) return list
-          if (index >= 0 && prev) {
+          const prevRaw = prev ? (prev.rawText ?? prev.text ?? "") : ""
+          
+          if (prev) {
+            if (part.text !== undefined && part.text !== "") {
+              const textValue = part.text
+              if (!prevRaw || textValue.startsWith(prevRaw) || textValue.length >= prevRaw.length) {
+                currentRaw = textValue
+              } else {
+                currentRaw = prevRaw + textValue
+              }
+            } else if (delta) {
+              currentRaw = prevRaw + delta
+            } else {
+              currentRaw = prevRaw
+            }
+          } else {
+             currentRaw = part.text ?? delta
+          }
+          
+          if (!currentRaw && index < 0) return list
+          const split = splitThink(currentRaw)
+          
+          const newMessageBase = prev ? { ...prev } : {
+            id: messageId,
+            role: "assistant" as const,
+            text: "",
+            ts: Date.now(),
+          }
+
+          const updatedMessage: Msg = {
+            ...newMessageBase,
+            rawText: currentRaw,
+            ts: Date.now()
+          }
+
+          if (split.hasThink) {
+            updatedMessage.thinkText = split.think.trim()
+            updatedMessage.thinkDone = split.done
+            updatedMessage.text = split.answer
+          } else {
+             updatedMessage.text = split.answer
+          }
+          
+          if (index >= 0) {
             const next = list.slice()
-            next[index] = { ...prev, text: nextText, ts: Date.now() }
+            next[index] = updatedMessage
             return next
           }
-          return [...list, { id: messageId, role: "assistant", text: nextText, ts: Date.now() }]
+          return [...list, updatedMessage]
         })
+
         if (part.time?.end) {
           if (busyTimer) window.clearTimeout(busyTimer)
           setBusy(false)
@@ -737,6 +1031,24 @@ const Sidebar: Component<SidebarProps> = (props) => {
             </Show>
           </div>
           <div class={`flex items-center ${props.isCollapsed ? 'flex-col gap-y-3' : 'gap-x-3'}`}>
+            <Show when={!props.isCollapsed}>
+              <button
+                onClick={handleNewSession}
+                title="New Chat"
+                class="hover:text-[#00F0FF] text-[#5C6876] transition-colors flex items-center justify-center w-8 h-8"
+              >
+                <iconify-icon icon="lucide:plus" class="text-lg"></iconify-icon>
+              </button>
+              <button
+                onClick={() => setShowHistory(!showHistory())}
+                title="History"
+                class={`hover:text-[#00F0FF] transition-colors flex items-center justify-center w-8 h-8 ${
+                  showHistory() ? "text-[#00F0FF]" : "text-[#5C6876]"
+                }`}
+              >
+                <iconify-icon icon="lucide:history" class="text-lg"></iconify-icon>
+              </button>
+            </Show>
             <div
               id="12:95"
               style={{
@@ -760,9 +1072,41 @@ const Sidebar: Component<SidebarProps> = (props) => {
         </div>
 
         <Show when={!props.isCollapsed}>
-          <div
-            ref={messagesRef}
-            id="12:96"
+          <Show when={showHistory()}>
+            <div class="overflow-y-auto grow shrink geek-scroll p-4 flex flex-col gap-2">
+              <div class="text-[#5C6876] text-xs font-bold uppercase tracking-wider mb-2">History</div>
+              <For each={history()}>
+                {(item) => (
+                  <div
+                    class={`flex items-center justify-between p-3 rounded cursor-pointer transition-colors group ${
+                      item.id === sid()
+                        ? "bg-[#00F0FF]/10 border border-[#00F0FF]/30"
+                        : "bg-[#1A2333] border border-transparent hover:border-[#00F0FF]/30"
+                    }`}
+                    onClick={() => handleSwitchSession(item.id, item.title)}
+                  >
+                    <div class="flex flex-col overflow-hidden">
+                      <div class="text-[#E8F0FF] text-sm truncate font-medium">{item.title}</div>
+                      <div class="text-[#5C6876] text-xs">{new Date(item.ts).toLocaleString()}</div>
+                    </div>
+                    <button
+                      onClick={(e) => deleteHistoryItem(e, item.id)}
+                      class="opacity-0 group-hover:opacity-100 p-1 hover:text-red-400 text-[#5C6876] transition-all"
+                    >
+                      <iconify-icon icon="lucide:trash-2"></iconify-icon>
+                    </button>
+                  </div>
+                )}
+              </For>
+              <Show when={history().length === 0}>
+                <div class="text-[#5C6876] text-sm text-center mt-10">No history found</div>
+              </Show>
+            </div>
+          </Show>
+          <Show when={!showHistory()}>
+            <div
+              ref={messagesRef}
+              id="12:96"
             class="overflow-y-auto grow shrink geek-scroll"
             style="padding: 1rem 1.5rem;"
           >
@@ -885,20 +1229,25 @@ const Sidebar: Component<SidebarProps> = (props) => {
                   <iconify-icon icon="lucide:clipboard-list" class="text-[#00F0FF] text-xl"></iconify-icon>
                   <span class="text-[#E8F0FF] font-semibold">请回答以下问题以继续</span>
                 </div>
-                <For each={questionState.activeQuestion!.questions}>
-                  {(q, qIndex) => (
+                <Show when={currentQuestion()}>
+                  {(q) => (
                     <div class="flex flex-col gap-2">
-                      <div class="text-[#E8F0FF] font-medium text-sm">
-                        {qIndex() + 1}. {q.question}
-                        <span class="text-xs text-[#5C6876] ml-2">
-                          {q.multiple ? "(多选)" : "(单选)"}
-                        </span>
+                      <div class="flex items-center justify-between">
+                        <div class="text-[#E8F0FF] font-medium text-sm">
+                          {questionIndex() + 1}. {q().question}
+                          <span class="text-xs text-[#5C6876] ml-2">
+                            {q().multiple ? "(多选)" : "(单选)"}
+                          </span>
+                        </div>
+                        <div class="text-xs text-[#5C6876]">
+                          {questionIndex() + 1}/{totalQuestions()}
+                        </div>
                       </div>
                       <div class="flex flex-col gap-2 pl-4">
-                        <For each={q.options}>
+                        <For each={q().options}>
                           {(opt) => {
                             const isSelected = () =>
-                              questionState.answers[qIndex()]?.selected.includes(opt.label)
+                              questionState.answers[questionIndex()]?.selected.includes(opt.label)
                             return (
                               <div
                                 class={`p-3 rounded-lg border transition-colors ${
@@ -909,7 +1258,7 @@ const Sidebar: Component<SidebarProps> = (props) => {
                               >
                                 <div
                                   class="flex items-start gap-3 cursor-pointer select-none"
-                                  onClick={() => toggleOption(qIndex(), opt.label, !!q.multiple)}
+                                  onClick={() => toggleOption(questionIndex(), opt.label, !!q().multiple)}
                                 >
                                   <div
                                     class={`mt-1 w-4 h-4 shrink-0 flex items-center justify-center border rounded ${
@@ -931,34 +1280,45 @@ const Sidebar: Component<SidebarProps> = (props) => {
                                     </Show>
                                   </div>
                                 </div>
-                                <div class="mt-2 pl-7">
-                                  <input
-                                    type="text"
-                                    placeholder={`针对"${opt.label}"的补充说明...`}
-                                    class="w-full bg-transparent border-b border-[#5C6876] focus:border-[#00F0FF] outline-none text-xs text-[#E8F0FF] py-1 transition-colors placeholder:text-[#5C6876]/50"
-                                    value={questionState.answers[qIndex()]?.customInputs[opt.label] || ""}
-                                    onInput={(e) => updateCustomInput(qIndex(), opt.label, e.currentTarget.value)}
-                                    onClick={(e) => e.stopPropagation()} 
-                                  />
-                                </div>
                               </div>
                             )
                           }}
                         </For>
                       </div>
+                      <input
+                        type="text"
+                        placeholder="补充说明（可选）"
+                        class="mt-2 w-full bg-transparent border-b border-[#5C6876] focus:border-[#00F0FF] outline-none text-xs text-[#E8F0FF] py-1 transition-colors placeholder:text-[#5C6876]/50"
+                        value={questionState.answers[questionIndex()]?.customInput || ""}
+                        onInput={(e) => updateCustomInput(questionIndex(), e.currentTarget.value)}
+                      />
+                      <div class="flex items-center justify-between mt-2">
+                        <Show when={questionIndex() > 0}>
+                          <button
+                            onClick={prevQuestion}
+                            class="py-2 px-3 border border-[#00F0FF]/40 text-[#00F0FF] rounded-lg hover:bg-[#00F0FF]/10 transition-colors"
+                          >
+                            上一个
+                          </button>
+                        </Show>
+                        <button
+                          onClick={nextQuestion}
+                          class="py-2 px-4 bg-[#00F0FF] hover:bg-[#00F0FF]/90 text-[#0F1624] font-semibold rounded-lg transition-colors flex items-center justify-center gap-2"
+                        >
+                          <iconify-icon
+                            icon={isLastQuestion() ? "lucide:send" : "lucide:arrow-right"}
+                            class="text-lg"
+                          ></iconify-icon>
+                          {isLastQuestion() ? "提交回答" : "下一个"}
+                        </button>
+                      </div>
                     </div>
                   )}
-                </For>
-                <button
-                  onClick={submitQuestions}
-                  class="mt-2 py-2 px-4 bg-[#00F0FF] hover:bg-[#00F0FF]/90 text-[#0F1624] font-semibold rounded-lg transition-colors flex items-center justify-center gap-2"
-                >
-                  <iconify-icon icon="lucide:send" class="text-lg"></iconify-icon>
-                  提交回答
-                </button>
+                </Show>
               </div>
             </Show>
           </div>
+        </Show>
 
         <div
           ref={resizerRef}
