@@ -294,7 +294,6 @@ const Sidebar: Component<SidebarProps> = (props) => {
     } catch (e) {
       console.error("Ensure session error:", e)
     }
-    setCookie("session_continue", "1")
     setCookie("app_session", id)
     setCookie("app_name", title)
     window.location.reload()
@@ -408,7 +407,7 @@ const Sidebar: Component<SidebarProps> = (props) => {
       return
     }
     setCookie("app_session", finalSessionId)
-    if (isFirstMessage) {
+    if (isFirstMessage && !cookieValue("app_name")) {
       const title = value.length > 12 ? value.slice(0, 12) + "..." : value
       setCookie("app_name", title)
     }
@@ -837,14 +836,7 @@ const Sidebar: Component<SidebarProps> = (props) => {
               if (toolName === "write" || toolName === "write_file") {
                 const p = input.file_path || input.path
                 if (p) detailLines.push(`📄 写入文件: ${p}`)
-                if (typeof input.content === "string") {
-                  const lines = input.content.split(/\r\n|\n|\r/)
-                  const previewLines = lines.slice(0, 50)
-                  const truncated = lines.length > 50
-                  const preview = previewLines.join("\n") + (truncated ? "\n..." : "")
-                  const pathText = p ? ` ${p}` : ""
-                  inputLines.push(`内容预览(前50行):${pathText}\n${preview}`)
-                }
+                // Hide content preview for now
               } else if (toolName === "read" || toolName === "read_file") {
                 const p = input.file_path || input.path
                 if (p) detailLines.push(`📖 读取文件: ${p}`)
