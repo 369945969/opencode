@@ -1,5 +1,5 @@
 import type { Component } from "solid-js"
-import { For, Show, batch, createEffect, createSignal, onCleanup, onMount } from "solid-js"
+import { For, Show, batch, createEffect, createMemo, createSignal, onCleanup, onMount } from "solid-js"
 import { createStore } from "solid-js/store"
 
 interface SidebarProps {
@@ -181,6 +181,12 @@ const Sidebar: Component<SidebarProps> = (props) => {
   const [streaming, setStreaming] = createSignal(false)
   const [showHistory, setShowHistory] = createSignal(false)
   const [history, setHistory] = createSignal<{ id: string; title: string; ts: number }[]>([])
+  const hasUserMessage = createMemo(() => msgs().some((msg) => msg.role === "user"))
+  const visibleMsgs = createMemo(() => {
+    const list = msgs()
+    if (!hasUserMessage()) return list
+    return list.filter((msg) => msg.id !== "welcome")
+  })
 
   const [questionState, setQuestionState] = createStore<{
     activeQuestion: QuestionPayload | null
@@ -1136,7 +1142,7 @@ const Sidebar: Component<SidebarProps> = (props) => {
             class="overflow-y-auto grow shrink geek-scroll"
             style="padding: 1rem 1.5rem;"
           >
-            <For each={msgs()}>
+            <For each={visibleMsgs()}>
               {(msg) => {
                 const isUser = msg.role === "user"
                 const hasThink = !!msg.thinkText
