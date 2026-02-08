@@ -1,5 +1,6 @@
 import type { Component } from "solid-js"
 import { For, Show, batch, createEffect, createSignal, onCleanup, onMount } from "solid-js"
+import { createStore } from "solid-js/store"
 
 interface SidebarProps {
   width: number
@@ -22,6 +23,27 @@ type Msg = {
   filePaths?: string[]
 }
 
+interface QuestionOption {
+  label: string
+  description?: string
+}
+
+interface QuestionItem {
+  question: string
+  header?: string
+  options: QuestionOption[]
+  multiple?: boolean
+}
+
+interface QuestionPayload {
+  id: string
+  sessionID: string
+  questions: QuestionItem[]
+  tool: {
+    messageID: string
+    callID: string
+  }
+}
 
 type EventPayload = {
   type?: string
@@ -88,6 +110,7 @@ type EventPayload = {
       message?: string
       name?: string
     }
+    questions?: QuestionItem[]
   }
   part?: {
     type?: string
@@ -122,6 +145,7 @@ type EventPayload = {
     message?: string
     name?: string
   }
+  questions?: QuestionItem[]
 }
 
 const Sidebar: Component<SidebarProps> = (props) => {
@@ -141,6 +165,14 @@ const Sidebar: Component<SidebarProps> = (props) => {
   const [sid, setSid] = createSignal("")
   const [busy, setBusy] = createSignal(false)
   const [streaming, setStreaming] = createSignal(false)
+  const [questionState, setQuestionState] = createStore<{
+    activeQuestion: QuestionPayload | null
+    answers: Record<number, { selected: string[]; customInputs: Record<string, string> }>
+  }>({
+    activeQuestion: null,
+    answers: {},
+  })
+
   let busyTimer: number | undefined
   let lastRetryKey = ""
   const userMessageIds = new Set<string>()
@@ -227,10 +259,10 @@ const Sidebar: Component<SidebarProps> = (props) => {
     return data.id
   }
 
-  const send = async () => {
+  const send = async (overrideText?: string) => {
     if (busy()) return
 
-    const value = text().trim()
+    const value = overrideText ?? text().trim()
     if (!value) return
     const cookieSession = cookieValue("app_session")
     const sessionId = sid() || cookieSession
@@ -305,7 +337,67 @@ const Sidebar: Component<SidebarProps> = (props) => {
     busyTimer = window.setTimeout(() => {
       setBusy(false)
       setStreaming(false)
-    }, 30000)
+      const currentMsgs = msgs()
+      const lastMsg = currentMsgs[currentMsgs.length - 1]
+      if (lastMsg && lastMsg.role === "user") {
+        setMsgs([
+          ...currentMsgs,
+          {
+            id: "error-" + Date.now(),
+            role: "assistant",
+            text: "Error: Request timed out after 120 seconds. The model might be busy or the context is too large.",
+            ts: Date.now(),
+          },
+        ])
+      }
+    }, 120000)
+  }
+
+  const toggleOption = (qIndex: number, label: string, multiple: boolean) => {
+    const current = questionState.answers[qIndex]?.selected || []
+    let next: string[]
+    if (multiple) {
+      if (current.includes(label)) {
+        next = current.filter((l) => l !== label)
+      } else {
+        next = [...current, label]
+      }
+    } else {
+      next = [label]
+    }
+    setQuestionState("answers", qIndex, "selected", next)
+  }
+
+  const updateCustomInput = (qIndex: number, label: string, value: string) => {
+    setQuestionState("answers", qIndex, "customInputs", label, value)
+  }
+
+  const submitQuestions = () => {
+    const q = questionState.activeQuestion
+    if (!q) return
+    const answers = questionState.answers
+
+    let responseText = "我提交了问卷回答：\n"
+    q.questions.forEach((item, index) => {
+      const ans = answers[index]
+      if (!ans) return
+      responseText += `\n### ${item.header || item.question}\n`
+      if (ans.selected.length === 0) {
+        responseText += "*(未选择)*\n"
+      } else {
+        ans.selected.forEach((label) => {
+          const customInput = ans.customInputs[label]
+          responseText += `- **${label}**`
+          if (customInput) {
+            responseText += `: ${customInput}`
+          }
+          responseText += "\n"
+        })
+      }
+    })
+
+    send(responseText)
+    setQuestionState({ activeQuestion: null, answers: {} })
   }
 
   const stopStream = async () => {
@@ -402,6 +494,26 @@ const Sidebar: Component<SidebarProps> = (props) => {
                 { id: makeId(), role: "assistant", text: hint, ts: Date.now() },
               ])
             }
+          }
+          return
+        }
+        if (type === "question.asked") {
+          const props = payload.properties ?? payload
+          // Ensure it matches the shape
+          if (props && Array.isArray(props.questions)) {
+            batch(() => {
+              setQuestionState("activeQuestion", props as QuestionPayload)
+              // Initialize answers
+              const initialAnswers: Record<number, { selected: string[]; customInputs: Record<string, string> }> = {}
+              ;(props.questions as QuestionItem[]).forEach((_: any, index: number) => {
+                initialAnswers[index] = { selected: [], customInputs: {} }
+              })
+              setQuestionState("answers", initialAnswers)
+            })
+            // Scroll to bottom to show question
+            requestAnimationFrame(() => {
+              if (messagesRef) messagesRef.scrollTo({ top: messagesRef.scrollHeight, behavior: "smooth" })
+            })
           }
           return
         }
@@ -764,6 +876,86 @@ const Sidebar: Component<SidebarProps> = (props) => {
                     <div class="w-1.5 h-1.5 rounded-full bg-[#00F0FF] animate-bounce" style="animation-delay: 300ms"></div>
                   </div>
                 </div>
+              </div>
+            </Show>
+            
+            <Show when={questionState.activeQuestion}>
+              <div class="flex flex-col gap-4 mb-4 p-4 rounded-xl border border-[#00F0FF]/30 bg-[#00F0FF]/5">
+                <div class="flex items-center gap-2 mb-2">
+                  <iconify-icon icon="lucide:clipboard-list" class="text-[#00F0FF] text-xl"></iconify-icon>
+                  <span class="text-[#E8F0FF] font-semibold">请回答以下问题以继续</span>
+                </div>
+                <For each={questionState.activeQuestion!.questions}>
+                  {(q, qIndex) => (
+                    <div class="flex flex-col gap-2">
+                      <div class="text-[#E8F0FF] font-medium text-sm">
+                        {qIndex() + 1}. {q.question}
+                        <span class="text-xs text-[#5C6876] ml-2">
+                          {q.multiple ? "(多选)" : "(单选)"}
+                        </span>
+                      </div>
+                      <div class="flex flex-col gap-2 pl-4">
+                        <For each={q.options}>
+                          {(opt) => {
+                            const isSelected = () =>
+                              questionState.answers[qIndex()]?.selected.includes(opt.label)
+                            return (
+                              <div
+                                class={`p-3 rounded-lg border transition-colors ${
+                                  isSelected()
+                                    ? "border-[#00F0FF] bg-[#00F0FF]/10"
+                                    : "border-[#1E293B] bg-[#1E293B]/50 hover:border-[#00F0FF]/50"
+                                }`}
+                              >
+                                <div
+                                  class="flex items-start gap-3 cursor-pointer select-none"
+                                  onClick={() => toggleOption(qIndex(), opt.label, !!q.multiple)}
+                                >
+                                  <div
+                                    class={`mt-1 w-4 h-4 shrink-0 flex items-center justify-center border rounded ${
+                                      isSelected()
+                                        ? "bg-[#00F0FF] border-[#00F0FF] text-[#0F1624]"
+                                        : "border-[#5C6876]"
+                                    }`}
+                                  >
+                                    <Show when={isSelected()}>
+                                      <iconify-icon icon="lucide:check" class="text-xs font-bold"></iconify-icon>
+                                    </Show>
+                                  </div>
+                                  <div class="flex flex-col gap-0.5">
+                                    <span class={`text-sm ${isSelected() ? "text-[#00F0FF]" : "text-[#E8F0FF]"}`}>
+                                      {opt.label}
+                                    </span>
+                                    <Show when={opt.description}>
+                                      <span class="text-xs text-[#94A3B8]">{opt.description}</span>
+                                    </Show>
+                                  </div>
+                                </div>
+                                <div class="mt-2 pl-7">
+                                  <input
+                                    type="text"
+                                    placeholder={`针对"${opt.label}"的补充说明...`}
+                                    class="w-full bg-transparent border-b border-[#5C6876] focus:border-[#00F0FF] outline-none text-xs text-[#E8F0FF] py-1 transition-colors placeholder:text-[#5C6876]/50"
+                                    value={questionState.answers[qIndex()]?.customInputs[opt.label] || ""}
+                                    onInput={(e) => updateCustomInput(qIndex(), opt.label, e.currentTarget.value)}
+                                    onClick={(e) => e.stopPropagation()} 
+                                  />
+                                </div>
+                              </div>
+                            )
+                          }}
+                        </For>
+                      </div>
+                    </div>
+                  )}
+                </For>
+                <button
+                  onClick={submitQuestions}
+                  class="mt-2 py-2 px-4 bg-[#00F0FF] hover:bg-[#00F0FF]/90 text-[#0F1624] font-semibold rounded-lg transition-colors flex items-center justify-center gap-2"
+                >
+                  <iconify-icon icon="lucide:send" class="text-lg"></iconify-icon>
+                  提交回答
+                </button>
               </div>
             </Show>
           </div>

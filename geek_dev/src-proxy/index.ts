@@ -73,6 +73,9 @@ db.exec(
 db.exec(
   "create table if not exists apps (uuid text primary key, user_id text not null, session_id text not null, app_name text not null, path text not null, created_at integer not null)",
 )
+db.exec(
+  "create table if not exists session_skills (session_id text primary key, skill text, injected_at integer)",
+)
 
 const readTree = async (root: string, depth: number, maxDepth: number, maxBytes: number) => {
   const entries = await fs.readdir(root, { withFileTypes: true }).catch(() => [])
@@ -558,9 +561,26 @@ export const createProxy = (input: ProxyConfig = {}) => {
             if (sessionIdx >= 0 && parts.length > sessionIdx + 1) {
               const sid = parts[sessionIdx + 1]
               const row = db.query("select path from apps where session_id = ?").get(sid) as { path: string } | undefined
-              if (row?.path) {
-                const rule = `[SYSTEM RULE]: You are strictly limited to operating within the directory: ${row.path}. You must not create, modify, or delete any files outside of this directory.`
-                if (Array.isArray(parsed.parts)) {
+                  if (row?.path) {
+                    let rule = `[SYSTEM RULE]: You are strictly limited to operating within the directory: ${row.path}. You must not create, modify, or delete any files outside of this directory.`
+                    
+                    const skillInjected = db.query("select 1 from session_skills where session_id = ?").get(sid)
+                    
+                    if (!skillInjected) {
+                      const skillPath = path.join(process.cwd(), "src-proxy", "product-manager", "SKILL.md")
+                      const skillContent = await fs.readFile(skillPath, "utf-8").catch(() => "")
+                      if (skillContent) {
+                        rule += `\n\n[ROLE DEFINITION]: You are the Product Manager Agent. You MUST follow these rules and pipeline:\n${skillContent}\n\n[SYSTEM NOTE]: This is a role definition. Do NOT attempt to invoke a tool named "skill" or "product-manager". Use your standard tools (like write_file) to produce the outputs.`
+                        
+                        try {
+                           db.query("insert or ignore into session_skills (session_id, skill, injected_at) values (?, ?, ?)").run(sid, "product-manager", Date.now())
+                        } catch (e) {
+                           console.error("DB Insert Error", e)
+                        }
+                      }
+                    }
+
+                    if (Array.isArray(parsed.parts)) {
                   const textPart = parsed.parts.find((p: any) => p.type === "text")
                   if (textPart) {
                     textPart.text = rule + "\n\n" + textPart.text
