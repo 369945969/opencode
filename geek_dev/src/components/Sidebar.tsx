@@ -767,34 +767,45 @@ const Sidebar: Component<SidebarProps> = (props) => {
             const index = list.findIndex((item) => item.id === toolId)
             const toolStatus = part.state?.status || "pending"
             const toolName = part.tool || "unknown tool"
-            let detail = ""
+            const detailLines: string[] = []
+            const inputLines: string[] = []
             
             const input = part.state?.input as any
             if (input) {
               if (toolName === "write" || toolName === "write_file") {
                 const p = input.file_path || input.path
-                if (p) detail = ` 📄 写入文件: ${p}`
+                if (p) detailLines.push(`📄 写入文件: ${p}`)
+                if (typeof input.content === "string") {
+                  const preview = input.content.length > 50 ? input.content.slice(0, 50) + "..." : input.content
+                  inputLines.push(`内容预览: ${preview}`)
+                }
               } else if (toolName === "read" || toolName === "read_file") {
                 const p = input.file_path || input.path
-                if (p) detail = ` 📖 读取文件: ${p}`
+                if (p) detailLines.push(`📖 读取文件: ${p}`)
               } else if (toolName === "execute" || toolName === "run_command" || toolName === "command") {
                 const c = input.command || input.cmd
-                if (c) detail = ` 💻 执行命令: ${c}`
+                if (c) detailLines.push(`💻 执行命令: ${c}`)
+                if (input.cwd) detailLines.push(`工作目录: ${input.cwd}`)
               } else if (toolName === "search_codebase" || toolName === "glob" || toolName === "grep") {
                  const p = input.query || input.pattern
-                 if (p) detail = ` 🔍 搜索: ${p}`
+                 if (p) detailLines.push(`🔍 搜索: ${p}`)
+              }
+              const inputText = JSON.stringify(input, null, 2)
+              if (inputText && inputText !== "{}") {
+                inputLines.push(`输入参数:\n${inputText}`)
               }
             }
 
             const output = part.state?.output
             let resultText = ""
             if (output) {
-                const outStr = typeof output === 'string' ? output : JSON.stringify(output, null, 2)
-                const truncated = outStr.length > 500 ? outStr.slice(0, 500) + "..." : outStr
+                const outStr = typeof output === "string" ? output : JSON.stringify(output, null, 2)
+                const truncated = outStr.length > 1200 ? outStr.slice(0, 1200) + "..." : outStr
                 resultText = `\n结果:\n${truncated}`
             }
-            
-            const messageText = `正在执行 ${toolName} 工具: ${toolStatus}${detail ? "\n" + detail : ""}${resultText}`
+            const detailText = detailLines.length ? `\n${detailLines.join("\n")}` : ""
+            const inputTextBlock = inputLines.length ? `\n${inputLines.join("\n")}` : ""
+            const messageText = `正在执行 ${toolName} 工具: ${toolStatus}${detailText}${inputTextBlock}${resultText}`
             if (index >= 0) {
               const prev = list[index]
               const next = list.slice()
