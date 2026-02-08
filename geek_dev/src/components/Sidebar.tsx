@@ -404,6 +404,11 @@ const Sidebar: Component<SidebarProps> = (props) => {
       ])
       return
     }
+    setCookie("app_session", finalSessionId)
+    if (isFirstMessage) {
+      const title = value.length > 12 ? value.slice(0, 12) + "..." : value
+      setCookie("app_name", title)
+    }
     const res = await fetch(`${base}/session/${finalSessionId}/prompt_async`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
