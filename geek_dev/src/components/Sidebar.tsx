@@ -763,7 +763,8 @@ const Sidebar: Component<SidebarProps> = (props) => {
         if (userMessageIds.has(messageId)) return
         if (part.type === "tool") {
           setMsgs((list) => {
-            const index = list.findIndex((item) => item.id === messageId)
+            const toolId = (part as any).id ?? `${messageId}:${(part as any).callID ?? part.tool ?? "tool"}`
+            const index = list.findIndex((item) => item.id === toolId)
             const toolStatus = part.state?.status || "pending"
             const toolName = part.tool || "unknown tool"
             let detail = ""
@@ -803,7 +804,7 @@ const Sidebar: Component<SidebarProps> = (props) => {
             return [
               ...list,
               {
-                id: messageId,
+                id: toolId,
                 role: "assistant",
                 text: messageText,
                 ts: Date.now(),
