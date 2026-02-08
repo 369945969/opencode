@@ -55,8 +55,8 @@ const defaults = {
   pmDepth: Number(process.env.PM_DEPTH ?? "3"),
   pmMaxBytes: Number(process.env.PM_MAX_BYTES ?? "1048576"),
 }
-const defaultProviderID = process.env.OPENCODE_DEFAULT_PROVIDER_ID ?? "local"
-const defaultModelID = process.env.OPENCODE_DEFAULT_MODEL_ID ?? "zai-org/glm-4.7-flash"
+const defaultProviderID = process.env.OPENCODE_DEFAULT_PROVIDER_ID ?? "nvidia"
+const defaultModelID = process.env.OPENCODE_DEFAULT_MODEL_ID ?? "glm-4.7"
 
 const text = new TextEncoder()
 const dbPath = path.join(process.cwd(), "src-proxy", "store.sqlite")

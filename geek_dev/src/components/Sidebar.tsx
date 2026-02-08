@@ -377,16 +377,27 @@ const Sidebar: Component<SidebarProps> = (props) => {
         if (!messageId) return
         if (userMessageIds.has(messageId)) return
         if (part.type === "reasoning") {
-          const reasoningId = `${messageId}:reasoning`
           setMsgs((list) => {
-            const index = list.findIndex((item) => item.id === reasoningId)
-            const nextText = part.time?.end ? "思考完成" : "思考中..."
+            const index = list.findIndex((item) => item.id === messageId)
+            const delta = props.delta ?? ""
             if (index >= 0) {
+              const prev = list[index]
+              const nextThink = part.text !== undefined ? part.text : (prev.thinkText || "") + delta
               const next = list.slice()
-              next[index] = { ...next[index], text: nextText, ts: Date.now() }
+              next[index] = { ...prev, thinkText: nextThink, thinkDone: !!part.time?.end, ts: Date.now() }
               return next
             }
-            return [...list, { id: reasoningId, role: "assistant", text: nextText, ts: Date.now() }]
+            return [
+              ...list,
+              {
+                id: messageId,
+                role: "assistant",
+                text: "",
+                ts: Date.now(),
+                thinkText: part.text !== undefined ? part.text : delta,
+                thinkDone: !!part.time?.end,
+              },
+            ]
           })
           return
         }
@@ -548,26 +559,6 @@ const Sidebar: Component<SidebarProps> = (props) => {
                       </div>
                     </Show>
                     <div style="flex-basis: 0%;" class={`${isUser ? "max-w-[80%]" : "grow shrink"}`}>
-                      <Show when={hasThink}>
-                        <details
-                          class="p-3 border-[1px] border-solid rounded-2xl mb-2"
-                          style={{
-                            "background-color": "color-mix( in oklab , #1A1F3A 90% , transparent )",
-                            "border-color": "color-mix( in oklab , #00F0FF 10% , transparent )",
-                          }}
-                          open={!msg.thinkDone}
-                        >
-                          <summary style="color: rgba(140, 150, 160, 1);" class="text-xs cursor-pointer">
-                            {msg.thinkDone ? "思考完成" : "思考中..."}
-                          </summary>
-                          <p
-                            style="color: rgba(140, 150, 160, 1);"
-                            class="text-xs whitespace-pre-wrap mt-2"
-                          >
-                            {msg.thinkText || "思考中..."}
-                          </p>
-                        </details>
-                      </Show>
                       <div
                         style={{
                           "background-color": isUser
@@ -580,6 +571,25 @@ const Sidebar: Component<SidebarProps> = (props) => {
                         }}
                         class="p-4 border-[1px] border-solid rounded-2xl"
                       >
+                        <Show when={hasThink}>
+                          <details
+                            class="mb-3 pb-3 border-b-[1px] border-solid"
+                            style={{
+                              "border-color": "color-mix( in oklab , #00F0FF 10% , transparent )",
+                            }}
+                            open={!msg.thinkDone}
+                          >
+                            <summary style="color: rgba(140, 150, 160, 1);" class="text-xs cursor-pointer">
+                              {msg.thinkDone ? "思考完成" : "思考中..."}
+                            </summary>
+                            <p
+                              style="color: rgba(140, 150, 160, 1);"
+                              class="text-xs whitespace-pre-wrap mt-2"
+                            >
+                              {msg.thinkText || "思考中..."}
+                            </p>
+                          </details>
+                        </Show>
                         <p style="color: rgba(232, 240, 255, 1);" class="text-sm whitespace-pre-wrap">
                           {msg.text}
                         </p>
