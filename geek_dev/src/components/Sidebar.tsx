@@ -18,15 +18,14 @@ type Msg = {
   thinkDone?: boolean
   thinkStart?: number
   thinkDuration?: number
+  toolStatus?: string
+  filePaths?: string[]
 }
 
-type Part = {
-  type: string
-  text?: string
-}
 
 type EventPayload = {
   type?: string
+  file?: string
   payload?: {
     type?: string
     properties?: {
@@ -40,11 +39,18 @@ type EventPayload = {
         text?: string
         sessionID?: string
         messageID?: string
+        tool?: string
+        state?: {
+          status?: string
+          input?: any
+          output?: any
+        }
         time?: {
           end?: number
         }
       }
       delta?: string
+      file?: string
     }
   }
   properties?: {
@@ -58,11 +64,18 @@ type EventPayload = {
       text?: string
       sessionID?: string
       messageID?: string
+      tool?: string
+      state?: {
+        status?: string
+        input?: any
+        output?: any
+      }
       time?: {
         end?: number
       }
     }
     delta?: string
+    file?: string
     connected?: boolean
     status?: {
       type?: string
@@ -81,6 +94,12 @@ type EventPayload = {
     text?: string
     sessionID?: string
     messageID?: string
+    tool?: string
+    state?: {
+      status?: string
+      input?: any
+      output?: any
+    }
     time?: {
       end?: number
     }
@@ -167,9 +186,6 @@ const Sidebar: Component<SidebarProps> = (props) => {
     return ""
   }
 
-  const formatTime = (ts: number) => {
-    return new Date(ts).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })
-  }
 
   const formatDuration = (ms: number) => {
     if (ms < 1000) return `${ms}ms`
@@ -396,6 +412,26 @@ const Sidebar: Component<SidebarProps> = (props) => {
           }
           return
         }
+        if (type === "file.edited") {
+          const props = payload.properties ?? payload
+          const filePath = props.file || ""
+          // Simple relative path logic
+          const parts = filePath.split("/")
+          const workspaceIndex = parts.indexOf("geek_dev")
+          const relativePath = workspaceIndex !== -1 ? parts.slice(workspaceIndex + 1).join("/") : filePath
+          
+          setMsgs((list) => [
+            ...list,
+            {
+              id: makeId(),
+              role: "assistant",
+              text: `已创建/编辑文件: ${relativePath}`,
+              ts: Date.now(),
+              filePaths: [relativePath],
+            },
+          ])
+          return
+        }
         if (type !== "message.part.updated") return
         const props = payload.properties ?? payload
         const part = props.part
@@ -405,6 +441,31 @@ const Sidebar: Component<SidebarProps> = (props) => {
         const messageId = part.messageID
         if (!messageId) return
         if (userMessageIds.has(messageId)) return
+        if (part.type === "tool") {
+          setMsgs((list) => {
+            const index = list.findIndex((item) => item.id === messageId)
+            const toolStatus = part.state?.status || "pending"
+            const toolName = part.tool || "unknown tool"
+            const messageText = `正在执行${toolName}工具: ${toolStatus}`
+            if (index >= 0) {
+              const prev = list[index]
+              const next = list.slice()
+              next[index] = { ...prev, toolStatus, text: messageText, ts: Date.now() }
+              return next
+            }
+            return [
+              ...list,
+              {
+                id: messageId,
+                role: "assistant",
+                text: messageText,
+                ts: Date.now(),
+                toolStatus,
+              },
+            ]
+          })
+          return
+        }
         if (part.type === "reasoning") {
           setMsgs((list) => {
             const index = list.findIndex((item) => item.id === messageId)
@@ -654,6 +715,23 @@ const Sidebar: Component<SidebarProps> = (props) => {
                           </div>
                         </Show>
                         <div class="whitespace-pre-wrap">{msg.text}</div>
+                        <Show when={msg.toolStatus}>
+                          <div class="mt-2 text-xs font-mono text-[#00F0FF] opacity-80">
+                            状态: {msg.toolStatus}
+                          </div>
+                        </Show>
+                        <Show when={msg.filePaths && msg.filePaths.length > 0}>
+                          <div class="mt-2 flex flex-col gap-1">
+                            <For each={msg.filePaths}>
+                              {(path) => (
+                                <div class="text-xs font-mono text-[#00F0FF] bg-[#00F0FF]/10 px-2 py-1 rounded border border-[#00F0FF]/20 flex items-center gap-2">
+                                  <iconify-icon icon="lucide:file-code" class="text-sm"></iconify-icon>
+                                  {path}
+                                </div>
+                              )}
+                            </For>
+                          </div>
+                        </Show>
                       </div>
                     </div>
                   </div>
