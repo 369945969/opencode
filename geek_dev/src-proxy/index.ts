@@ -58,7 +58,7 @@ const defaults = {
   workspace: process.env.OPENCODE_WORKSPACE ?? path.join(process.cwd(), "workspace"),
 }
 const defaultProviderID = process.env.OPENCODE_DEFAULT_PROVIDER_ID ?? "local"
-const defaultModelID = process.env.OPENCODE_DEFAULT_MODEL_ID ?? "glm-4.7"
+const defaultModelID = process.env.OPENCODE_DEFAULT_MODEL_ID ?? "glm-4.6v"
 
 const text = new TextEncoder()
 const dbPath = path.join(process.cwd(), "src-proxy", "store.sqlite")
