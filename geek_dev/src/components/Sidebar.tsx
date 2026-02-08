@@ -776,8 +776,11 @@ const Sidebar: Component<SidebarProps> = (props) => {
                 const p = input.file_path || input.path
                 if (p) detailLines.push(`📄 写入文件: ${p}`)
                 if (typeof input.content === "string") {
-                  const preview = input.content.length > 50 ? input.content.slice(0, 50) + "..." : input.content
-                  inputLines.push(`内容预览: ${preview}`)
+                  const lines = input.content.split(/\r\n|\n|\r/)
+                  const previewLines = lines.slice(0, 50)
+                  const truncated = lines.length > 50
+                  const preview = previewLines.join("\n") + (truncated ? "\n..." : "")
+                  inputLines.push(`内容预览(前50行):\n${preview}`)
                 }
               } else if (toolName === "read" || toolName === "read_file") {
                 const p = input.file_path || input.path
