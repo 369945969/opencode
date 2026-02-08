@@ -185,6 +185,7 @@ const mockWireframeFiles = [
 
 interface WorkspaceProps {
   onOpenFile?: (doc: any) => void
+  title?: string
 }
 
 const Workspace: Component<WorkspaceProps> = (props) => {
@@ -465,7 +466,7 @@ const Workspace: Component<WorkspaceProps> = (props) => {
       style="flex-basis: 0%; padding: 1.5rem 2rem;"
       class="overflow-x-hidden overflow-y-hidden flex flex-col grow shrink relative"
     >
-      <div id="12:32" class="flex justify-between items-center mb-6 h-10">
+      <div id="12:32" class="flex justify-between items-center mb-6 h-10 relative">
         <div class="flex items-center gap-x-4">
           <Show when={currentView() !== "canvas"}>
             <button
@@ -516,6 +517,13 @@ const Workspace: Component<WorkspaceProps> = (props) => {
             </button>
           </Show>
         </div>
+        
+        <Show when={props.title}>
+          <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-[#E8F0FF] font-semibold text-lg whitespace-nowrap overflow-hidden text-ellipsis max-w-[40%]">
+            {props.title}
+          </div>
+        </Show>
+
         <div class="flex items-center gap-x-2">
           <Show when={isCanvasOrDesign()}>
             <span id="12:46" style="color: rgba(138, 151, 170, 1);" class="text-sm">

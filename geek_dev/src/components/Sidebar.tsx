@@ -5,6 +5,7 @@ interface SidebarProps {
   width: number
   isCollapsed?: boolean
   onToggle?: () => void
+  onChatStart?: (text: string) => Promise<void>
 }
 
 type Msg = {
@@ -14,6 +15,8 @@ type Msg = {
   ts: number
   thinkText?: string
   thinkDone?: boolean
+  thinkStart?: number
+  thinkDuration?: number
 }
 
 type Part = {
@@ -167,6 +170,12 @@ const Sidebar: Component<SidebarProps> = (props) => {
     return new Date(ts).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })
   }
 
+  const formatDuration = (ms: number) => {
+    if (ms < 1000) return `${ms}ms`
+    const s = (ms / 1000).toFixed(1)
+    return `${s}s`
+  }
+
   const splitThink = (textValue: string) => {
     const openTag = "<think>"
     const closeTag = "</think>"
@@ -202,21 +211,40 @@ const Sidebar: Component<SidebarProps> = (props) => {
 
   const send = async () => {
     if (busy()) return
+    if (!connected()) {
+      setMsgs((list) => [
+        ...list,
+        { id: makeId(), role: "assistant", text: "服务端连接失败", ts: Date.now() },
+      ])
+      return
+    }
     const value = text().trim()
     if (!value) return
     const cookieSession = cookieValue("app_session")
     const sessionId = sid() || cookieSession
     if (!sessionId) {
-      setMsgs((list) => [
-        ...list,
-        { id: makeId(), role: "assistant", text: "当前未创建App，请点击右侧开始创建App", ts: Date.now() },
-      ])
+      // setMsgs((list) => [
+      //   ...list,
+      //   { id: makeId(), role: "assistant", text: "会话正在初始化，请稍候...", ts: Date.now() },
+      // ])
       return
     }
+    
+    const isFirstMessage = msgs().filter(m => m.role === "user").length === 0
+    
+    // Update UI immediately to prevent message staying in input box
     setMsgs((list) => [
       ...list,
       { id: makeId(), role: "user", text: value, ts: Date.now() },
     ])
+    setText("")
+    
+    if (isFirstMessage && props.onChatStart) {
+      setBusy(true) // Prevent double submit
+      await props.onChatStart(value)
+      // Do not setBusy(false) here, we continue to streaming
+    }
+
     setBusy(true)
     setStreaming(true)
     const finalSessionId = sessionId || (await ensureSession())
@@ -252,7 +280,6 @@ const Sidebar: Component<SidebarProps> = (props) => {
       ])
       return
     }
-    setText("")
     if (busyTimer) window.clearTimeout(busyTimer)
     busyTimer = window.setTimeout(() => {
       setBusy(false)
@@ -274,10 +301,10 @@ const Sidebar: Component<SidebarProps> = (props) => {
     document.addEventListener("mouseup", stopDrag)
     const cookieSession = cookieValue("app_session")
     if (!cookieSession) {
-      setMsgs((list) => [
-        ...list,
-        { id: makeId(), role: "assistant", text: "当前未创建App，请点击右侧开始创建App", ts: Date.now() },
-      ])
+      // setMsgs((list) => [
+      //   ...list,
+      //   { id: makeId(), role: "assistant", text: "正在初始化默认会话...", ts: Date.now() },
+      // ])
     } else {
       setSid(cookieSession)
     }
@@ -285,15 +312,15 @@ const Sidebar: Component<SidebarProps> = (props) => {
       const detail = (evt as CustomEvent).detail as { sessionId?: string; appName?: string } | undefined
       if (!detail?.sessionId) return
       setSid(detail.sessionId)
-      setMsgs((list) => [
-        ...list,
-        {
-          id: makeId(),
-          role: "assistant",
-          text: `App已创建：${detail.appName ?? ""}`,
-          ts: Date.now(),
-        },
-      ])
+      // setMsgs((list) => [
+      //   ...list,
+      //   {
+      //     id: makeId(),
+      //     role: "assistant",
+      //     text: `App已创建：${detail.appName ?? ""}`,
+      //     ts: Date.now(),
+      //   },
+      // ])
     }
     window.addEventListener("app_created", handleCreated as EventListener)
     let source: EventSource | undefined
@@ -380,11 +407,15 @@ const Sidebar: Component<SidebarProps> = (props) => {
           setMsgs((list) => {
             const index = list.findIndex((item) => item.id === messageId)
             const delta = props.delta ?? ""
+            const now = Date.now()
             if (index >= 0) {
               const prev = list[index]
               const nextThink = part.text !== undefined ? part.text : (prev.thinkText || "") + delta
+              const thinkDone = !!part.time?.end
+              const thinkStart = prev.thinkStart || now
+              const thinkDuration = thinkDone ? now - thinkStart : undefined
               const next = list.slice()
-              next[index] = { ...prev, thinkText: nextThink, thinkDone: !!part.time?.end, ts: Date.now() }
+              next[index] = { ...prev, thinkText: nextThink, thinkDone, thinkStart, thinkDuration, ts: now }
               return next
             }
             return [
@@ -393,9 +424,10 @@ const Sidebar: Component<SidebarProps> = (props) => {
                 id: messageId,
                 role: "assistant",
                 text: "",
-                ts: Date.now(),
+                ts: now,
                 thinkText: part.text !== undefined ? part.text : delta,
                 thinkDone: !!part.time?.end,
+                thinkStart: now,
               },
             ]
           })
@@ -558,7 +590,7 @@ const Sidebar: Component<SidebarProps> = (props) => {
                         </div>
                       </div>
                     </Show>
-                    <div style="flex-basis: 0%;" class={`${isUser ? "max-w-[80%]" : "grow shrink"}`}>
+                    <div class={`${isUser ? "max-w-[80%]" : "grow shrink basis-0"}`}>
                       <div
                         style={{
                           "background-color": isUser
@@ -573,14 +605,23 @@ const Sidebar: Component<SidebarProps> = (props) => {
                       >
                         <Show when={hasThink}>
                           <details
-                            class="mb-3 pb-3 border-b-[1px] border-solid"
+                            class="mb-3 pb-3 border-b-[1px] border-solid group"
                             style={{
                               "border-color": "color-mix( in oklab , #00F0FF 10% , transparent )",
                             }}
-                            open={!msg.thinkDone}
+                            open
                           >
-                            <summary style="color: rgba(140, 150, 160, 1);" class="text-xs cursor-pointer">
-                              {msg.thinkDone ? "思考完成" : "思考中..."}
+                            <summary style="color: rgba(140, 150, 160, 1);" class="text-xs cursor-pointer list-none flex items-center gap-x-2 select-none">
+                              <span>{msg.thinkDone ? "已思考" : "思考中..."}</span>
+                              <Show when={msg.thinkDone && msg.thinkDuration}>
+                                <span style="color: rgba(92, 104, 118, 1);">
+                                  {formatDuration(msg.thinkDuration!)}
+                                </span>
+                              </Show>
+                              <iconify-icon
+                                icon="lucide:chevron-right"
+                                class="text-sm transition-transform group-open:rotate-90"
+                              ></iconify-icon>
                             </summary>
                             <p
                               style="color: rgba(140, 150, 160, 1);"

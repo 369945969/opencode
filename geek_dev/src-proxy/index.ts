@@ -440,6 +440,78 @@ export const createProxy = (input: ProxyConfig = {}) => {
     return Response.json(app, { headers: out })
   }
 
+  const generateTitle = async (req: Request) => {
+    const body = await req.json().catch(() => null)
+    const textValue = body?.text ?? ""
+    if (!textValue) return Response.json({ title: "New Project" }, { headers: baseHeaders })
+    
+    const headers = new Headers({ "Content-Type": "application/json" })
+    if (auth) headers.set("Authorization", auth)
+    
+    // Create temp session
+    const sessionRes = await fetch(`${config.baseUrl}/session`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ title: "TitleGen" })
+    })
+    const sessionData = await sessionRes.json()
+    const sessionId = sessionData?.id
+    
+    if (!sessionId) return Response.json({ title: "Project" }, { headers: baseHeaders })
+    
+    // Add instruction to avoid repeating user input
+    const prompt = `请分析以下用户输入，并用最简短的语言（5-10个字）概括其核心意图，作为项目标题。注意：绝对不要直接重复用户的输入，必须进行概括和重写。只返回标题文本。输入内容：${textValue}`
+    
+    
+    let resultText = ""
+    try {
+        const promptRes = await fetch(`${config.baseUrl}/session/${sessionId}/prompt_async`, {
+            method: "POST",
+            headers,
+            body: JSON.stringify({
+                model: { providerID: defaultProviderID, modelID: defaultModelID },
+                parts: [{ type: "text", text: prompt }],
+            })
+        })
+    
+    const reader = promptRes.body?.getReader()
+    if (reader) {
+        const decoder = new TextDecoder()
+        while (true) {
+            const { done, value } = await reader.read()
+            if (done) break
+            const chunk = decoder.decode(value)
+            const lines = chunk.split("\n")
+            for (const line of lines) {
+                if (line.startsWith("data: ")) {
+                    try {
+                        const json = JSON.parse(line.slice(6))
+                        console.log("Chunk:", JSON.stringify(json)) // Debug log
+                        
+                        // Handle text content
+                        if (json.properties?.delta && json.properties.part?.type === "text") {
+                            resultText += json.properties.delta
+                        }
+                    } catch {}
+                }
+            }
+        }
+    }
+    } catch (e) {
+        console.error("Generate title error:", e)
+    }
+    
+    let title = resultText.trim().replace(/^["']|["']$/g, "").replace(/\n/g, " ")
+    if (title.length > 20) title = title.slice(0, 20)
+    
+    // Cleanup
+    try {
+        await fetch(`${config.baseUrl}/session/${sessionId}`, { method: "DELETE", headers })
+    } catch {}
+
+    return Response.json({ title }, { headers: baseHeaders })
+  }
+
   const proxyFetch = async (req: Request) => {
     const url = new URL(req.url)
     const target = new URL(url.pathname + url.search, config.baseUrl)
@@ -506,6 +578,7 @@ export const createProxy = (input: ProxyConfig = {}) => {
     if (url.pathname === "/pm/dirs") return pmResponse()
     if (url.pathname === "/apps" && req.method === "GET") return appsList(req)
     if (url.pathname === "/apps" && req.method === "POST") return appsCreate(req)
+    if (url.pathname === "/generate-title" && req.method === "POST") return generateTitle(req)
     return proxyFetch(req)
   }
 

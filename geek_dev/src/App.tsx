@@ -17,12 +17,37 @@ declare module "solid-js" {
   }
 }
 
+const base = import.meta.env.VITE_PROXY_URL ?? "http://localhost:4097"
+
 function App() {
   const [sidebarWidth, setSidebarWidth] = createSignal(window.innerWidth * 0.36)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = createSignal(false)
   const [currentView, setCurrentView] = createSignal("home")
   const [selectedDoc, setSelectedDoc] = createSignal<any>(null)
+  const [transitioning, setTransitioning] = createSignal(false)
+  const [transitionTitle, setTransitionTitle] = createSignal("Analyzing Input...")
+  const [projectTitle, setProjectTitle] = createSignal("")
   let isResizing = false
+
+  const handleChatStart = async (text: string): Promise<void> => {
+    if (currentView() !== "home") return
+
+    setTransitioning(true)
+    
+    // User requested: Use first 20 chars + "..." as title directly, skipping LLM
+    const title = text.slice(0, 20) + "..."
+    
+    setTransitionTitle(`Project: ${title}`)
+    setProjectTitle(title)
+
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        setCurrentView("workspace")
+        setTransitioning(false)
+        resolve()
+      }, 2000)
+    })
+  }
 
   const startResizing = () => {
     isResizing = true
@@ -70,6 +95,7 @@ function App() {
             width={isSidebarCollapsed() ? 60 : sidebarWidth()} 
             isCollapsed={isSidebarCollapsed()}
             onToggle={() => setIsSidebarCollapsed(!isSidebarCollapsed())}
+            onChatStart={handleChatStart}
           />
           <Show when={!isSidebarCollapsed()}>
             <div
@@ -80,34 +106,52 @@ function App() {
           </Show>
         </Show>
 
-        <Show when={currentView() === "home"}>
-          <Home onNavigate={(page) => setCurrentView(page)} />
-        </Show>
+        <div class="relative flex flex-col grow overflow-hidden">
+          <Show when={currentView() === "home"}>
+            <Home onNavigate={(page) => setCurrentView(page)} />
+          </Show>
 
-        <Show when={currentView() === "project-list"}>
-          <ProjectList onNavigate={(page) => setCurrentView(page)} />
-        </Show>
+          <Show when={currentView() === "project-list"}>
+            <ProjectList onNavigate={(page) => setCurrentView(page)} />
+          </Show>
 
-        <Show when={currentView() === "workspace"}>
-          <Workspace
-            onOpenFile={(doc: any) => {
-              if (doc.type === "style-comparison") {
-                setCurrentView("style-comparison")
-              } else {
-                setSelectedDoc(doc)
-                setCurrentView("doc-detail")
-              }
-            }}
-          />
-        </Show>
+          <Show when={currentView() === "workspace"}>
+            <Workspace
+              title={projectTitle()}
+              onOpenFile={(doc: any) => {
+                if (doc.type === "style-comparison") {
+                  setCurrentView("style-comparison")
+                } else {
+                  setSelectedDoc(doc)
+                  setCurrentView("doc-detail")
+                }
+              }}
+            />
+          </Show>
 
-        <Show when={currentView() === "doc-detail"}>
-          <DocDetail doc={selectedDoc()} onBack={() => setCurrentView("workspace")} />
-        </Show>
+          <Show when={currentView() === "doc-detail"}>
+            <DocDetail doc={selectedDoc()} onBack={() => setCurrentView("workspace")} />
+          </Show>
 
-        <Show when={currentView() === "style-comparison"}>
-          <StyleComparison onBack={() => setCurrentView("workspace")} />
-        </Show>
+          <Show when={currentView() === "style-comparison"}>
+            <StyleComparison onBack={() => setCurrentView("workspace")} />
+          </Show>
+
+          <Show when={transitioning()}>
+            <div 
+               style="z-index: 9999; background: #0B0E14;" 
+               class="absolute inset-0 flex flex-col items-center justify-center text-[#00F0FF]"
+            >
+               <div class="relative w-64 h-64 flex items-center justify-center mb-8">
+                  <div class="absolute inset-0 border-4 border-[#00F0FF] rounded-full opacity-20 animate-[ping_3s_cubic-bezier(0,0,0.2,1)_infinite]"></div>
+                  <div class="absolute inset-0 border-t-4 border-[#00F0FF] rounded-full animate-spin"></div>
+                  <div class="text-4xl font-mono font-bold tracking-widest animate-pulse">GEEK</div>
+               </div>
+               <div class="text-2xl mb-2 font-mono text-[#E8F0FF]">{transitionTitle()}</div>
+               <div class="text-sm font-mono text-[#5C6876]">Initializing Environment...</div>
+            </div>
+          </Show>
+        </div>
       </div>
     </div>
   )
