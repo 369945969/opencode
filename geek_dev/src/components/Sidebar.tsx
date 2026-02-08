@@ -1,5 +1,5 @@
 import type { Component } from "solid-js"
-import { For, Show, createEffect, createSignal, onCleanup, onMount } from "solid-js"
+import { For, Show, batch, createEffect, createSignal, onCleanup, onMount } from "solid-js"
 
 interface SidebarProps {
   width: number
@@ -146,6 +146,7 @@ const Sidebar: Component<SidebarProps> = (props) => {
   const userMessageIds = new Set<string>()
   let messagesRef: HTMLDivElement | undefined
   let resizerRef: HTMLDivElement | undefined
+  let textareaRef: HTMLTextAreaElement | undefined
   let startY = 0
   let startHeight = 0
 
@@ -228,41 +229,43 @@ const Sidebar: Component<SidebarProps> = (props) => {
 
   const send = async () => {
     if (busy()) return
-    if (!connected()) {
-      setMsgs((list) => [
-        ...list,
-        { id: makeId(), role: "assistant", text: "服务端连接失败", ts: Date.now() },
-      ])
-      return
-    }
+
     const value = text().trim()
     if (!value) return
     const cookieSession = cookieValue("app_session")
     const sessionId = sid() || cookieSession
-    if (!sessionId) {
-      // setMsgs((list) => [
-      //   ...list,
-      //   { id: makeId(), role: "assistant", text: "会话正在初始化，请稍候...", ts: Date.now() },
-      // ])
-      return
-    }
+
     
     const isFirstMessage = msgs().filter(m => m.role === "user").length === 0
     
     // Update UI immediately to prevent message staying in input box
-    setMsgs((list) => [
-      ...list,
-      { id: makeId(), role: "user", text: value, ts: Date.now() },
-    ])
+    // Force clear input first, outside of batch to ensure priority
     setText("")
-    
-    // Show typing immediately and block input
-    setBusy(true)
-    setStreaming(true)
+    if (textareaRef) textareaRef.value = ""
+
+    batch(() => {
+      setMsgs((list) => [
+        ...list,
+        { id: makeId(), role: "user", text: value, ts: Date.now() },
+      ])
+      
+      // Show typing immediately and block input
+      setBusy(true)
+      setStreaming(true)
+    })
 
     if (isFirstMessage && props.onChatStart) {
       // Trigger transition logic in background, do not await
-      props.onChatStart(value).catch(console.error)
+      // Use setTimeout to ensure UI updates (input clearing) happen before any heavy transition logic
+      // Increase delay to 300ms to ensure browser has time to paint the cleared input state and avoid race conditions
+      setTimeout(() => {
+        // Double check clear before transition
+        if (textareaRef && textareaRef.value !== "") {
+           textareaRef.value = ""
+           setText("")
+        }
+        props.onChatStart?.(value).catch(console.error)
+      }, 300)
     }
 
     const finalSessionId = sessionId || (await ensureSession())
@@ -345,7 +348,7 @@ const Sidebar: Component<SidebarProps> = (props) => {
     try {
       source = new EventSource(`${base}/events`)
       source.onopen = () => {
-        setConnected(false)
+        setConnected(true)
       }
       source.onerror = () => {
         setConnected(false)
@@ -779,6 +782,7 @@ const Sidebar: Component<SidebarProps> = (props) => {
             style="background-color: color-mix( in oklab , #1A1F3A 80% , transparent ); border-color: color-mix( in oklab , #00F0FF 30% , transparent ); padding: 1rem 1.5rem;"
           >
             <textarea
+              ref={textareaRef}
               id="12:127"
               style="color: rgba(232, 240, 255, 1); resize: none;"
               placeholder="向AI助手描述你的需求..."
