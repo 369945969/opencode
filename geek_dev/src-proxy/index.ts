@@ -12,6 +12,7 @@ export type ProxyConfig = {
   pmRoot?: string
   pmDepth?: number
   pmMaxBytes?: number
+  workspace?: string
 }
 
 type TreeFile = {
@@ -54,6 +55,7 @@ const defaults = {
   pmRoot: process.env.PM_ROOT ?? process.cwd(),
   pmDepth: Number(process.env.PM_DEPTH ?? "3"),
   pmMaxBytes: Number(process.env.PM_MAX_BYTES ?? "1048576"),
+  workspace: process.env.OPENCODE_WORKSPACE ?? path.join(process.cwd(), "workspace"),
 }
 const defaultProviderID = process.env.OPENCODE_DEFAULT_PROVIDER_ID ?? "nvidia"
 const defaultModelID = process.env.OPENCODE_DEFAULT_MODEL_ID ?? "glm-4.7"
@@ -420,7 +422,8 @@ export const createProxy = (input: ProxyConfig = {}) => {
     if (!res.ok || !data?.id) {
       return Response.json({ error: "session create failed" }, { status: 500, headers: baseHeaders })
     }
-    const appPath = path.join(userRow.root, uuid)
+    // User requested: Use config.workspace + sessionId
+    const appPath = path.join(config.workspace, data.id)
     await fs.mkdir(appPath, { recursive: true })
     const app: AppItem = {
       uuid,
@@ -512,6 +515,18 @@ export const createProxy = (input: ProxyConfig = {}) => {
     return Response.json({ title }, { headers: baseHeaders })
   }
 
+  const ensureSessionDir = async (req: Request) => {
+    const url = new URL(req.url)
+    const parts = url.pathname.split("/")
+    const sessionIdx = parts.indexOf("session")
+    const sessionId = parts[sessionIdx + 1]
+    if (!sessionId) return Response.json({ error: "No session ID" }, { status: 400, headers: baseHeaders })
+
+    const appPath = path.join(config.workspace, sessionId)
+    await fs.mkdir(appPath, { recursive: true })
+    return Response.json({ status: "ok", path: appPath }, { headers: baseHeaders })
+  }
+
   const proxyFetch = async (req: Request) => {
     const url = new URL(req.url)
     const target = new URL(url.pathname + url.search, config.baseUrl)
@@ -532,8 +547,32 @@ export const createProxy = (input: ProxyConfig = {}) => {
           req.method === "POST" &&
           target.pathname.startsWith("/session/") &&
           (target.pathname.endsWith("/message") || target.pathname.endsWith("/prompt_async"))
-        if (isMessage && !parsed?.model) {
-          parsed.model = { providerID: defaultProviderID, modelID: defaultModelID }
+        if (isMessage) {
+          if (!parsed?.model) {
+            parsed.model = { providerID: defaultProviderID, modelID: defaultModelID }
+          }
+          // User requested: Inject system rules for directory restriction
+          try {
+            const parts = target.pathname.split("/")
+            const sessionIdx = parts.indexOf("session")
+            if (sessionIdx >= 0 && parts.length > sessionIdx + 1) {
+              const sid = parts[sessionIdx + 1]
+              const row = db.query("select path from apps where session_id = ?").get(sid) as { path: string } | undefined
+              if (row?.path) {
+                const rule = `[SYSTEM RULE]: You are strictly limited to operating within the directory: ${row.path}. You must not create, modify, or delete any files outside of this directory.`
+                if (Array.isArray(parsed.parts)) {
+                  const textPart = parsed.parts.find((p: any) => p.type === "text")
+                  if (textPart) {
+                    textPart.text = rule + "\n\n" + textPart.text
+                  } else {
+                    parsed.parts.unshift({ type: "text", text: rule })
+                  }
+                }
+              }
+            }
+          } catch (e) {
+            console.error("Inject system rule error:", e)
+          }
         }
         bodyText = JSON.stringify(parsed)
       } catch {}
@@ -579,6 +618,7 @@ export const createProxy = (input: ProxyConfig = {}) => {
     if (url.pathname === "/apps" && req.method === "GET") return appsList(req)
     if (url.pathname === "/apps" && req.method === "POST") return appsCreate(req)
     if (url.pathname === "/generate-title" && req.method === "POST") return generateTitle(req)
+    if (url.pathname.endsWith("/ensure") && req.method === "POST") return ensureSessionDir(req)
     return proxyFetch(req)
   }
 

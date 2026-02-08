@@ -524,11 +524,11 @@ const Sidebar: Component<SidebarProps> = (props) => {
     if (last.role === "assistant") {
       // If thinking is in progress, do not show typing
       if (last.thinkText && !last.thinkDone) return false
-      // If thinking is done but no text yet, show typing
-      if (last.thinkDone && !last.text) return true
-      // If no thinking and no text (just initialized), show typing
-      if (!last.thinkText && !last.text) return true
-      return false
+      // If we are here, it means either:
+      // 1. No thinking involved (pure text)
+      // 2. Thinking is done
+      // In these cases, since streaming() is true, we should show typing to indicate more text might come
+      return true
     }
     return false
   }
@@ -555,7 +555,7 @@ const Sidebar: Component<SidebarProps> = (props) => {
               ></iconify-icon>
             </div>
             <Show when={!props.isCollapsed}>
-              <h2 id="12:94" style="color: rgba(232, 240, 255, 1);" class="text-lg font-semibold truncate max-w-[160px]" title={props.title || "极客开发区"}>
+              <h2 id="12:94" style="color: rgba(232, 240, 255, 1);" class="text-lg font-semibold truncate max-w-[240px]" title={props.title || "极客开发区"}>
                 {props.title || "极客开发区"}
               </h2>
             </Show>
@@ -615,70 +615,53 @@ const Sidebar: Component<SidebarProps> = (props) => {
                         style={{
                           "background-color": isUser
                             ? "color-mix( in oklab , #00F0FF 15% , transparent )"
-                            : "color-mix( in oklab , #1A1F3A 90% , transparent )",
+                            : "transparent",
                           "border-color": isUser
                             ? "color-mix( in oklab , #00F0FF 30% , transparent )"
-                            : "color-mix( in oklab , #00F0FF 10% , transparent )",
-                          "margin-left": isUser ? "auto" : undefined,
+                            : "transparent",
                         }}
-                        class="p-4 border-[1px] border-solid rounded-2xl"
+                        class={`p-3 rounded-lg border-[1px] border-solid ${
+                          isUser ? "text-[#E8F0FF]" : "text-[#94A3B8]"
+                        } text-sm leading-relaxed break-words`}
                       >
                         <Show when={hasThink}>
-                          <details
-                            class="mb-3 pb-3 border-b-[1px] border-solid group"
-                            style={{
-                              "border-color": "color-mix( in oklab , #00F0FF 10% , transparent )",
-                            }}
-                            open
-                          >
-                            <summary style="color: rgba(140, 150, 160, 1);" class="text-xs cursor-pointer list-none flex items-center gap-x-2 select-none">
-                              <span>{msg.thinkDone ? "已思考" : "思考中..."}</span>
+                          <div class="mb-2">
+                            <div class="flex items-center gap-x-2 mb-2">
+                              <span class="text-xs font-mono text-[#5C6876] uppercase tracking-wider">
+                                {msg.thinkDone ? "已思考" : "思考中..."}
+                              </span>
                               <Show when={msg.thinkDone && msg.thinkDuration}>
-                                <span style="color: rgba(92, 104, 118, 1);">
+                                <span class="text-xs text-[#475569] font-mono">
                                   {formatDuration(msg.thinkDuration!)}
                                 </span>
                               </Show>
-                              <iconify-icon
-                                icon="lucide:chevron-right"
-                                class="text-sm transition-transform group-open:rotate-90"
-                              ></iconify-icon>
-                            </summary>
-                            <p
-                              style="color: rgba(140, 150, 160, 1);"
-                              class="text-xs whitespace-pre-wrap mt-2"
+                              <div
+                                class={`transition-transform duration-200 ${msg.thinkDone ? "" : "animate-pulse"}`}
+                              >
+                                <iconify-icon
+                                  icon="lucide:chevron-down"
+                                  class="text-[#5C6876] text-sm"
+                                ></iconify-icon>
+                              </div>
+                            </div>
+                            <div
+                              class={`text-[#5C6876] text-xs font-mono border-l-2 border-[#1E293B] pl-3 py-1 ${
+                                msg.thinkDone ? "max-h-[200px] overflow-y-auto geek-scroll" : ""
+                              }`}
                             >
-                              {msg.thinkText || "思考中..."}
-                            </p>
-                          </details>
+                              {msg.thinkText}
+                            </div>
+                          </div>
                         </Show>
-                        <p style="color: rgba(232, 240, 255, 1);" class="text-sm whitespace-pre-wrap">
-                          {msg.text}
-                        </p>
+                        <div class="whitespace-pre-wrap">{msg.text}</div>
                       </div>
-                      <span
-                        style="color: rgba(92, 104, 118, 1);"
-                        class={`text-xs block mt-1 ${isUser ? "text-right mr-4" : "ml-4"}`}
-                      >
-                        {formatTime(msg.ts)}
-                      </span>
                     </div>
-                    <Show when={isUser}>
-                      <div
-                        style="background-color: color-mix( in oklab , #00F0FF 10% , transparent );"
-                        class="flex shrink-0 justify-center items-center w-8 h-8 rounded-full"
-                      >
-                        <img
-                          alt="User profile picture with friendly expression"
-                          src="https://static.paraflowcontent.com/public/resource/image/c0613487-2f97-4453-8e91-a50f025afcec.jpeg"
-                          class="w-full h-full object-cover rounded-full"
-                        />
-                      </div>
-                    </Show>
                   </div>
                 )
               }}
             </For>
             
+            {/* Typing Indicator */}
             <Show when={showTyping()}>
               <div class="flex gap-x-3 mb-4">
                 <div
@@ -694,18 +677,10 @@ const Sidebar: Component<SidebarProps> = (props) => {
                   </div>
                 </div>
                 <div class="grow shrink basis-0">
-                  <div
-                    style={{
-                      "background-color": "color-mix( in oklab , #1A1F3A 90% , transparent )",
-                      "border-color": "color-mix( in oklab , #00F0FF 10% , transparent )",
-                    }}
-                    class="p-4 border-[1px] border-solid rounded-2xl w-fit"
-                  >
-                    <div class="flex gap-1 items-center h-4">
-                      <div class="w-2 h-2 rounded-full bg-[#00F0FF] animate-[bounce_1s_infinite_0ms]"></div>
-                      <div class="w-2 h-2 rounded-full bg-[#00F0FF] animate-[bounce_1s_infinite_200ms]"></div>
-                      <div class="w-2 h-2 rounded-full bg-[#00F0FF] animate-[bounce_1s_infinite_400ms]"></div>
-                    </div>
+                  <div class="flex items-center gap-x-1 h-10 px-3">
+                    <div class="w-1.5 h-1.5 rounded-full bg-[#00F0FF] animate-bounce" style="animation-delay: 0ms"></div>
+                    <div class="w-1.5 h-1.5 rounded-full bg-[#00F0FF] animate-bounce" style="animation-delay: 150ms"></div>
+                    <div class="w-1.5 h-1.5 rounded-full bg-[#00F0FF] animate-bounce" style="animation-delay: 300ms"></div>
                   </div>
                 </div>
               </div>

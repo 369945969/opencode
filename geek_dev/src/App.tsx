@@ -34,8 +34,8 @@ function App() {
 
     setTransitioning(true)
     
-    // User requested: Use first 20 chars + "..." as title directly, skipping LLM
-    const title = text.slice(0, 20) + "..."
+    // User requested: Use first 12 chars + "..." as title directly, skipping LLM
+    const title = text.length > 12 ? text.slice(0, 12) + "..." : text
     
     setTransitionTitle(`Project: ${title}`)
     setProjectTitle(title)

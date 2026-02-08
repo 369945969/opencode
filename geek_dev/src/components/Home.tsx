@@ -9,7 +9,25 @@ const Home: Component<HomeProps> = (props) => {
   const base = import.meta.env.VITE_PROXY_URL ?? "http://localhost:4097"
   const [creating, setCreating] = createSignal(false)
 
+  const cookieValue = (key: string) => {
+    const source = document.cookie || ""
+    const list = source.split(";").map((part) => part.trim())
+    for (const item of list) {
+      if (!item.startsWith(`${key}=`)) continue
+      return decodeURIComponent(item.slice(key.length + 1))
+    }
+    return ""
+  }
+
   onMount(async () => {
+    const cookieSession = cookieValue("app_session")
+    if (cookieSession) {
+      // User requested: Check and ensure directory exists for existing session
+      await fetch(`${base}/session/${cookieSession}/ensure`, {
+          method: "POST"
+      }).catch(e => console.error("Ensure dir failed", e))
+      return
+    }
     setCreating(true)
     const res = await fetch(`${base}/apps`, {
       method: "POST",
@@ -23,6 +41,10 @@ const Home: Component<HomeProps> = (props) => {
       return
     }
     setCreating(false)
+    
+    // User requested: Save session to cookie to reuse on refresh
+    document.cookie = `app_session=${data.sessionId}; path=/; max-age=31536000; SameSite=Lax`
+    
     window.dispatchEvent(
       new CustomEvent("app_created", {
         detail: { sessionId: data.sessionId, appName: data.appName, uuid: data.uuid },
