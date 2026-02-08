@@ -90,6 +90,7 @@ Generate high-fidelity HTML for each User Story under `[project_name]/Screen&Pro
     - `[project_name]/Screen&Prototype/`: Stores all `.html` prototypes.
 2.  **Consistency Principle**: Prototypes must strictly follow color values and border radiuses defined in `StyleGuide.md`, no random improvisation.
 3.  **Progressive Delivery**: If the project is too large, prioritize generating documents and prototypes for P0 level features.
+4.  **Language Consistency**: Always respond in the user's language and write all generated documents in the same language the user used.
 
 ## Example Trigger Words
 "Help me design an enterprise-level CRM system, focusing on managing sales leads and customer follow-up records, requiring a Web interface."

@@ -179,11 +179,13 @@ const Sidebar: Component<SidebarProps> = (props) => {
   const [sid, setSid] = createSignal("")
   const [busy, setBusy] = createSignal(false)
   const [streaming, setStreaming] = createSignal(false)
+  const [continueMode, setContinueMode] = createSignal(false)
   const [showHistory, setShowHistory] = createSignal(false)
   const [history, setHistory] = createSignal<{ id: string; title: string; ts: number }[]>([])
   const hasUserMessage = createMemo(() => msgs().some((msg) => msg.role === "user"))
   const visibleMsgs = createMemo(() => {
     const list = msgs()
+    if (continueMode()) return list.filter((msg) => msg.id !== "welcome")
     if (!hasUserMessage()) return list
     return list.filter((msg) => msg.id !== "welcome")
   })
@@ -292,6 +294,7 @@ const Sidebar: Component<SidebarProps> = (props) => {
     } catch (e) {
       console.error("Ensure session error:", e)
     }
+    setCookie("session_continue", "1")
     setCookie("app_session", id)
     setCookie("app_name", title)
     window.location.reload()
@@ -541,6 +544,7 @@ const Sidebar: Component<SidebarProps> = (props) => {
       if (textareaRef) textareaRef.value = detail.text
     }
     const cookieSession = cookieValue("app_session")
+    const continueFlag = cookieValue("session_continue")
     if (!cookieSession) {
       // setMsgs((list) => [
       //   ...list,
@@ -548,6 +552,43 @@ const Sidebar: Component<SidebarProps> = (props) => {
       // ])
     } else {
       setSid(cookieSession)
+      if (!continueFlag) {
+        setMsgs((list) =>
+          list.map((msg) =>
+            msg.id === "welcome"
+              ? {
+                  ...msg,
+                  text: "已检测到上次会话，是否继续？如果继续，请回复“继续”。",
+                }
+              : msg,
+          ),
+        )
+      }
+    }
+    if (continueFlag && cookieSession) {
+      setCookie("session_continue", "")
+      setContinueMode(true)
+      setBusy(true)
+      setStreaming(true)
+      setMsgs((list) => list.filter((msg) => msg.id !== "welcome"))
+      fetch(`${base}/session/${cookieSession}/prompt_async`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          parts: [{ type: "text", text: "continue" }],
+          agent: "build",
+        }),
+      })
+        .then((res) => {
+          if (!res.ok) {
+            setBusy(false)
+            setStreaming(false)
+          }
+        })
+        .catch(() => {
+          setBusy(false)
+          setStreaming(false)
+        })
     }
     const handleCreated = (evt: Event) => {
       const detail = (evt as CustomEvent).detail as { sessionId?: string; appName?: string } | undefined
@@ -801,7 +842,8 @@ const Sidebar: Component<SidebarProps> = (props) => {
                   const previewLines = lines.slice(0, 50)
                   const truncated = lines.length > 50
                   const preview = previewLines.join("\n") + (truncated ? "\n..." : "")
-                  inputLines.push(`内容预览(前50行):\n${preview}`)
+                  const pathText = p ? ` ${p}` : ""
+                  inputLines.push(`内容预览(前50行):${pathText}\n${preview}`)
                 }
               } else if (toolName === "read" || toolName === "read_file") {
                 const p = input.file_path || input.path
@@ -813,10 +855,6 @@ const Sidebar: Component<SidebarProps> = (props) => {
               } else if (toolName === "search_codebase" || toolName === "glob" || toolName === "grep") {
                  const p = input.query || input.pattern
                  if (p) detailLines.push(`🔍 搜索: ${p}`)
-              }
-              const inputText = JSON.stringify(input, null, 2)
-              if (inputText && inputText !== "{}") {
-                inputLines.push(`输入参数:\n${inputText}`)
               }
             }
 
@@ -1025,7 +1063,7 @@ const Sidebar: Component<SidebarProps> = (props) => {
   const showTyping = () => {
     if (!streaming()) return false
     const list = msgs()
-    if (list.length === 0) return false
+    if (list.length === 0) return continueMode()
     const last = list[list.length - 1]
     if (last.role === "user") return true
     if (last.role === "assistant") {
@@ -1053,14 +1091,6 @@ const Sidebar: Component<SidebarProps> = (props) => {
           class={`flex ${props.isCollapsed ? 'flex-col gap-y-4 justify-center' : 'justify-between'} items-center border-b-[1px] shrink-0`}
         >
           <div id="12:91" class={`flex items-center ${props.isCollapsed ? 'justify-center' : 'gap-x-3'}`}>
-            <div id="12:92" class="bg-transparent flex justify-center items-center w-6 h-6">
-              <iconify-icon
-                id="12:93"
-                style="color: rgba(0, 240, 255, 1);"
-                icon="lucide:brain-circuit"
-                class="text-xl"
-              ></iconify-icon>
-            </div>
             <Show when={!props.isCollapsed}>
               <h2 id="12:94" style="color: rgba(232, 240, 255, 1);" class="text-lg font-semibold truncate max-w-[240px]" title={props.title || "极客开发区"}>
                 {props.title || "极客开发区"}
@@ -1163,12 +1193,25 @@ const Sidebar: Component<SidebarProps> = (props) => {
                         style="background-color: color-mix( in oklab , #00F0FF 20% , transparent ); border-color: color-mix( in oklab , #00F0FF 40% , transparent );"
                         class="flex shrink-0 justify-center items-center w-8 h-8 border-[1px] border-solid rounded-full"
                       >
-                        <div class="bg-transparent flex justify-center items-center w-4 h-4">
-                          <iconify-icon
-                            style="color: rgba(0, 240, 255, 1);"
-                            icon="lucide:brain-circuit"
-                            class="text-sm"
-                          ></iconify-icon>
+                        <div class="bg-transparent flex justify-center items-center w-4 h-4" style="color: rgba(0, 240, 255, 1);">
+                          <svg
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="1.6"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            class="w-4 h-4"
+                          >
+                            <rect x="4" y="6.5" width="16" height="12" rx="3" />
+                            <path d="M9 6.5V4" />
+                            <path d="M15 6.5V4" />
+                            <circle cx="9" cy="12.5" r="1.25" />
+                            <circle cx="15" cy="12.5" r="1.25" />
+                            <path d="M8 15.5h8" />
+                            <path d="M3.5 12.5H4" />
+                            <path d="M20 12.5H20.5" />
+                          </svg>
                         </div>
                       </div>
                     </Show>
@@ -1271,12 +1314,25 @@ const Sidebar: Component<SidebarProps> = (props) => {
                   style="background-color: color-mix( in oklab , #00F0FF 20% , transparent ); border-color: color-mix( in oklab , #00F0FF 40% , transparent );"
                   class="flex shrink-0 justify-center items-center w-8 h-8 border-[1px] border-solid rounded-full"
                 >
-                  <div class="bg-transparent flex justify-center items-center w-4 h-4">
-                    <iconify-icon
-                      style="color: rgba(0, 240, 255, 1);"
-                      icon="lucide:brain-circuit"
-                      class="text-sm"
-                    ></iconify-icon>
+                  <div class="bg-transparent flex justify-center items-center w-4 h-4" style="color: rgba(0, 240, 255, 1);">
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.6"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      class="w-4 h-4"
+                    >
+                      <rect x="4" y="6.5" width="16" height="12" rx="3" />
+                      <path d="M9 6.5V4" />
+                      <path d="M15 6.5V4" />
+                      <circle cx="9" cy="12.5" r="1.25" />
+                      <circle cx="15" cy="12.5" r="1.25" />
+                      <path d="M8 15.5h8" />
+                      <path d="M3.5 12.5H4" />
+                      <path d="M20 12.5H20.5" />
+                    </svg>
                   </div>
                 </div>
                 <div class="grow shrink basis-0">
@@ -1403,7 +1459,7 @@ const Sidebar: Component<SidebarProps> = (props) => {
               ref={textareaRef}
               id="12:127"
               style="color: rgba(232, 240, 255, 1); resize: none;"
-              placeholder="向AI助手描述你的需求..."
+              placeholder="请描述你的需求..."
               class="flex-grow w-full bg-transparent outline-none text-sm"
               value={text()}
               onInput={(e) => setText(e.currentTarget.value)}

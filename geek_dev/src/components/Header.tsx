@@ -54,7 +54,7 @@ const Header: Component<HeaderProps> = (props) => {
                 <iconify-icon
                   id="14:7"
                   style="color: rgba(0, 240, 255, 1);"
-                  icon="lucide:zap"
+                  icon="lucide:sparkles"
                   class="text-2xl"
                 ></iconify-icon>
               </div>
