@@ -518,12 +518,6 @@ const Workspace: Component<WorkspaceProps> = (props) => {
           </Show>
         </div>
         
-        <Show when={props.title}>
-          <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-[#E8F0FF] font-semibold text-lg whitespace-nowrap overflow-hidden text-ellipsis max-w-[40%]">
-            {props.title}
-          </div>
-        </Show>
-
         <div class="flex items-center gap-x-2">
           <Show when={isCanvasOrDesign()}>
             <span id="12:46" style="color: rgba(138, 151, 170, 1);" class="text-sm">

@@ -6,6 +6,7 @@ interface SidebarProps {
   isCollapsed?: boolean
   onToggle?: () => void
   onChatStart?: (text: string) => Promise<void>
+  title?: string
 }
 
 type Msg = {
@@ -239,14 +240,15 @@ const Sidebar: Component<SidebarProps> = (props) => {
     ])
     setText("")
     
-    if (isFirstMessage && props.onChatStart) {
-      setBusy(true) // Prevent double submit
-      await props.onChatStart(value)
-      // Do not setBusy(false) here, we continue to streaming
-    }
-
+    // Show typing immediately and block input
     setBusy(true)
     setStreaming(true)
+
+    if (isFirstMessage && props.onChatStart) {
+      // Trigger transition logic in background, do not await
+      props.onChatStart(value).catch(console.error)
+    }
+
     const finalSessionId = sessionId || (await ensureSession())
     if (!finalSessionId) {
       setBusy(false)
@@ -513,6 +515,24 @@ const Sidebar: Component<SidebarProps> = (props) => {
     })
   })
 
+  const showTyping = () => {
+    if (!streaming()) return false
+    const list = msgs()
+    if (list.length === 0) return false
+    const last = list[list.length - 1]
+    if (last.role === "user") return true
+    if (last.role === "assistant") {
+      // If thinking is in progress, do not show typing
+      if (last.thinkText && !last.thinkDone) return false
+      // If thinking is done but no text yet, show typing
+      if (last.thinkDone && !last.text) return true
+      // If no thinking and no text (just initialized), show typing
+      if (!last.thinkText && !last.text) return true
+      return false
+    }
+    return false
+  }
+
   return (
     <aside
       id="12:88"
@@ -535,8 +555,8 @@ const Sidebar: Component<SidebarProps> = (props) => {
               ></iconify-icon>
             </div>
             <Show when={!props.isCollapsed}>
-              <h2 id="12:94" style="color: rgba(232, 240, 255, 1);" class="text-lg font-semibold">
-                极客开发区
+              <h2 id="12:94" style="color: rgba(232, 240, 255, 1);" class="text-lg font-semibold truncate max-w-[160px]" title={props.title || "极客开发区"}>
+                {props.title || "极客开发区"}
               </h2>
             </Show>
           </div>
@@ -658,6 +678,38 @@ const Sidebar: Component<SidebarProps> = (props) => {
                 )
               }}
             </For>
+            
+            <Show when={showTyping()}>
+              <div class="flex gap-x-3 mb-4">
+                <div
+                  style="background-color: color-mix( in oklab , #00F0FF 20% , transparent ); border-color: color-mix( in oklab , #00F0FF 40% , transparent );"
+                  class="flex shrink-0 justify-center items-center w-8 h-8 border-[1px] border-solid rounded-full"
+                >
+                  <div class="bg-transparent flex justify-center items-center w-4 h-4">
+                    <iconify-icon
+                      style="color: rgba(0, 240, 255, 1);"
+                      icon="lucide:brain-circuit"
+                      class="text-sm"
+                    ></iconify-icon>
+                  </div>
+                </div>
+                <div class="grow shrink basis-0">
+                  <div
+                    style={{
+                      "background-color": "color-mix( in oklab , #1A1F3A 90% , transparent )",
+                      "border-color": "color-mix( in oklab , #00F0FF 10% , transparent )",
+                    }}
+                    class="p-4 border-[1px] border-solid rounded-2xl w-fit"
+                  >
+                    <div class="flex gap-1 items-center h-4">
+                      <div class="w-2 h-2 rounded-full bg-[#00F0FF] animate-[bounce_1s_infinite_0ms]"></div>
+                      <div class="w-2 h-2 rounded-full bg-[#00F0FF] animate-[bounce_1s_infinite_200ms]"></div>
+                      <div class="w-2 h-2 rounded-full bg-[#00F0FF] animate-[bounce_1s_infinite_400ms]"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </Show>
           </div>
 
         <div

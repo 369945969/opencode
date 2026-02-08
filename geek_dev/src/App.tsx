@@ -96,6 +96,7 @@ function App() {
             isCollapsed={isSidebarCollapsed()}
             onToggle={() => setIsSidebarCollapsed(!isSidebarCollapsed())}
             onChatStart={handleChatStart}
+            title={projectTitle()}
           />
           <Show when={!isSidebarCollapsed()}>
             <div
