@@ -59,7 +59,7 @@ const Header: Component<HeaderProps> = (props) => {
                 ></iconify-icon>
               </div>
               <span id="14:8" style="color: rgba(232, 240, 255, 1);" class="text-xl font-bold">
-                Geek Dev
+                极客设计工坊
               </span>
             </button>
           </div>

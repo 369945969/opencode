@@ -57,8 +57,8 @@ const defaults = {
   pmMaxBytes: Number(process.env.PM_MAX_BYTES ?? "1048576"),
   workspace: process.env.OPENCODE_WORKSPACE ?? path.join(process.cwd(), "workspace"),
 }
-const defaultProviderID = process.env.OPENCODE_DEFAULT_PROVIDER_ID ?? "local"
-const defaultModelID = process.env.OPENCODE_DEFAULT_MODEL_ID ?? "glm-4.6v"
+const defaultProviderID = process.env.OPENCODE_DEFAULT_PROVIDER_ID ?? "geek_code"
+const defaultModelID = process.env.OPENCODE_DEFAULT_MODEL_ID ?? "agent"
 
 const text = new TextEncoder()
 const dbPath = path.join(process.cwd(), "src-proxy", "store.sqlite")

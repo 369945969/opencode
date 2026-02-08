@@ -171,7 +171,8 @@ const Sidebar: Component<SidebarProps> = (props) => {
     {
       id: "welcome",
       role: "assistant",
-      text: "你好！我是你的AI设计助手。我可以帮你创建文档、生成界面设计稿，或者分析你的设计需求。你想要我帮你做什么？",
+      text:
+        "Hi, Geek Developers\n你想打造怎样的产品体验？\n一句需求，生成结构化产品蓝图\nPRD 与架构文档一体化输出\n用户故事 + 验收标准系统拆解\n用户旅程与流程逻辑清晰呈现\n高保真原型快速落地与验证",
       ts: Date.now(),
     },
   ])
@@ -330,6 +331,8 @@ const Sidebar: Component<SidebarProps> = (props) => {
     }
     return { hasThink: false, think: "", answer: textValue, done: false }
   }
+  const sanitizeBoxMarkers = (textValue: string) =>
+    textValue.replace(/<\|begin_of_box\|>|<\|end_of_box\|>/g, "")
 
   const ensureSession = async () => {
     if (sid()) return sid()
@@ -520,6 +523,12 @@ const Sidebar: Component<SidebarProps> = (props) => {
     loadHistory()
     document.addEventListener("mousemove", doDrag)
     document.addEventListener("mouseup", stopDrag)
+    const handleExample = (event: Event) => {
+      const detail = (event as CustomEvent).detail as { text?: string }
+      if (!detail?.text) return
+      setText(detail.text)
+      if (textareaRef) textareaRef.value = detail.text
+    }
     const cookieSession = cookieValue("app_session")
     if (!cookieSession) {
       // setMsgs((list) => [
@@ -544,6 +553,7 @@ const Sidebar: Component<SidebarProps> = (props) => {
       // ])
     }
     window.addEventListener("app_created", handleCreated as EventListener)
+    window.addEventListener("home_example", handleExample as EventListener)
     let source: EventSource | undefined
     try {
       source = new EventSource(`${base}/events`)
@@ -983,6 +993,7 @@ const Sidebar: Component<SidebarProps> = (props) => {
       clearInterval(poll)
       if (busyTimer) window.clearTimeout(busyTimer)
       window.removeEventListener("app_created", handleCreated as EventListener)
+      window.removeEventListener("home_example", handleExample as EventListener)
       source?.close()
     })
   })
@@ -1129,6 +1140,11 @@ const Sidebar: Component<SidebarProps> = (props) => {
               {(msg) => {
                 const isUser = msg.role === "user"
                 const hasThink = !!msg.thinkText
+                const isWelcome = msg.id === "welcome"
+                const welcomeLines = isWelcome ? sanitizeBoxMarkers(msg.text).split("\n") : []
+                const welcomeTitle = welcomeLines[0] ?? ""
+                const welcomeSubtitle = welcomeLines[1] ?? ""
+                const welcomeItems = welcomeLines.slice(2)
                 return (
                   <div class={`flex gap-x-3 mb-4 ${isUser ? "justify-end" : ""}`}>
                     <Show when={!isUser}>
@@ -1159,6 +1175,29 @@ const Sidebar: Component<SidebarProps> = (props) => {
                           isUser ? "text-[#E8F0FF]" : "text-[#94A3B8]"
                         } text-sm leading-relaxed break-words`}
                       >
+                        <Show
+                          when={!isWelcome}
+                          fallback={
+                            <div class="relative overflow-hidden rounded-xl border border-[#00F0FF]/25 bg-[#0F1624]/60 px-5 py-4">
+                              <div class="absolute -top-12 -right-12 w-32 h-32 rounded-full bg-[#00F0FF]/10 blur-2xl"></div>
+                              <div class="absolute -bottom-10 -left-10 w-28 h-28 rounded-full bg-[#00F0FF]/10 blur-2xl"></div>
+                              <div class="text-[#E8F0FF] text-base font-semibold tracking-wide">
+                                {welcomeTitle}
+                              </div>
+                              <div class="mt-1 text-sm text-[#94A3B8]">{welcomeSubtitle}</div>
+                              <div class="mt-4 grid grid-cols-1 gap-2">
+                                <For each={welcomeItems}>
+                                  {(item) => (
+                                    <div class="flex items-center gap-2 text-sm text-[#C8D2E0]">
+                                      <div class="w-1.5 h-1.5 rounded-full bg-[#00F0FF]"></div>
+                                      <span>{item}</span>
+                                    </div>
+                                  )}
+                                </For>
+                              </div>
+                            </div>
+                          }
+                        >
                         <Show when={hasThink}>
                           <div class="mb-2">
                             <div class="flex items-center gap-x-2 mb-2">
@@ -1184,11 +1223,11 @@ const Sidebar: Component<SidebarProps> = (props) => {
                                 msg.thinkDone ? "max-h-[200px] overflow-y-auto geek-scroll" : ""
                               }`}
                             >
-                              {msg.thinkText}
+                              {sanitizeBoxMarkers(msg.thinkText || "")}
                             </div>
                           </div>
                         </Show>
-                        <div class="whitespace-pre-wrap">{msg.text}</div>
+                        <div class="whitespace-pre-wrap">{sanitizeBoxMarkers(msg.text)}</div>
                         <Show when={msg.toolStatus}>
                           <div class="mt-2 text-xs font-mono text-[#00F0FF] opacity-80">
                             状态: {msg.toolStatus}
@@ -1205,6 +1244,7 @@ const Sidebar: Component<SidebarProps> = (props) => {
                               )}
                             </For>
                           </div>
+                        </Show>
                         </Show>
                       </div>
                     </div>

@@ -1,5 +1,5 @@
 import type { Component } from "solid-js"
-import { createSignal, onMount } from "solid-js"
+import { For, createSignal, onMount } from "solid-js"
 
 interface HomeProps {
   onNavigate: (page: string) => void
@@ -8,6 +8,26 @@ interface HomeProps {
 const Home: Component<HomeProps> = () => {
   const base = import.meta.env.VITE_PROXY_URL ?? "http://localhost:4097"
   const [creating, setCreating] = createSignal(false)
+  const examples = [
+    {
+      title: "制造运营大屏",
+      desc: "产能、良率、工单与异常告警统一监控",
+      prompt: "设计制造运营大屏，聚合产能、良率、工单与异常告警，突出关键指标与趋势",
+    },
+    {
+      title: "园区监控大屏",
+      desc: "安防态势、告警联动与巡检闭环",
+      prompt: "搭建园区监控大屏，包含安防态势、告警联动、巡检进度与热点区域",
+    },
+    {
+      title: "物流调度大屏",
+      desc: "车辆轨迹、时效与载重分布一览",
+      prompt: "设计物流调度大屏，展示车辆轨迹、时效、载重分布与异常路段",
+    },
+  ]
+  const handleExampleClick = (text: string) => {
+    window.dispatchEvent(new CustomEvent("home_example", { detail: { text } }))
+  }
 
   const cookieValue = (key: string) => {
     const source = document.cookie || ""
@@ -89,11 +109,29 @@ const Home: Component<HomeProps> = () => {
             </div>
 
             <h2 id="14:61" style="color: rgba(232, 240, 255, 1);" class="text-4xl mb-4 font-bold">
-              欢迎来到Geek Dev Apps
+              欢迎来到极客设计工坊
             </h2>
-            <p id="14:62" style="color: rgba(138, 151, 170, 1);" class="text-lg mb-8 whitespace-nowrap">
-              {creating() ? "正在初始化默认会话..." : "在这里开始你的创意之旅，AI助手将帮助你快速构建产品原型和设计稿"}
+            <p id="14:62" style="color: rgba(138, 151, 170, 1);" class="text-lg mb-6 whitespace-nowrap">
+              {creating() ? "正在初始化默认会话..." : "在这里开始你的创意之旅，轻松快速构建产品原型和设计稿"}
             </p>
+            <div class="flex flex-nowrap justify-center gap-4 max-w-[1100px] overflow-x-auto geek-scroll px-2">
+              <For each={examples}>
+                {(item: { title: string; desc: string; prompt: string }) => (
+                  <button
+                    onClick={() => handleExampleClick(item.prompt)}
+                    class="text-left w-64 shrink-0 px-4 py-3 rounded-xl border border-[#00F0FF]/15 bg-[#0F1624]/70 hover:bg-[#00F0FF]/10 hover:border-[#00F0FF]/50 transition-colors"
+                  >
+                    <div class="text-sm text-[#E8F0FF] font-semibold">{item.title}</div>
+                    <div
+                      class="text-xs text-[#8A97AA] mt-1"
+                      style="-webkit-line-clamp: 2; display: -webkit-box; -webkit-box-orient: vertical; overflow: hidden;"
+                    >
+                      {item.desc}
+                    </div>
+                  </button>
+                )}
+              </For>
+            </div>
           </div>
         </div>
       </div>

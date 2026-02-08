@@ -139,47 +139,72 @@ const mockDesignFiles = [
   },
 ]
 
-// Mock Data for Wireframe (Flowchart)
 const mockWireframeFiles = [
   {
     id: "w1",
-    title: "User Registration Flow",
-    filename: "registration_flow.mermaid",
-    type: "flowchart",
+    title: "用户故事｜注册与登录",
+    filename: "US_01_用户注册.md",
+    type: "markdown",
     lastModified: "5 hours ago",
-    content: `graph TD
-    A[Start] --> B{User fills form?}
-    B -- Yes --> C[Validate Data]
-    C -- Valid --> D[Create Account]
-    C -- Invalid --> B
-    D --> E[Send Welcome Email]
-    E --> F[End]`,
+    content: `# 用户故事：注册与登录
+
+## 背景
+面向汽车维修店技师/店主，首次使用平台需要快速完成注册与登录。
+
+## 用户故事
+- 作为维修店技师，我希望能用手机号快速注册，以便快速查看可用车型钥匙。
+- 作为店主，我希望登录后能看到最近下单记录，以便复购。
+
+## 价值与收益
+- 降低首次使用门槛
+- 提升新用户转化率
+
+## 验收标准
+1. 支持手机号/邮箱注册与登录
+2. 注册后自动进入首页
+3. 登录失败提示明确原因`,
   },
   {
     id: "w2",
-    title: "Checkout Process",
-    filename: "checkout.mermaid",
-    type: "flowchart",
+    title: "用户故事｜下单与支付",
+    filename: "US_02_下单与支付.md",
+    type: "markdown",
     lastModified: "1 day ago",
-    content: `graph LR
-    Cart --> Address
-    Address --> Payment
-    Payment --> Confirmation
-    Confirmation --> Success
-    Payment -- Fail --> Error[Show Error]`,
+    content: `# 用户故事：下单与支付
+
+## 用户故事
+- 作为技师，我希望一键加入购物车并快速结算，以节省采购时间。
+- 作为采购人员，我希望支持多种支付方式，以适配公司流程。
+
+## 价值与收益
+- 提升下单效率
+- 降低支付流失
+
+## 验收标准
+1. 支持购物车批量下单
+2. 支付成功后生成订单与通知
+3. 支持失败重试与状态恢复`,
   },
   {
     id: "w3",
-    title: "System Architecture",
-    filename: "architecture.mermaid",
-    type: "flowchart",
+    title: "用户故事｜订单查询",
+    filename: "US_03_订单查询.md",
+    type: "markdown",
     lastModified: "2 days ago",
-    content: `graph TB
-    Client[Client App] --> API[API Gateway]
-    API --> Auth[Auth Service]
-    API --> Core[Core Service]
-    Core --> DB[(Database)]
-    Core --> Cache[(Redis)]`,
+    content: `# 用户故事：订单查询
+
+## 用户故事
+- 作为店主，我希望能查询历史订单，以便对账与复购。
+- 作为技师，我希望查看订单物流状态，以便安排工单。
+
+## 价值与收益
+- 提升复购率
+- 降低售后沟通成本
+
+## 验收标准
+1. 订单支持按时间/状态筛选
+2. 订单详情包含物流与发票信息
+3. 支持导出订单记录`,
   },
 ]
 
@@ -232,6 +257,44 @@ const Workspace: Component<WorkspaceProps> = (props) => {
     })
     
     return formatted.trim()
+  }
+  const parseMarkdown = (text: string): string => {
+    if (!text) return ""
+    let html = text
+
+    html = html.replace(
+      /^### (.*$)/gim,
+      '<h3 class="text-lg font-semibold mb-3 mt-6" style="color: rgba(232, 240, 255, 1);">$1</h3>',
+    )
+    html = html.replace(
+      /^## (.*$)/gim,
+      '<h2 class="text-xl font-bold mb-4 mt-8 pb-2 border-b" style="color: rgba(232, 240, 255, 1); border-color: color-mix(in oklab, #00F0FF 30%, transparent);">$1</h2>',
+    )
+    html = html.replace(
+      /^# (.*$)/gim,
+      '<h1 class="text-3xl font-bold mb-4" style="color: rgba(232, 240, 255, 1);">$1</h1>',
+    )
+
+    html = html.replace(/\*\*(.*)\*\*/gim, "<strong>$1</strong>")
+    html = html.replace(/\*(.*)\*/gim, "<em>$1</em>")
+    html = html.replace(
+      /`(.*)`/gim,
+      '<code class="px-2 py-1 rounded" style="background-color: color-mix(in oklab, #00F0FF 10%, transparent); color: rgba(0, 240, 255, 1); font-family: monospace;">$1</code>',
+    )
+
+    html = html.replace(
+      /^- (.*$)/gim,
+      '<li class="ml-4 list-none flex items-start mb-2" style="color: rgba(184, 197, 217, 1);"><span class="w-2 h-2 mt-2 mr-3 rounded-full shrink-0" style="background-color: rgba(0, 240, 255, 1);"></span>$1</li>',
+    )
+    html = html.replace(
+      /^\d+\. (.*$)/gim,
+      '<li class="ml-4 list-decimal mb-2" style="color: rgba(184, 197, 217, 1);">$1</li>',
+    )
+
+    html = html.replace(/\n\n/g, '</p><p class="mb-4 leading-relaxed" style="color: rgba(184, 197, 217, 1);">')
+    html = html.replace(/\n/g, "<br>")
+
+    return `<p class="mb-4 leading-relaxed" style="color: rgba(184, 197, 217, 1);">${html}</p>`
   }
 
   // Preview Modal State
@@ -477,7 +540,7 @@ const Workspace: Component<WorkspaceProps> = (props) => {
             </button>
             <Show when={currentView() === "folder" && activeFolder() === "wireframe"}>
               <h1 style="color: rgba(232, 240, 255, 1);" class="text-2xl font-bold ml-2">
-                交互流程图
+                用户故事
               </h1>
             </Show>
           </Show>
@@ -713,20 +776,20 @@ const Workspace: Component<WorkspaceProps> = (props) => {
                       </div>
                       <div style="flex-basis: 0%;" class="flex flex-col grow shrink gap-y-2">
                         <h3 style="color: rgba(232, 240, 255, 1);" class="text-lg font-semibold">
-                          交互流程图
+                          用户故事
                         </h3>
                         <p style="color: rgba(138, 151, 170, 1);" class="text-sm font-normal">
-                          页面跳转与交互逻辑
+                          场景与价值描述
                         </p>
                         <div class="flex items-center gap-x-2 mt-2">
                           <div
-                            style="background-color: color-mix( in oklab , #FF006E 20% , transparent ); color: rgba(255, 0, 110, 1); padding: 0.25rem 0.5rem;"
+                            style="background-color: color-mix( in oklab , #00F0FF 20% , transparent ); color: rgba(0, 240, 255, 1); padding: 0.25rem 0.5rem;"
                             class="text-xs rounded-lg"
                           >
-                            流程图
+                            文档
                           </div>
                           <span style="color: rgba(92, 104, 118, 1);" class="text-xs">
-                            User Flow
+                            User Story
                           </span>
                         </div>
                       </div>
@@ -883,11 +946,11 @@ const Workspace: Component<WorkspaceProps> = (props) => {
                   {(file) => (
                     <div
                       onClick={() => openFile(file)}
-                      class="group cursor-pointer p-4 rounded-xl border border-[#FF006E]/10 bg-[#1A1F3A]/90 hover:border-[#FF006E]/50 hover:bg-[#FF006E]/5 transition-all flex flex-col gap-4"
+                      class="group cursor-pointer p-4 rounded-xl border border-[#00F0FF]/10 bg-[#1A1F3A]/90 hover:border-[#00F0FF]/50 hover:bg-[#00F0FF]/5 transition-all flex flex-col gap-4"
                     >
                       <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 rounded-lg bg-[#FF006E]/10 flex items-center justify-center text-[#FF006E]">
-                          <iconify-icon icon="lucide:workflow" class="text-xl"></iconify-icon>
+                        <div class="w-10 h-10 rounded-lg bg-[#00F0FF]/10 flex items-center justify-center text-[#00F0FF]">
+                          <iconify-icon icon="lucide:file-text" class="text-xl"></iconify-icon>
                         </div>
                         <div class="flex-1 min-w-0">
                           <h3 class="text-[#E8F0FF] font-medium truncate">{file.filename}</h3>
@@ -917,6 +980,8 @@ const Workspace: Component<WorkspaceProps> = (props) => {
                     ? "bg-[#B026FF]/10 text-[#B026FF]"
                     : activeFile().type === "flowchart"
                       ? "bg-[#FF006E]/10 text-[#FF006E]"
+                      : activeFile().type === "markdown"
+                        ? "bg-[#00F0FF]/10 text-[#00F0FF]"
                       : "bg-[#00F0FF]/10 text-[#00F0FF]"
                 }`}
               >
@@ -926,6 +991,8 @@ const Workspace: Component<WorkspaceProps> = (props) => {
                       ? "lucide:layout"
                       : activeFile().type === "flowchart"
                         ? "lucide:workflow"
+                        : activeFile().type === "markdown"
+                          ? "lucide:file-text"
                         : "lucide:file-text"
                   }
                 ></iconify-icon>
@@ -942,6 +1009,12 @@ const Workspace: Component<WorkspaceProps> = (props) => {
               <Show when={activeFile().type === "html"}>
                 <div class="w-full h-full bg-white">
                   <iframe srcdoc={activeFile().content} class="w-full h-full border-none" title="Preview" />
+                </div>
+              </Show>
+
+              <Show when={activeFile().type === "markdown"}>
+                <div class="p-8 max-w-4xl mx-auto w-full">
+                  <div class="text-[#E8F0FF]" innerHTML={parseMarkdown(activeFile().content)}></div>
                 </div>
               </Show>
 
@@ -963,7 +1036,7 @@ const Workspace: Component<WorkspaceProps> = (props) => {
                           <iconify-icon icon="lucide:arrow-left" class="text-xl"></iconify-icon>
                         </button>
                         <h1 style="color: rgba(232, 240, 255, 1);" class="text-2xl font-bold">
-                          交互流程图
+                          用户故事
                         </h1>
                       </div>
                     </div>
