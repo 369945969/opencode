@@ -568,6 +568,35 @@ export const createProxy = (input: ProxyConfig = {}) => {
     return Response.json({ root, items }, { headers: baseHeaders })
   }
 
+  const workspaceExport = async (req: Request) => {
+    const url = new URL(req.url)
+    const sessionId = url.searchParams.get("session") ?? ""
+    if (!sessionId) {
+      return Response.json({ error: "session required" }, { status: 400, headers: baseHeaders })
+    }
+    const workspaceRoot = path.resolve(config.workspace)
+    const root = path.join(workspaceRoot, sessionId)
+    const exists = await fs.stat(root).then(() => true).catch(() => false)
+    if (!exists) {
+      return Response.json({ error: "not found" }, { status: 404, headers: baseHeaders })
+    }
+    const proc = Bun.spawn(["zip", "-r", "-", "."], {
+      cwd: root,
+      stderr: "ignore",
+      stdout: "pipe",
+    })
+    const stream = proc.stdout
+    if (!stream) {
+      return Response.json({ error: "export failed" }, { status: 500, headers: baseHeaders })
+    }
+    const headers = {
+      ...baseHeaders,
+      "Content-Type": "application/zip",
+      "Content-Disposition": `attachment; filename="${sessionId}.zip"`,
+    }
+    return new Response(stream, { headers })
+  }
+
   const proxyFetch = async (req: Request) => {
     const url = new URL(req.url)
     const target = new URL(url.pathname + url.search, config.baseUrl)
@@ -680,6 +709,7 @@ export const createProxy = (input: ProxyConfig = {}) => {
     if (url.pathname === "/workspace/file" && req.method === "GET") return readWorkspaceFile(req)
     if (url.pathname === "/workspace/file" && req.method === "POST") return writeWorkspaceFile(req)
     if (url.pathname === "/workspace/tree" && req.method === "GET") return workspaceTree(req)
+    if (url.pathname === "/workspace/export" && req.method === "GET") return workspaceExport(req)
     return proxyFetch(req)
   }
 

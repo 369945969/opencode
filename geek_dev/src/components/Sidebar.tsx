@@ -935,7 +935,7 @@ const Sidebar: Component<SidebarProps> = (props) => {
               role: "assistant",
               text: `已创建/编辑文件: ${displayPath}`,
               ts: Date.now(),
-              filePaths: [relativePath],
+              filePaths: [displayPath.split("/").pop() || displayPath],
             },
           ])
           return

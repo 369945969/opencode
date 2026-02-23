@@ -409,7 +409,11 @@ const Workspace: Component<WorkspaceProps> = (props) => {
     const compareName = (a: { name: string }, b: { name: string }) =>
       a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: "base" })
     const globals = flat
-      .filter((item) => item.path.includes("Global&Context"))
+      .filter(
+        (item) =>
+          item.path.includes("Global&Context") ||
+          item.name === "FlowLogic.md",
+      )
       .map((item) => ({
         path: item.path,
         name: item.name,
@@ -427,11 +431,15 @@ const Workspace: Component<WorkspaceProps> = (props) => {
       }))
       .sort(compareName)
     const styles = flat
-      .filter((item) => item.path.includes("Style&Guide"))
+      .filter(
+        (item) =>
+          item.path.includes("Style&Guide") &&
+          item.name !== "FlowLogic.md",
+      )
       .map((item) => ({
         path: item.path,
         name: item.name,
-        preview: makePreview(item.content),
+        preview: item.kind === "html" ? item.content : makePreview(item.content),
         kind: item.kind,
       }))
       .sort(compareName)
@@ -669,6 +677,26 @@ const Workspace: Component<WorkspaceProps> = (props) => {
     }
   }
 
+  const exportWorkspace = async () => {
+    const sid =
+      cookieValue("app_session") ||
+      sessionId()
+    if (!sid) return
+    const url = `${base}/workspace/export?session=${encodeURIComponent(sid)}`
+    const res = await fetch(url).catch(() => null)
+    if (!res || !res.ok) return
+    const blob = await res.blob().catch(() => null)
+    if (!blob) return
+    const href = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = href
+    a.download = `${sid}.zip`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(href)
+  }
+
   const updateFullScreenState = () => {
     setIsFullScreen(!!document.fullscreenElement)
   }
@@ -824,8 +852,8 @@ const Workspace: Component<WorkspaceProps> = (props) => {
                                 }}
                                 class={
                                   theme() === "light"
-                                    ? "min-w-[160px] max-w-[200px] text-left rounded-xl border border-slate-200 bg-white hover:border-slate-400 hover:bg-slate-50 transition-all px-3 py-2 flex flex-col gap-2 shadow-sm"
-                                    : "min-w-[160px] max-w-[200px] text-left rounded-xl border border-[#00F0FF]/10 bg-[#141829]/80 hover:border-[#00F0FF]/60 hover:bg-[#141829] transition-all px-3 py-2 flex flex-col gap-2"
+                                    ? "min-w-[220px] max-w-[280px] h-[200px] text-left rounded-xl border border-slate-200 bg-white hover:border-slate-400 hover:bg-slate-50 transition-all px-3 py-2 flex flex-col gap-2 shadow-sm"
+                                    : "min-w-[220px] max-w-[280px] h-[200px] text-left rounded-xl border border-[#00F0FF]/10 bg-[#141829]/80 hover:border-[#00F0FF]/60 hover:bg-[#141829] transition-all px-3 py-2 flex flex-col gap-2"
                                 }
                               >
                                 <div
@@ -837,15 +865,34 @@ const Workspace: Component<WorkspaceProps> = (props) => {
                                 >
                                   {doc.name}
                                 </div>
-                                <div
-                                  class={
-                                    theme() === "light"
-                                      ? "flex-1 text-[10px] text-slate-600 whitespace-pre-wrap leading-relaxed overflow-hidden"
-                                      : "flex-1 text-[10px] text-[#8A97AA] whitespace-pre-wrap leading-relaxed overflow-hidden"
+                                <Show
+                                  when={doc.kind === "html"}
+                                  fallback={
+                                    <div
+                                      class={
+                                        theme() === "light"
+                                          ? "flex-1 text-[10px] text-slate-600 whitespace-pre-wrap leading-relaxed overflow-hidden"
+                                          : "flex-1 text-[10px] text-[#8A97AA] whitespace-pre-wrap leading-relaxed overflow-hidden"
+                                      }
+                                    >
+                                      {doc.preview}
+                                    </div>
                                   }
                                 >
-                                  {doc.preview}
-                                </div>
+                                  <div
+                                    class={
+                                      theme() === "light"
+                                        ? "mt-1 flex-1 rounded-md overflow-hidden border border-slate-200 bg-white"
+                                        : "mt-1 flex-1 rounded-md overflow-hidden border border-[#00F0FF]/20 bg-black"
+                                    }
+                                  >
+                                    <iframe
+                                      srcdoc={doc.preview}
+                                      class="w-[300%] h-[300%] border-none pointer-events-none scale-[0.3333] origin-top-left bg-white"
+                                      tabindex="-1"
+                                    />
+                                  </div>
+                                </Show>
                               </button>
                             )}
                           </For>
@@ -909,15 +956,34 @@ const Workspace: Component<WorkspaceProps> = (props) => {
                                 >
                                   {doc.name}
                                 </div>
-                                <div
-                                  class={
-                                    theme() === "light"
-                                      ? "flex-1 text-[10px] text-slate-600 whitespace-pre-wrap leading-relaxed overflow-hidden"
-                                      : "flex-1 text-[10px] text-[#8A97AA] whitespace-pre-wrap leading-relaxed overflow-hidden"
+                                <Show
+                                  when={doc.kind === "html"}
+                                  fallback={
+                                    <div
+                                      class={
+                                        theme() === "light"
+                                          ? "flex-1 text-[10px] text-slate-600 whitespace-pre-wrap leading-relaxed overflow-hidden"
+                                          : "flex-1 text-[10px] text-[#8A97AA] whitespace-pre-wrap leading-relaxed overflow-hidden"
+                                      }
+                                    >
+                                      {doc.preview}
+                                    </div>
                                   }
                                 >
-                                  {doc.preview}
-                                </div>
+                                  <div
+                                    class={
+                                      theme() === "light"
+                                        ? "mt-1 h-[120px] rounded-md overflow-hidden border border-slate-200 bg-white"
+                                        : "mt-1 h-[120px] rounded-md overflow-hidden border border-[#00F0FF]/20 bg-black"
+                                    }
+                                  >
+                                    <iframe
+                                      srcdoc={doc.preview}
+                                      class="w-[300%] h-[300%] border-none pointer-events-none scale-[0.3333] origin-top-left bg-white"
+                                      tabindex="-1"
+                                    />
+                                  </div>
+                                </Show>
                               </button>
                             )}
                           </For>
@@ -942,7 +1008,7 @@ const Workspace: Component<WorkspaceProps> = (props) => {
                               : "text-base font-semibold text-[#E8F0FF]"
                           }
                         >
-                          Flow Logic & Style Guide
+                          Style Guide
                         </div>
                       </div>
                     </div>
@@ -967,9 +1033,13 @@ const Workspace: Component<WorkspaceProps> = (props) => {
                                   void openDocPreview(doc)
                                 }}
                                 class={
-                                  theme() === "light"
-                                    ? "min-w-[160px] max-w-[200px] text-left rounded-xl border border-slate-200 bg-white hover:border-slate-400 hover:bg-slate-50 transition-all px-3 py-2 flex flex-col gap-2 shadow-sm"
-                                    : "min-w-[160px] max-w-[200px] text-left rounded-xl border border-[#00F0FF]/10 bg-[#141829]/80 hover:border-[#00F0FF]/60 hover:bg-[#141829] transition-all px-3 py-2 flex flex-col gap-2"
+                                  doc.kind === "html"
+                                    ? theme() === "light"
+                                      ? "min-w-[320px] max-w-[420px] h-[220px] text-left rounded-xl border border-slate-200 bg-white hover:border-slate-400 hover:bg-slate-50 transition-all px-3 py-2 flex flex-col gap-2 shadow-sm"
+                                      : "min-w-[320px] max-w-[420px] h-[220px] text-left rounded-xl border border-[#00F0FF]/10 bg-[#141829]/80 hover:border-[#00F0FF]/60 hover:bg-[#141829] transition-all px-3 py-2 flex flex-col gap-2"
+                                    : theme() === "light"
+                                      ? "min-w-[160px] max-w-[200px] h-[220px] text-left rounded-xl border border-slate-200 bg-white hover:border-slate-400 hover:bg-slate-50 transition-all px-3 py-2 flex flex-col gap-2 shadow-sm"
+                                      : "min-w-[160px] max-w-[200px] h-[220px] text-left rounded-xl border border-[#00F0FF]/10 bg-[#141829]/80 hover:border-[#00F0FF]/60 hover:bg-[#141829] transition-all px-3 py-2 flex flex-col gap-2"
                                 }
                               >
                                 <div
@@ -981,15 +1051,34 @@ const Workspace: Component<WorkspaceProps> = (props) => {
                                 >
                                   {doc.name}
                                 </div>
-                                <div
-                                  class={
-                                    theme() === "light"
-                                      ? "flex-1 text-[10px] text-slate-600 whitespace-pre-wrap leading-relaxed overflow-hidden"
-                                      : "flex-1 text-[10px] text-[#8A97AA] whitespace-pre-wrap leading-relaxed overflow-hidden"
+                                <Show
+                                  when={doc.kind === "html"}
+                                  fallback={
+                                    <div
+                                      class={
+                                        theme() === "light"
+                                          ? "flex-1 text-[10px] text-slate-600 whitespace-pre-wrap leading-relaxed overflow-hidden"
+                                          : "flex-1 text-[10px] text-[#8A97AA] whitespace-pre-wrap leading-relaxed overflow-hidden"
+                                      }
+                                    >
+                                      {doc.preview}
+                                    </div>
                                   }
                                 >
-                                  {doc.preview}
-                                </div>
+                                  <div
+                                    class={
+                                      theme() === "light"
+                                        ? "mt-1 flex-1 rounded-md overflow-hidden border border-slate-200 bg-white"
+                                        : "mt-1 flex-1 rounded-md overflow-hidden border border-[#00F0FF]/20 bg-black"
+                                    }
+                                  >
+                                    <iframe
+                                      srcdoc={doc.preview}
+                                      class="w-[300%] h-[300%] border-none pointer-events-none scale-[0.3333] origin-top-left bg-white"
+                                      tabindex="-1"
+                                    />
+                                  </div>
+                                </Show>
                               </button>
                             )}
                           </For>
@@ -1106,7 +1195,7 @@ const Workspace: Component<WorkspaceProps> = (props) => {
 
             <Show when={isCanvasOrDesign()}>
               <div class="pointer-events-none absolute inset-0">
-                <div class="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center pointer-events-auto">
+                <div class="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-x-3 pointer-events-auto">
                   <button
                     id="12:fullscreen"
                     onClick={toggleFullScreen}
@@ -1120,6 +1209,22 @@ const Workspace: Component<WorkspaceProps> = (props) => {
                       <iconify-icon
                         style="color: rgba(0, 240, 255, 1);"
                         icon={isFullScreen() ? "lucide:minimize" : "lucide:maximize"}
+                        class="text-base"
+                      ></iconify-icon>
+                    </div>
+                  </button>
+                  <button
+                    onClick={exportWorkspace}
+                    class={
+                      theme() === "light"
+                        ? "flex justify-center items-center w-10 h-10 rounded-lg border border-slate-200 bg-white hover:border-[#00F0FF] hover:bg-slate-50 hover:shadow-[0_0_12px_rgba(0,240,255,0.25)]"
+                        : "flex justify-center items-center w-10 h-10 rounded-lg bg-[#1A1F3A]/90 hover:bg-[#00F0FF]/10 hover:shadow-[0_0_12px_rgba(0,240,255,0.25)]"
+                    }
+                  >
+                    <div class="bg-transparent flex justify-center items-center w-5 h-5">
+                      <iconify-icon
+                        style="color: rgba(0, 240, 255, 1);"
+                        icon="lucide:download-cloud"
                         class="text-base"
                       ></iconify-icon>
                     </div>
