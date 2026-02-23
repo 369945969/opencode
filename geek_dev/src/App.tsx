@@ -184,17 +184,37 @@ function App() {
           </Show>
 
           <Show when={transitioning()}>
-            <div 
-               style="z-index: 9999; background: #0B0E14;" 
-               class="absolute inset-0 flex flex-col items-center justify-center text-[#00F0FF]"
+            <div
+              style="z-index: 9999;"
+              class={
+                theme() === "light"
+                  ? "absolute inset-0 flex flex-col items-center justify-center bg-[#EDF5FF] text-[#1F2933]"
+                  : "absolute inset-0 flex flex-col items-center justify-center bg-[#0B0E14] text-[#00F0FF]"
+              }
             >
-               <div class="relative w-64 h-64 flex items-center justify-center mb-8">
-                  <div class="absolute inset-0 border-4 border-[#00F0FF] rounded-full opacity-20 animate-[ping_3s_cubic-bezier(0,0,0.2,1)_infinite]"></div>
-                  <div class="absolute inset-0 border-t-4 border-[#00F0FF] rounded-full animate-spin"></div>
-                  <div class="text-4xl font-mono font-bold tracking-widest animate-pulse">GEEK</div>
-               </div>
-               <div class="text-2xl mb-2 font-mono text-[#E8F0FF]">{transitionTitle()}</div>
-               <div class="text-sm font-mono text-[#5C6876]">Initializing Environment...</div>
+              <div class="relative w-64 h-64 flex items-center justify-center mb-8">
+                <div class="absolute inset-0 border-4 border-[#00F0FF] rounded-full opacity-20 animate-[ping_3s_cubic-bezier(0,0,0.2,1)_infinite]"></div>
+                <div class="absolute inset-0 border-t-4 border-[#00F0FF] rounded-full animate-spin"></div>
+                <div class="text-4xl font-mono font-bold tracking-widest animate-pulse">GEEK</div>
+              </div>
+              <div
+                class={
+                  theme() === "light"
+                    ? "text-2xl mb-2 font-mono text-[#1F2933]"
+                    : "text-2xl mb-2 font-mono text-[#E8F0FF]"
+                }
+              >
+                {transitionTitle()}
+              </div>
+              <div
+                class={
+                  theme() === "light"
+                    ? "text-sm font-mono text-[#5C6876]"
+                    : "text-sm font-mono text-[#5C6876]"
+                }
+              >
+                Initializing Environment...
+              </div>
             </div>
           </Show>
         </div>

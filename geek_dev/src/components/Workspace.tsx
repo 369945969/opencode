@@ -589,6 +589,19 @@ const Workspace: Component<WorkspaceProps> = (props) => {
 
   // Inject Inspector Script
   const getPreviewContent = (html: string) => {
+    const style = `
+      <style>
+        html, body {
+          margin: 0;
+          padding: 10px;
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+        body::-webkit-scrollbar {
+          display: none;
+        }
+      </style>
+    `
     const script = `
       <script>
         document.body.dataset.inspectMode = 'true';
@@ -641,7 +654,13 @@ const Workspace: Component<WorkspaceProps> = (props) => {
         });
       </script>
     `
-    return html.replace("</body>", `${script}</body>`)
+    let out = html
+    if (out.includes("</head>")) {
+      out = out.replace("</head>", `${style}</head>`)
+    } else {
+      out = out.replace("<body", `${style}<body`)
+    }
+    return out.replace("</body>", `${script}</body>`)
   }
 
   let canvasRef: HTMLDivElement | undefined
@@ -852,8 +871,8 @@ const Workspace: Component<WorkspaceProps> = (props) => {
                                 }}
                                 class={
                                   theme() === "light"
-                                    ? "min-w-[160px] max-w-[200px] h-[260px] text-left rounded-xl border border-slate-200 bg-white hover:border-slate-400 hover:bg-slate-50 transition-all px-3 py-2 flex flex-col gap-2 shadow-sm"
-                                    : "min-w-[160px] max-w-[200px] h-[260px] text-left rounded-xl border border-[#00F0FF]/10 bg-[#141829]/80 hover:border-[#00F0FF]/60 hover:bg-[#141829] transition-all px-3 py-2 flex flex-col gap-2"
+                                    ? "min-w-[160px] max-w-[200px] text-left rounded-xl border border-slate-200 bg-white hover:border-slate-400 hover:bg-slate-50 transition-all px-3 py-2 flex flex-col gap-2 shadow-sm"
+                                    : "min-w-[160px] max-w-[200px] text-left rounded-xl border border-[#00F0FF]/10 bg-[#141829]/80 hover:border-[#00F0FF]/60 hover:bg-[#141829] transition-all px-3 py-2 flex flex-col gap-2"
                                 }
                               >
                                 <div
@@ -943,8 +962,8 @@ const Workspace: Component<WorkspaceProps> = (props) => {
                                 }}
                                 class={
                                   theme() === "light"
-                                    ? "min-w-[160px] max-w-[200px] h-[260px] text-left rounded-xl border border-slate-200 bg-white hover:border-slate-400 hover:bg-slate-50 transition-all px-3 py-2 flex flex-col gap-2 shadow-sm"
-                                    : "min-w-[160px] max-w-[200px] h-[260px] text-left rounded-xl border border-[#00F0FF]/10 bg-[#141829]/80 hover:border-[#00F0FF]/60 hover:bg-[#141829] transition-all px-3 py-2 flex flex-col gap-2"
+                                    ? "min-w-[160px] max-w-[200px] text-left rounded-xl border border-slate-200 bg-white hover:border-slate-400 hover:bg-slate-50 transition-all px-3 py-2 flex flex-col gap-2 shadow-sm"
+                                    : "min-w-[160px] max-w-[200px] text-left rounded-xl border border-[#00F0FF]/10 bg-[#141829]/80 hover:border-[#00F0FF]/60 hover:bg-[#141829] transition-all px-3 py-2 flex flex-col gap-2"
                                 }
                               >
                                 <div
@@ -1035,8 +1054,8 @@ const Workspace: Component<WorkspaceProps> = (props) => {
                                   }}
                                   class={
                                     theme() === "light"
-                                      ? "group relative flex-none w-[260px] aspect-square rounded-xl border border-slate-200 bg-white hover:border-slate-400 hover:bg-slate-50 transition-all overflow-hidden shadow-sm"
-                                      : "group relative flex-none w-[260px] aspect-square rounded-xl border border-[#00F0FF]/20 bg-[#141829]/80 hover:border-[#00F0FF]/60 hover:bg-[#141829] transition-all overflow-hidden"
+                                      ? "group relative flex-none w-[260px] aspect-square rounded-xl border border-slate-200 bg-slate-50 hover:border-slate-300 hover:bg-white transition-all overflow-hidden shadow-sm"
+                                      : "group relative flex-none w-[260px] aspect-square rounded-xl border border-[#00F0FF]/25 bg-[#050816]/80 hover:border-[#00F0FF]/60 hover:bg-[#050816] transition-all overflow-hidden"
                                   }
                                 >
                                   <div class="absolute inset-0">
@@ -1049,6 +1068,7 @@ const Workspace: Component<WorkspaceProps> = (props) => {
                                     >
                                       <iframe
                                         srcdoc={doc.preview}
+                                        scrolling="no"
                                         class="w-[300%] h-[300%] border-none pointer-events-none scale-[0.3333] origin-top-left bg-white"
                                         tabindex="-1"
                                       />
