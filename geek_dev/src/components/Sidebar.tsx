@@ -22,6 +22,7 @@ type Msg = {
   toolStatus?: string
   filePaths?: string[]
   rawText?: string
+  thinkCollapsed?: boolean
 }
 
 interface QuestionOption {
@@ -192,6 +193,12 @@ const Sidebar: Component<SidebarProps> = (props) => {
     return list.filter((msg) => msg.id !== "welcome")
   })
 
+  const flipThink = (id: string) => {
+    setMsgs((list) =>
+      list.map((msg) => (msg.id === id ? { ...msg, thinkCollapsed: !msg.thinkCollapsed } : msg)),
+    )
+  }
+
   const [questionState, setQuestionState] = createStore<{
     activeQuestion: QuestionPayload | null
     answers: Record<number, { selected: string[]; customInput: string }>
@@ -361,6 +368,36 @@ const Sidebar: Component<SidebarProps> = (props) => {
   }
   const sanitizeBoxMarkers = (textValue: string) =>
     textValue.replace(/<\|begin_of_box\|>|<\|end_of_box\|>/g, "")
+  const formatAssistantText = (textValue: string) => {
+    if (!textValue) return textValue
+    if (!textValue.includes("已创建/编辑文件:") && !textValue.includes("workspace/ses_")) return textValue
+    return textValue.replace(/workspace\/ses_[^/\s]+\/([^\s]+)/g, "$1")
+  }
+  const formatToolOutput = (toolName: string, textValue: string) => {
+    if (!textValue) return textValue
+    if (toolName !== "write" && toolName !== "write_file") return textValue
+    const lines = textValue.split(/\r?\n/)
+    const headerIndex = lines.findIndex((line) =>
+      line.trimStart().startsWith("Updated file (LINE#ID:content):"),
+    )
+    if (headerIndex === -1) return textValue
+    const head = lines.slice(0, headerIndex + 1)
+    const rest = lines.slice(headerIndex + 1)
+    const next: string[] = []
+    for (const line of rest) {
+      const trimmed = line.trim()
+      if (!trimmed) continue
+      const match = trimmed.match(/^(\d+)#[^:]*:\s?(.*)$/)
+      if (!match) continue
+      const num = match[1]
+      const content = match[2]
+      next.push(`${num}: ${content}`)
+      if (next.length >= 10) break
+    }
+    if (!next.length) return textValue
+    const more = rest.length > next.length ? ["..."] : []
+    return [...head, ...next, ...more].join("\n")
+  }
 
   const ensureSession = async () => {
     if (sid()) return sid()
@@ -538,30 +575,33 @@ const Sidebar: Component<SidebarProps> = (props) => {
     setQuestionIndex(next)
   }
 
-  const submitQuestions = () => {
+  const submitQuestions = async () => {
     const q = questionState.activeQuestion
     if (!q) return
     const answers = questionState.answers
-
-    let responseText = "我提交了问卷回答：\n"
-    q.questions.forEach((item, index) => {
+    const payload = q.questions.map((_, index) => {
       const ans = answers[index]
-      if (!ans) return
-      responseText += `\n### ${item.header || item.question}\n`
-      if (ans.selected.length === 0) {
-        responseText += "*(未选择)*\n"
-      } else {
-        ans.selected.forEach((label) => {
-          responseText += `- **${label}**`
-          responseText += "\n"
-        })
-      }
-      if (ans.customInput) {
-        responseText += `补充说明：${ans.customInput}\n`
-      }
+      if (!ans) return []
+      const selected = ans.selected || []
+      if (!ans.customInput) return selected
+      return [...selected, ans.customInput]
     })
-
-    send(responseText)
+    const res = await fetch(`${base}/question/${q.id}/reply`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ answers: payload }),
+    }).catch(() => null)
+    if (!res || !res.ok) {
+      setMsgs((list) => [
+        ...list,
+        {
+          id: makeId(),
+          role: "assistant",
+          text: "提交问卷失败，请稍后重试。",
+          ts: Date.now(),
+        },
+      ])
+    }
     setQuestionState({ activeQuestion: null, answers: {} })
     setQuestionIndex(0)
   }
@@ -773,9 +813,14 @@ const Sidebar: Component<SidebarProps> = (props) => {
               if (index >= 0) {
                 const prev = list[index]
                 const next = list.slice()
-                const newText =
+                const base =
                   messageText === "" ? prev.text ?? "" : messageText ?? prev.text ?? ""
-                const nextMsg: Msg = { ...prev, toolStatus, text: newText, ts: Date.now() }
+                const nextMsg: Msg = {
+                  ...prev,
+                  toolStatus,
+                  text: formatAssistantText(base),
+                  ts: Date.now(),
+                }
                 if (!messageText && pendingRaw) {
                   const split = splitThink(pendingRaw)
                   nextMsg.rawText = pendingRaw
@@ -800,7 +845,7 @@ const Sidebar: Component<SidebarProps> = (props) => {
                   {
                     id: messageId,
                     role: "assistant",
-                    text: split.answer,
+                    text: formatAssistantText(split.answer),
                     ts: Date.now(),
                     toolStatus,
                     rawText: pendingRaw,
@@ -815,7 +860,7 @@ const Sidebar: Component<SidebarProps> = (props) => {
                   {
                     id: messageId,
                     role: "assistant",
-                    text: messageText ?? "",
+                    text: formatAssistantText(messageText ?? ""),
                     ts: Date.now(),
                     toolStatus,
                     thinkText: pendingThink,
@@ -827,7 +872,7 @@ const Sidebar: Component<SidebarProps> = (props) => {
                 {
                   id: messageId,
                   role: "assistant",
-                  text: messageText ?? "",
+                  text: formatAssistantText(messageText ?? ""),
                   ts: Date.now(),
                   toolStatus,
                 },
@@ -864,6 +909,9 @@ const Sidebar: Component<SidebarProps> = (props) => {
           const parts = filePath.split("/")
           const workspaceIndex = parts.indexOf("geek_dev")
           const relativePath = workspaceIndex !== -1 ? parts.slice(workspaceIndex + 1).join("/") : filePath
+          const displayPath = relativePath.startsWith("workspace/ses_")
+            ? relativePath.split("/").slice(2).join("/")
+            : relativePath
           
           if (relativePath.startsWith("workspace/")) {
             let area = ""
@@ -885,7 +933,7 @@ const Sidebar: Component<SidebarProps> = (props) => {
             {
               id: makeId(),
               role: "assistant",
-              text: `已创建/编辑文件: ${relativePath}`,
+              text: `已创建/编辑文件: ${displayPath}`,
               ts: Date.now(),
               filePaths: [relativePath],
             },
@@ -914,11 +962,16 @@ const Sidebar: Component<SidebarProps> = (props) => {
             if (input) {
               if (toolName === "write" || toolName === "write_file") {
                 const p = input.file_path || input.path
-                if (p) detailLines.push(`📄 写入文件: ${p}`)
-                // Hide content preview for now
+                if (p) {
+                  const name = p.split("/").pop() || p
+                  detailLines.push(`📄 ${name}`)
+                }
               } else if (toolName === "read" || toolName === "read_file") {
                 const p = input.file_path || input.path
-                if (p) detailLines.push(`📖 读取文件: ${p}`)
+                if (p) {
+                  const name = p.split("/").pop() || p
+                  detailLines.push(`📖 ${name}`)
+                }
               } else if (toolName === "execute" || toolName === "run_command" || toolName === "command") {
                 const c = input.command || input.cmd
                 if (c) detailLines.push(`💻 执行命令: ${c}`)
@@ -933,12 +986,15 @@ const Sidebar: Component<SidebarProps> = (props) => {
             let resultText = ""
             if (output) {
                 const outStr = typeof output === "string" ? output : JSON.stringify(output, null, 2)
-                const truncated = outStr.length > 1200 ? outStr.slice(0, 1200) + "..." : outStr
+                const formattedOut = formatToolOutput(toolName, outStr)
+                const truncated = formattedOut.length > 1200 ? formattedOut.slice(0, 1200) + "..." : formattedOut
                 resultText = `\n结果:\n${truncated}`
             }
             const detailText = detailLines.length ? `\n${detailLines.join("\n")}` : ""
             const inputTextBlock = inputLines.length ? `\n${inputLines.join("\n")}` : ""
-            const messageText = `正在执行 ${toolName} 工具: ${toolStatus}${detailText}${inputTextBlock}${resultText}`
+            const messageText = formatAssistantText(
+              `正在执行 ${toolName} 工具: ${toolStatus}${detailText}${inputTextBlock}${resultText}`,
+            )
             if (index >= 0) {
               const prev = list[index]
               const next = list.slice()
@@ -1471,8 +1527,11 @@ const Sidebar: Component<SidebarProps> = (props) => {
                                   {formatDuration(msg.thinkDuration!)}
                                 </span>
                               </Show>
-                              <div
-                                class={`transition-transform duration-200 ${msg.thinkDone ? "" : "animate-pulse"}`}
+                              <button
+                                class={`transition-transform duration-200 ${
+                                  msg.thinkDone ? "" : "animate-pulse"
+                                } ${msg.thinkCollapsed ? "-rotate-90" : "rotate-0"}`}
+                                onClick={() => flipThink(msg.id)}
                               >
                                 <iconify-icon
                                   icon="lucide:chevron-down"
@@ -1482,19 +1541,21 @@ const Sidebar: Component<SidebarProps> = (props) => {
                                       : "text-[#5C6876] text-sm"
                                   }
                                 ></iconify-icon>
+                              </button>
+                            </div>
+                            <Show when={!msg.thinkCollapsed}>
+                              <div
+                                class={`text-xs font-mono border-l-2 pl-3 py-1 ${
+                                  msg.thinkDone ? "max-h-[200px] overflow-y-auto geek-scroll" : ""
+                                } ${
+                                  theme() === "light"
+                                    ? "text-slate-400 border-slate-200"
+                                    : "text-[#5C6876] border-[#1E293B]"
+                                }`}
+                              >
+                                {sanitizeBoxMarkers(msg.thinkText || "")}
                               </div>
-                            </div>
-                            <div
-                              class={`text-xs font-mono border-l-2 pl-3 py-1 ${
-                                msg.thinkDone ? "max-h-[200px] overflow-y-auto geek-scroll" : ""
-                              } ${
-                                theme() === "light"
-                                  ? "text-slate-400 border-slate-200"
-                                  : "text-[#5C6876] border-[#1E293B]"
-                              }`}
-                            >
-                              {sanitizeBoxMarkers(msg.thinkText || "")}
-                            </div>
+                            </Show>
                           </div>
                         </Show>
                         <div
