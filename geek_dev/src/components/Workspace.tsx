@@ -893,10 +893,10 @@ const Workspace: Component<WorkspaceProps> = (props) => {
                                   class={
                                     theme() === "light"
                                       ? focusName() === doc.name
-                                        ? "min-w-[160px] max-w-[200px] text-left rounded-xl border border-[#00B7FF] bg-white ring-1 ring-[#00B7FF]/40 transition-all px-3 py-2 flex flex-col gap-2 shadow-sm"
+                                        ? "min-w-[160px] max-w-[200px] text-left rounded-xl border border-[#FB3B3B] bg-white ring-1 ring-[#FB3B3B]/40 transition-all px-3 py-2 flex flex-col gap-2 shadow-sm"
                                         : "min-w-[160px] max-w-[200px] text-left rounded-xl border border-slate-200 bg-white hover:border-slate-400 hover:bg-slate-50 transition-all px-3 py-2 flex flex-col gap-2 shadow-sm"
                                       : focusName() === doc.name
-                                        ? "min-w-[160px] max-w-[200px] text-left rounded-xl border border-[#00F0FF] bg-[#141829] ring-1 ring-[#00F0FF]/40 transition-all px-3 py-2 flex flex-col gap-2"
+                                        ? "min-w-[160px] max-w-[200px] text-left rounded-xl border border-[#FB3B3B] bg-[#141829] ring-1 ring-[#FB3B3B]/40 transition-all px-3 py-2 flex flex-col gap-2"
                                         : "min-w-[160px] max-w-[200px] text-left rounded-xl border border-[#00F0FF]/10 bg-[#141829]/80 hover:border-[#00F0FF]/60 hover:bg-[#141829] transition-all px-3 py-2 flex flex-col gap-2"
                                   }
                                 >
@@ -977,9 +977,18 @@ const Workspace: Component<WorkspaceProps> = (props) => {
                       >
                         <div class="flex gap-3">
                           <For each={styleDocs()}>
-                            {(doc) =>
-                              doc.kind === "html" ? (
+                            {(doc) => {
+                              let el: HTMLButtonElement | undefined
+                              createEffect(() => {
+                                if (focusName() === doc.name && el) {
+                                  el.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "nearest" })
+                                }
+                              })
+                              return doc.kind === "html" ? (
                                 <button
+                                  ref={(node) => {
+                                    el = node
+                                  }}
                                   type="button"
                                   title={doc.name}
                                   onMouseDown={(e) => e.stopPropagation()}
@@ -989,8 +998,12 @@ const Workspace: Component<WorkspaceProps> = (props) => {
                                   }}
                                   class={
                                     theme() === "light"
-                                      ? "group relative flex-none w-[260px] aspect-square rounded-xl border border-slate-200 bg-slate-50 hover:border-slate-300 hover:bg-white transition-all overflow-hidden shadow-sm"
-                                      : "group relative flex-none w-[260px] aspect-square rounded-xl border border-[#00F0FF]/25 bg-[#050816]/80 hover:border-[#00F0FF]/60 hover:bg-[#050816] transition-all overflow-hidden"
+                                      ? focusName() === doc.name
+                                        ? "group relative flex-none w-[260px] aspect-square rounded-xl border border-[#FB3B3B] bg-slate-50 ring-1 ring-[#FB3B3B]/40 transition-all overflow-hidden shadow-sm"
+                                        : "group relative flex-none w-[260px] aspect-square rounded-xl border border-slate-200 bg-slate-50 hover:border-slate-300 hover:bg-white transition-all overflow-hidden shadow-sm"
+                                      : focusName() === doc.name
+                                        ? "group relative flex-none w-[260px] aspect-square rounded-xl border border-[#FB3B3B] bg-[#050816]/80 ring-1 ring-[#FB3B3B]/40 transition-all overflow-hidden"
+                                        : "group relative flex-none w-[260px] aspect-square rounded-xl border border-[#00F0FF]/25 bg-[#050816]/80 hover:border-[#00F0FF]/60 hover:bg-[#050816] transition-all overflow-hidden"
                                   }
                                 >
                                   <div class="absolute inset-0">
@@ -1016,29 +1029,12 @@ const Workspace: Component<WorkspaceProps> = (props) => {
                                       ></div>
                                     </div>
                                   </div>
-                                  <div class="absolute bottom-0 left-0 right-0 px-3 pb-3">
-                                    <div
-                                      class={
-                                        theme() === "light"
-                                          ? "text-xs font-semibold text-slate-900 truncate"
-                                          : "text-xs font-semibold text-[#E8F0FF] truncate"
-                                      }
-                                    >
-                                      {doc.name}
-                                    </div>
-                                    <div
-                                      class={
-                                        theme() === "light"
-                                          ? "text-[10px] text-slate-600 truncate"
-                                          : "text-[10px] text-[#8A97AA] truncate"
-                                      }
-                                    >
-                                      点击放大查看原型
-                                    </div>
-                                  </div>
                                 </button>
                               ) : (
                                 <button
+                                  ref={(node) => {
+                                    el = node
+                                  }}
                                   type="button"
                                   title={doc.name}
                                   onMouseDown={(e) => e.stopPropagation()}
@@ -1048,8 +1044,12 @@ const Workspace: Component<WorkspaceProps> = (props) => {
                                   }}
                                   class={
                                     theme() === "light"
-                                      ? "min-w-[160px] max-w-[200px] text-left rounded-xl border border-slate-200 bg-white hover:border-slate-400 hover:bg-slate-50 transition-all px-3 py-2 flex flex-col gap-2 shadow-sm"
-                                      : "min-w-[160px] max-w-[200px] text-left rounded-xl border border-[#00F0FF]/10 bg-[#141829]/80 hover:border-[#00F0FF]/60 hover:bg-[#141829] transition-all px-3 py-2 flex flex-col gap-2"
+                                      ? focusName() === doc.name
+                                        ? "min-w-[160px] max-w-[200px] text-left rounded-xl border border-[#FB3B3B] bg-white ring-1 ring-[#FB3B3B]/40 transition-all px-3 py-2 flex flex-col gap-2 shadow-sm"
+                                        : "min-w-[160px] max-w-[200px] text-left rounded-xl border border-slate-200 bg-white hover:border-slate-400 hover:bg-slate-50 transition-all px-3 py-2 flex flex-col gap-2 shadow-sm"
+                                      : focusName() === doc.name
+                                        ? "min-w-[160px] max-w-[200px] text-left rounded-xl border border-[#FB3B3B] bg-[#141829] ring-1 ring-[#FB3B3B]/40 transition-all px-3 py-2 flex flex-col gap-2"
+                                        : "min-w-[160px] max-w-[200px] text-left rounded-xl border border-[#00F0FF]/10 bg-[#141829]/80 hover:border-[#00F0FF]/60 hover:bg-[#141829] transition-all px-3 py-2 flex flex-col gap-2"
                                   }
                                 >
                                   <div
@@ -1072,7 +1072,7 @@ const Workspace: Component<WorkspaceProps> = (props) => {
                                   </div>
                                 </button>
                               )
-                            }
+                            }}
                           </For>
                         </div>
                       </Show>
@@ -1132,10 +1132,10 @@ const Workspace: Component<WorkspaceProps> = (props) => {
                                   class={
                                     theme() === "light"
                                       ? focusName() === doc.name
-                                        ? "min-w-[160px] max-w-[200px] text-left rounded-xl border border-[#00B7FF] bg-white ring-1 ring-[#00B7FF]/40 transition-all px-3 py-2 flex flex-col gap-2 shadow-sm"
+                                        ? "min-w-[160px] max-w-[200px] text-left rounded-xl border border-[#FB3B3B] bg-white ring-1 ring-[#FB3B3B]/40 transition-all px-3 py-2 flex flex-col gap-2 shadow-sm"
                                         : "min-w-[160px] max-w-[200px] text-left rounded-xl border border-slate-200 bg-white hover:border-slate-400 hover:bg-slate-50 transition-all px-3 py-2 flex flex-col gap-2 shadow-sm"
                                       : focusName() === doc.name
-                                        ? "min-w-[160px] max-w-[200px] text-left rounded-xl border border-[#00F0FF] bg-[#141829] ring-1 ring-[#00F0FF]/40 transition-all px-3 py-2 flex flex-col gap-2"
+                                        ? "min-w-[160px] max-w-[200px] text-left rounded-xl border border-[#FB3B3B] bg-[#141829] ring-1 ring-[#FB3B3B]/40 transition-all px-3 py-2 flex flex-col gap-2"
                                         : "min-w-[160px] max-w-[200px] text-left rounded-xl border border-[#00F0FF]/10 bg-[#141829]/80 hover:border-[#00F0FF]/60 hover:bg-[#141829] transition-all px-3 py-2 flex flex-col gap-2"
                                   }
                                 >
@@ -1222,20 +1222,34 @@ const Workspace: Component<WorkspaceProps> = (props) => {
                       >
                         <div class="flex gap-4 h-full items-stretch px-3 py-3">
                           <For each={screenDocs()}>
-                            {(doc) => (
-                              <button
-                                type="button"
-                                onMouseDown={(e) => e.stopPropagation()}
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  void openDocPreview(doc)
-                                }}
-                                class={
-                                  theme() === "light"
-                                    ? "group relative flex-none w-[260px] aspect-square rounded-xl border border-slate-200 bg-white hover:border-slate-400 hover:bg-slate-50 transition-all overflow-hidden shadow-sm"
-                                    : "group relative flex-none w-[260px] aspect-square rounded-xl border border-[#00F0FF]/20 bg-[#141829]/80 hover:border-[#00F0FF]/60 hover:bg-[#141829] transition-all overflow-hidden"
+                            {(doc) => {
+                              let el: HTMLButtonElement | undefined
+                              createEffect(() => {
+                                if (focusName() === doc.name && el) {
+                                  el.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "nearest" })
                                 }
-                              >
+                              })
+                              return (
+                                <button
+                                  ref={(node) => {
+                                    el = node
+                                  }}
+                                  type="button"
+                                  onMouseDown={(e) => e.stopPropagation()}
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    void openDocPreview(doc)
+                                  }}
+                                  class={
+                                    theme() === "light"
+                                      ? focusName() === doc.name
+                                        ? "group relative flex-none w-[260px] aspect-square rounded-xl border border-[#FB3B3B] bg-white ring-1 ring-[#FB3B3B]/40 transition-all overflow-hidden shadow-sm"
+                                        : "group relative flex-none w-[260px] aspect-square rounded-xl border border-slate-200 bg-white hover:border-slate-400 hover:bg-slate-50 transition-all overflow-hidden shadow-sm"
+                                      : focusName() === doc.name
+                                        ? "group relative flex-none w-[260px] aspect-square rounded-xl border border-[#FB3B3B] bg-[#141829]/80 ring-1 ring-[#FB3B3B]/40 transition-all overflow-hidden"
+                                        : "group relative flex-none w-[260px] aspect-square rounded-xl border border-[#00F0FF]/20 bg-[#141829]/80 hover:border-[#00F0FF]/60 hover:bg-[#141829] transition-all overflow-hidden"
+                                  }
+                                >
                                 <div class="absolute inset-0">
                                   <div
                                     class={
@@ -1280,8 +1294,9 @@ const Workspace: Component<WorkspaceProps> = (props) => {
                                     点击放大查看原型
                                   </div>
                                 </div>
-                              </button>
-                            )}
+                                </button>
+                              )
+                            }}
                           </For>
                         </div>
                       </Show>
