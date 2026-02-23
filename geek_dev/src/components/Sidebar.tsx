@@ -182,6 +182,7 @@ const Sidebar: Component<SidebarProps> = (props) => {
   const [continueMode, setContinueMode] = createSignal(false)
   const [showHistory, setShowHistory] = createSignal(false)
   const [history, setHistory] = createSignal<{ id: string; title: string; ts: number }[]>([])
+  const [needReplay, setNeedReplay] = createSignal(false)
   const hasUserMessage = createMemo(() => msgs().some((msg) => msg.role === "user"))
   const visibleMsgs = createMemo(() => {
     const list = msgs()
@@ -364,8 +365,7 @@ const Sidebar: Component<SidebarProps> = (props) => {
     const cookieSession = cookieValue("app_session")
     const sessionId = sid() || cookieSession
 
-    
-    const isFirstMessage = msgs().filter(m => m.role === "user").length === 0
+    const isFirstMessage = msgs().filter((m) => m.role === "user").length === 0
     
     // Update UI immediately to prevent message staying in input box
     // Force clear input first, outside of batch to ensure priority
@@ -412,11 +412,35 @@ const Sidebar: Component<SidebarProps> = (props) => {
       const title = value.length > 12 ? value.slice(0, 12) + "..." : value
       setCookie("app_name", title)
     }
+    let promptText = value
+    if (needReplay()) {
+      const historyMsgs = msgs().filter((msg) => msg.id !== "welcome")
+      if (historyMsgs.length > 0) {
+        const log = historyMsgs
+          .map((msg) => {
+            const role = msg.role === "user" ? "【用户】" : "【助手】"
+            return `${role}\n${sanitizeBoxMarkers(msg.text)}`
+          })
+          .join("\n\n")
+        promptText = [
+          "下面是本项目之前的完整对话历史，请先通读并识别上一次执行停在了哪个具体步骤。",
+          "然后从你识别到的最后一步开始，先轻微重复该步骤一次以衔接上下文，再继续向后生成和执行，避免出现断层或遗漏。",
+          "",
+          "[对话历史开始]",
+          log,
+          "[对话历史结束]",
+          "",
+          "在阅读完历史之后，再结合下面这条新的输入继续工作：",
+          value,
+        ].join("\n")
+      }
+      setNeedReplay(false)
+    }
     const res = await fetch(`${base}/session/${finalSessionId}/prompt_async`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        parts: [{ type: "text", text: value }],
+        parts: [{ type: "text", text: promptText }],
         agent: "build",
       }),
     })
@@ -785,12 +809,33 @@ const Sidebar: Component<SidebarProps> = (props) => {
                 {
                   id: messageId,
                   role: "assistant",
-                text: messageText ?? "",
+                  text: messageText ?? "",
                   ts: Date.now(),
                   toolStatus,
                 },
               ]
             })
+            if (messageText && messageText.includes("已创建/编辑文件:")) {
+              const marker = "已创建/编辑文件:"
+              const index = messageText.indexOf(marker)
+              const tail = messageText.slice(index + marker.length).trim()
+              const pathMatch = tail.match(/workspace\/\S+/)
+              const filePath = pathMatch ? pathMatch[0] : tail.split(/\s/)[0]
+              if (filePath) {
+                let area = ""
+                if (filePath.includes("Global&Context")) area = "global"
+                else if (filePath.includes("Feature&Plan")) area = "feature"
+                else if (filePath.includes("Style&Guide")) area = "style"
+                else if (filePath.includes("Screen&Prototype")) area = "screen"
+                if (area) {
+                  window.dispatchEvent(
+                    new CustomEvent("workspace_file_created", {
+                      detail: { path: filePath, area },
+                    }),
+                  )
+                }
+              }
+            }
           }
           return
         }
@@ -802,6 +847,21 @@ const Sidebar: Component<SidebarProps> = (props) => {
           const workspaceIndex = parts.indexOf("geek_dev")
           const relativePath = workspaceIndex !== -1 ? parts.slice(workspaceIndex + 1).join("/") : filePath
           
+          if (relativePath.startsWith("workspace/")) {
+            let area = ""
+            if (relativePath.includes("Global&Context")) area = "global"
+            else if (relativePath.includes("Feature&Plan")) area = "feature"
+            else if (relativePath.includes("Style&Guide")) area = "style"
+            else if (relativePath.includes("Screen&Prototype")) area = "screen"
+            if (area) {
+              window.dispatchEvent(
+                new CustomEvent("workspace_file_created", {
+                  detail: { path: relativePath, area },
+                }),
+              )
+            }
+          }
+
           setMsgs((list) => [
             ...list,
             {
@@ -1053,6 +1113,7 @@ const Sidebar: Component<SidebarProps> = (props) => {
         const parsed = JSON.parse(json)
         if (!Array.isArray(parsed) || parsed.length === 0) return
         setMsgs(parsed)
+        setNeedReplay(true)
       } catch {}
       return
     }

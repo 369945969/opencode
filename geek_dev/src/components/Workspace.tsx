@@ -1,4 +1,4 @@
-import { type Component, createSignal, onMount, onCleanup, Show, For } from "solid-js"
+import { type Component, createSignal, onMount, onCleanup, Show, For, createEffect } from "solid-js"
 
 // Mock Data for Product Requirements Document
 const mockDocs = [
@@ -214,6 +214,7 @@ interface WorkspaceProps {
 }
 
 const Workspace: Component<WorkspaceProps> = (props) => {
+  const base = import.meta.env.VITE_PROXY_URL ?? "http://localhost:4097"
   const [scale, setScale] = createSignal(1)
   const [position, setPosition] = createSignal({ x: 0, y: 0 })
   const [isDragging, setIsDragging] = createSignal(false)
@@ -225,6 +226,22 @@ const Workspace: Component<WorkspaceProps> = (props) => {
   const [currentView, setCurrentView] = createSignal<"canvas" | "folder" | "file">("canvas")
   const [activeFolder, setActiveFolder] = createSignal<string | null>("界面设计")
   const [activeFile, setActiveFile] = createSignal<any | null>(null)
+
+  const [globalDocs, setGlobalDocs] = createSignal<{ path: string; name: string; preview: string; kind: "md" | "html" }[]>([])
+  const [featureDocs, setFeatureDocs] = createSignal<{ path: string; name: string; preview: string; kind: "md" | "html" }[]>([])
+  const [styleDocs, setStyleDocs] = createSignal<{ path: string; name: string; preview: string; kind: "md" | "html" }[]>([])
+  const [screenDocs, setScreenDocs] = createSignal<{ path: string; name: string; preview: string; kind: "md" | "html" }[]>([])
+
+  const cookieValue = (key: string) => {
+    const source = document.cookie || ""
+    const list = source.split(";").map((part) => part.trim())
+    for (const item of list) {
+      if (!item.startsWith(`${key}=`)) continue
+      return decodeURIComponent(item.slice(key.length + 1))
+    }
+    return ""
+  }
+
 
   // Helper to format HTML
   const formatHtml = (html: string) => {
@@ -297,9 +314,10 @@ const Workspace: Component<WorkspaceProps> = (props) => {
     return `<p class="mb-4 leading-relaxed" style="color: rgba(184, 197, 217, 1);">${html}</p>`
   }
 
-  // Preview Modal State
   const [previewFile, setPreviewFile] = createSignal<any | null>(null)
+  const [editValue, setEditValue] = createSignal("")
   const [selectedHtml, setSelectedHtml] = createSignal<string | null>(null)
+  const [sessionId, setSessionId] = createSignal("")
 
   onMount(() => {
     const handleMessage = (event: MessageEvent) => {
@@ -310,6 +328,146 @@ const Workspace: Component<WorkspaceProps> = (props) => {
     window.addEventListener('message', handleMessage)
     onCleanup(() => window.removeEventListener('message', handleMessage))
   })
+
+  onMount(() => {
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent).detail as { path?: string; area?: string } | undefined
+      if (!detail?.path || !detail.area) return
+      const sid = sessionId() || cookieValue("app_session")
+      if (!sid) return
+      void loadWorkspaceDocs(sid)
+    }
+    window.addEventListener("workspace_file_created", handler as EventListener)
+    onCleanup(() => window.removeEventListener("workspace_file_created", handler as EventListener))
+  })
+
+  const fetchDoc = async (pathValue: string) => {
+    const url = `${base}/workspace/file?path=${encodeURIComponent(pathValue)}`
+    const res = await fetch(url).catch(() => null)
+    if (!res || !res.ok) return ""
+    const data = await res.json().catch(() => null)
+    if (!data?.content || typeof data.content !== "string") return ""
+    return data.content as string
+  }
+
+  const loadWorkspaceDocs = async (sid: string) => {
+    const url = `${base}/workspace/tree?session=${encodeURIComponent(sid)}`
+    const res = await fetch(url).catch(() => null)
+    if (!res || !res.ok) return
+    const data = await res.json().catch(() => null)
+    const items = (data?.items ?? []) as any[]
+    const flat: { path: string; name: string; content: string; kind: "md" | "html" }[] = []
+    const walk = (list: any[]) => {
+      list.forEach((item) => {
+        if (!item || typeof item !== "object") return
+        if (item.type === "file") {
+          const pathValue = String(item.path || "")
+          const name = String(item.name || "")
+          const ext = name.toLowerCase().endsWith(".html") ? "html" : name.toLowerCase().endsWith(".md") ? "md" : ""
+          if (!ext) return
+          const kind = ext === "html" ? "html" : "md"
+          const content = typeof item.content === "string" ? item.content : ""
+          flat.push({ path: pathValue, name, content, kind })
+          return
+        }
+        if (Array.isArray(item.children)) walk(item.children)
+      })
+    }
+    walk(items)
+    const makePreview = (text: string) => {
+      if (!text) return ""
+      const trimmed = text.trim()
+      const lines = trimmed.split("\n").slice(0, 6)
+      const snippet = lines.join("\n")
+      return snippet.length > 300 ? `${snippet.slice(0, 300)}...` : snippet
+    }
+    const compareName = (a: { name: string }, b: { name: string }) =>
+      a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: "base" })
+    const globals = flat
+      .filter((item) => item.path.includes("Global&Context"))
+      .map((item) => ({
+        path: item.path,
+        name: item.name,
+        preview: makePreview(item.content),
+        kind: item.kind,
+      }))
+      .sort(compareName)
+    const features = flat
+      .filter((item) => item.path.includes("Feature&Plan"))
+      .map((item) => ({
+        path: item.path,
+        name: item.name,
+        preview: makePreview(item.content),
+        kind: item.kind,
+      }))
+      .sort(compareName)
+    const styles = flat
+      .filter((item) => item.path.includes("Style&Guide"))
+      .map((item) => ({
+        path: item.path,
+        name: item.name,
+        preview: makePreview(item.content),
+        kind: item.kind,
+      }))
+      .sort(compareName)
+    const screens = flat
+      .filter((item) => item.path.includes("Screen&Prototype"))
+      .map((item) => ({
+        path: item.path,
+        name: item.name,
+        preview: item.kind === "html" ? item.content : makePreview(item.content),
+        kind: item.kind,
+      }))
+      .sort(compareName)
+    setGlobalDocs(globals)
+    setFeatureDocs(features)
+    setStyleDocs(styles)
+    setScreenDocs(screens)
+  }
+
+  onMount(() => {
+    const sid = cookieValue("app_session")
+    if (!sid) return
+    setSessionId(sid)
+    void loadWorkspaceDocs(sid)
+  })
+
+  const openDocPreview = async (doc: { path: string; name: string; kind: "md" | "html" }) => {
+    const text = await fetchDoc(doc.path)
+    if (!text) return
+    if (doc.kind === "html") {
+      setPreviewFile({
+        kind: "html",
+        name: doc.name,
+        path: doc.path,
+        content: text,
+      })
+      return
+    }
+    setPreviewFile({
+      kind: "md",
+      name: doc.name,
+      path: doc.path,
+      content: text,
+    })
+    setEditValue(text)
+  }
+
+  const saveMarkdown = async () => {
+    const file = previewFile()
+    if (!file || file.kind !== "md") return
+    const url = `${base}/workspace/file`
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ path: file.path, content: editValue() }),
+    }).catch(() => null)
+    if (!res || !res.ok) return
+    setPreviewFile({ ...file, content: editValue() })
+    const sid = sessionId()
+    if (!sid) return
+    void loadWorkspaceDocs(sid)
+  }
 
   const getMermaidHtml = (content: string) => {
     return `
@@ -495,12 +653,6 @@ const Workspace: Component<WorkspaceProps> = (props) => {
   })
 
   // Folder/File Handlers
-  const openFolder = (folderId: string) => {
-    if (activeTool() === "select") {
-      setActiveFolder(folderId)
-      setCurrentView("folder")
-    }
-  }
 
   const openFile = (file: any) => {
     console.log("Opening file:", file.filename)
@@ -525,106 +677,38 @@ const Workspace: Component<WorkspaceProps> = (props) => {
   return (
     <main
       id="12:31"
-      style="flex-basis: 0%; padding: 1.5rem 2rem;"
+      style="flex-basis: 0%; padding: 0.75rem 1rem;"
       class="overflow-x-hidden overflow-y-hidden flex flex-col grow shrink relative"
     >
-      <div id="12:32" class="flex justify-between items-center mb-6 h-10 relative">
-        <div class="flex items-center gap-x-4">
-          <Show when={currentView() !== "canvas"}>
-            <button
-              onClick={currentView() === "folder" ? backToCanvas : backToFolder}
-              class="hover:bg-[#00F0FF]/15 hover:shadow-[0_0_12px_rgba(0,240,255,0.25)] flex justify-center items-center w-10 h-10 rounded-lg text-[#00F0FF]"
-              style="background-color: color-mix( in oklab , #1A1F3A 90% , transparent );"
-            >
-              <iconify-icon icon="lucide:arrow-left" class="text-xl"></iconify-icon>
-            </button>
-            <Show when={currentView() === "folder" && activeFolder() === "wireframe"}>
-              <h1 style="color: rgba(232, 240, 255, 1);" class="text-2xl font-bold ml-2">
-                用户故事
-              </h1>
+      <Show when={currentView() !== "canvas"}>
+        <div id="12:32" class="flex justify-between items-center mb-3 h-10 relative">
+          <div class="flex items-center gap-x-4">
+            <Show when={currentView() !== "canvas"}>
+              <button
+                onClick={currentView() === "folder" ? backToCanvas : backToFolder}
+                class="hover:bg-[#00F0FF]/15 hover:shadow-[0_0_12px_rgba(0,240,255,0.25)] flex justify-center items-center w-10 h-10 rounded-lg text-[#00F0FF]"
+                style="background-color: color-mix( in oklab , #1A1F3A 90% , transparent );"
+              >
+                <iconify-icon icon="lucide:arrow-left" class="text-xl"></iconify-icon>
+              </button>
+              <Show when={currentView() === "folder" && activeFolder() === "wireframe"}>
+                <h1 style="color: rgba(232, 240, 255, 1);" class="text-2xl font-bold ml-2">
+                  用户故事
+                </h1>
+              </Show>
             </Show>
-          </Show>
-          <Show when={isCanvasOrDesign()}>
-            <button
-              id="12:39"
-              onClick={() => setActiveTool((t) => (t === "select" ? "hand" : "select"))}
-              class={`hover:bg-[#00F0FF]/15 hover:shadow-[0_0_12px_rgba(0,240,255,0.25)] flex justify-center items-center w-10 h-10 rounded-lg ${activeTool() === "hand" ? "bg-[#00F0FF]/20 shadow-[0_0_12px_rgba(0,240,255,0.25)]" : ""}`}
-              style={{
-                "background-color":
-                  activeTool() === "hand" ? undefined : "color-mix( in oklab , #1A1F3A 90% , transparent )",
-              }}
-            >
-              <div id="12:40" class="bg-transparent flex justify-center items-center w-5 h-5">
-                <iconify-icon
-                  id="12:41"
-                  style="color: rgba(0, 240, 255, 1);"
-                  icon={activeTool() === "select" ? "lucide:mouse-pointer" : "lucide:hand"}
-                  class="text-base"
-                ></iconify-icon>
-              </div>
-            </button>
-            <button
-              id="12:fullscreen"
-              onClick={toggleFullScreen}
-              class="hover:bg-[#00F0FF]/15 hover:shadow-[0_0_12px_rgba(0,240,255,0.25)] flex justify-center items-center w-10 h-10 rounded-lg"
-              style="background-color: color-mix( in oklab , #1A1F3A 90% , transparent );"
-            >
-              <div class="bg-transparent flex justify-center items-center w-5 h-5">
-                <iconify-icon
-                  style="color: rgba(0, 240, 255, 1);"
-                  icon={isFullScreen() ? "lucide:minimize" : "lucide:maximize"}
-                  class="text-base"
-                ></iconify-icon>
-              </div>
-            </button>
-          </Show>
+          </div>
+
+          <div class="flex items-center gap-x-2"></div>
         </div>
-        
-        <div class="flex items-center gap-x-2">
-          <Show when={isCanvasOrDesign()}>
-            <span id="12:46" style="color: rgba(138, 151, 170, 1);" class="text-sm">
-              {Math.round(scale() * 100)}%
-            </span>
-            <button
-              id="12:47"
-              onClick={zoomIn}
-              class="hover:bg-[#00F0FF]/15 hover:shadow-[0_0_12px_rgba(0,240,255,0.25)] flex justify-center items-center w-10 h-10 rounded-lg"
-              style="background-color: color-mix( in oklab , #1A1F3A 90% , transparent );"
-            >
-              <div id="12:48" class="bg-transparent flex justify-center items-center w-5 h-5">
-                <iconify-icon
-                  id="12:49"
-                  style="color: rgba(0, 240, 255, 1);"
-                  icon="lucide:zoom-in"
-                  class="text-base"
-                ></iconify-icon>
-              </div>
-            </button>
-            <button
-              id="12:50"
-              onClick={zoomOut}
-              class="hover:bg-[#00F0FF]/15 hover:shadow-[0_0_12px_rgba(0,240,255,0.25)] flex justify-center items-center w-10 h-10 rounded-lg"
-              style="background-color: color-mix( in oklab , #1A1F3A 90% , transparent );"
-            >
-              <div id="12:51" class="bg-transparent flex justify-center items-center w-5 h-5">
-                <iconify-icon
-                  id="12:52"
-                  style="color: rgba(0, 240, 255, 1);"
-                  icon="lucide:zoom-out"
-                  class="text-base"
-                ></iconify-icon>
-              </div>
-            </button>
-          </Show>
-        </div>
-      </div>
+      </Show>
 
       <div
         id="12:53"
         ref={canvasRef}
         style={{
-          "background-color": "color-mix( in oklab , #141829 80% , transparent )",
-          "border-color": "color-mix( in oklab , #00F0FF 10% , transparent )",
+          "background-color": "transparent",
+          "border-color": "transparent",
           cursor:
             isCanvasOrDesign()
               ? activeTool() === "hand"
@@ -634,7 +718,7 @@ const Workspace: Component<WorkspaceProps> = (props) => {
                 : "default"
               : "default",
         }}
-        class="overflow-hidden relative grow shrink border-[1px] border-solid rounded-2xl"
+        class="overflow-hidden relative grow shrink"
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
@@ -653,205 +737,283 @@ const Workspace: Component<WorkspaceProps> = (props) => {
             }}
           >
             <Show when={currentView() === "canvas"}>
-              <div id="12:54" style="top: 0; right: 0; bottom: 0; left: 0;" class="absolute p-12 overflow-auto flex">
-                {/* Folder Grid Container */}
-                <div class="grid grid-cols-2 gap-8 w-fit relative z-50 m-auto">
-                  <div class="flex flex-col gap-8">
-                    {/* Product Requirements Doc - Folder */}
-                    <div
-                      onMouseDown={(e) => e.stopPropagation()}
-                      onMouseUp={(e) => e.stopPropagation()}
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        e.preventDefault()
-                        // Open the first doc in the folder directly, switching to DocDetail view
-                        if (mockDocs.length > 0) {
-                          props.onOpenFile?.(mockDocs[0])
+              <div
+                id="12:54"
+                style="top: 0; right: 0; bottom: 0; left: 0;"
+                class="absolute inset-0 overflow-hidden flex"
+              >
+                <div class="w-full h-full grid grid-cols-2 grid-rows-2 gap-4">
+                  <div class="h-full border border-[#00F0FF]/20 rounded-2xl bg-[#0F1624]/80 p-4 flex flex-col overflow-hidden">
+                    <div class="flex items-center justify-between mb-3">
+                      <div>
+                        <div class="text-base font-semibold text-[#E8F0FF]">
+                          PRD & Architecture
+                        </div>
+                      </div>
+                    </div>
+                    <div class="flex-1 overflow-auto geek-scroll px-2">
+                      <Show
+                        when={globalDocs().length}
+                        fallback={
+                          <div class="text-xs text-[#5C6876]">
+                            等待 Global&Context 目录下 PRD 与 Architecture 文档生成...
+                          </div>
                         }
-                      }}
-                      class="hover:shadow-[0_8px_32px_rgba(0,240,255,0.25)] hover:scale-[1.02] transition-all cursor-pointer flex gap-x-4 w-80 p-5 border-[1px] border-solid rounded-2xl"
-                      style="background-color: color-mix( in oklab , #1A1F3A 90% , transparent ); box-shadow: 0 0 rgba(0, 0, 0, 0), 0 0 rgba(0, 0, 0, 0), 0 0 rgba(0, 0, 0, 0), 0 0 rgba(0, 0, 0, 0), 0 4px 20px rgba(0, 240, 255, 0.08); border-color: color-mix( in oklab , #00F0FF 10% , transparent );"
-                    >
-                      <div class="shrink-0">
-                        <div
-                          style="background-color: color-mix( in oklab , #00F0FF 10% , transparent ); border-color: color-mix( in oklab , #00F0FF 20% , transparent );"
-                          class="flex justify-center items-center w-16 h-20 border-[1px] border-solid rounded-lg"
-                        >
-                          <div class="bg-transparent flex justify-center items-center w-8 h-8">
-                            <iconify-icon
-                              style="color: rgba(0, 240, 255, 1);"
-                              icon="lucide:folder-open"
-                              class="text-2xl"
-                            ></iconify-icon>
-                          </div>
+                      >
+                        <div class="inline-flex gap-3 flex-wrap min-w-max">
+                          <For each={globalDocs()}>
+                            {(doc) => (
+                              <button
+                                type="button"
+                                title={doc.name}
+                                onMouseDown={(e) => e.stopPropagation()}
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  void openDocPreview(doc)
+                                }}
+                                class="min-w-[160px] max-w-[200px] text-left rounded-xl border border-[#00F0FF]/10 bg-[#141829]/80 hover:border-[#00F0FF]/60 hover:bg-[#141829] transition-all px-3 py-2 flex flex-col gap-2"
+                              >
+                                <div class="text-xs font-semibold text-[#E8F0FF] truncate">
+                                  {doc.name}
+                                </div>
+                                <div class="flex-1 text-[10px] text-[#8A97AA] whitespace-pre-wrap leading-relaxed overflow-hidden">
+                                  {doc.preview}
+                                </div>
+                              </button>
+                            )}
+                          </For>
                         </div>
-                      </div>
-                      <div style="flex-basis: 0%;" class="flex flex-col grow shrink gap-y-2">
-                        <h3 style="color: rgba(232, 240, 255, 1);" class="text-lg font-semibold">
-                          产品需求文档
-                        </h3>
-                        <p style="color: rgba(138, 151, 170, 1);" class="text-sm font-normal">
-                          全局背景与规格
-                        </p>
-                        <div class="flex items-center gap-x-2 mt-2">
-                          <div
-                            style="background-color: color-mix( in oklab , #00F0FF 15% , transparent ); color: rgba(0, 240, 255, 1); padding: 0.25rem 0.5rem;"
-                            class="text-xs rounded-lg"
-                          >
-                            文档
-                          </div>
-                          <span style="color: rgba(92, 104, 118, 1);" class="text-xs">
-                            6 个文件
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Style Selection - Folder */}
-                    <div
-                      onMouseDown={(e) => e.stopPropagation()}
-                      onMouseUp={(e) => e.stopPropagation()}
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        e.preventDefault()
-                        props.onOpenFile?.({ type: 'style-comparison' })
-                      }}
-                      class="hover:shadow-[0_8px_32px_rgba(0,240,255,0.25)] hover:scale-[1.02] transition-all cursor-pointer flex gap-x-4 w-80 p-5 border-[1px] border-solid rounded-2xl"
-                      style="background-color: color-mix( in oklab , #1A1F3A 90% , transparent ); box-shadow: 0 0 rgba(0, 0, 0, 0), 0 0 rgba(0, 0, 0, 0), 0 0 rgba(0, 0, 0, 0), 0 0 rgba(0, 0, 0, 0), 0 4px 20px rgba(0, 240, 255, 0.08); border-color: color-mix( in oklab , #00F0FF 10% , transparent );"
-                    >
-                      <div class="shrink-0">
-                        <div
-                          style="background-color: color-mix( in oklab , #B026FF 10% , transparent ); border-color: color-mix( in oklab , #B026FF 20% , transparent );"
-                          class="flex justify-center items-center w-16 h-20 border-[1px] border-solid rounded-lg"
-                        >
-                          <div class="bg-transparent flex justify-center items-center w-8 h-8">
-                            <iconify-icon
-                              style="color: rgba(176, 38, 255, 1);"
-                              icon="lucide:palette"
-                              class="text-2xl"
-                            ></iconify-icon>
-                          </div>
-                        </div>
-                      </div>
-                      <div style="flex-basis: 0%;" class="flex flex-col grow shrink gap-y-2">
-                        <h3 style="color: rgba(232, 240, 255, 1);" class="text-lg font-semibold">
-                          风格选择
-                        </h3>
-                        <p style="color: rgba(138, 151, 170, 1);" class="text-sm font-normal">
-                          UI 组件与配色方案
-                        </p>
-                        <div class="flex items-center gap-x-2 mt-2">
-                          <div
-                            style="background-color: color-mix( in oklab , #B026FF 20% , transparent ); color: rgba(176, 38, 255, 1); padding: 0.25rem 0.5rem;"
-                            class="text-xs rounded-lg"
-                          >
-                            风格
-                          </div>
-                          <span style="color: rgba(92, 104, 118, 1);" class="text-xs">
-                            Cyberpunk
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Wireframe - Folder */}
-                    <div
-                      onClick={() => openFolder("wireframe")}
-                      class="hover:shadow-[0_8px_32px_rgba(0,240,255,0.25)] hover:scale-[1.02] transition-all cursor-pointer flex gap-x-4 w-80 p-5 border-[1px] border-solid rounded-2xl"
-                      style="background-color: color-mix( in oklab , #1A1F3A 90% , transparent ); box-shadow: 0 0 rgba(0, 0, 0, 0), 0 0 rgba(0, 0, 0, 0), 0 0 rgba(0, 0, 0, 0), 0 0 rgba(0, 0, 0, 0), 0 4px 20px rgba(0, 240, 255, 0.08); border-color: color-mix( in oklab , #00F0FF 10% , transparent );"
-                    >
-                      <div class="shrink-0">
-                        <div
-                          style="background-color: color-mix( in oklab , #FF006E 10% , transparent ); border-color: color-mix( in oklab , #FF006E 20% , transparent );"
-                          class="flex justify-center items-center w-16 h-20 border-[1px] border-solid rounded-lg"
-                        >
-                          <div class="bg-transparent flex justify-center items-center w-8 h-8">
-                            <iconify-icon
-                              style="color: rgba(255, 0, 110, 1);"
-                              icon="lucide:workflow"
-                              class="text-2xl"
-                            ></iconify-icon>
-                          </div>
-                        </div>
-                      </div>
-                      <div style="flex-basis: 0%;" class="flex flex-col grow shrink gap-y-2">
-                        <h3 style="color: rgba(232, 240, 255, 1);" class="text-lg font-semibold">
-                          用户故事
-                        </h3>
-                        <p style="color: rgba(138, 151, 170, 1);" class="text-sm font-normal">
-                          场景与价值描述
-                        </p>
-                        <div class="flex items-center gap-x-2 mt-2">
-                          <div
-                            style="background-color: color-mix( in oklab , #00F0FF 20% , transparent ); color: rgba(0, 240, 255, 1); padding: 0.25rem 0.5rem;"
-                            class="text-xs rounded-lg"
-                          >
-                            文档
-                          </div>
-                          <span style="color: rgba(92, 104, 118, 1);" class="text-xs">
-                            User Story
-                          </span>
-                        </div>
-                      </div>
+                      </Show>
                     </div>
                   </div>
 
-                  <div class="h-full">
-                    {/* Interface Design - Folder */}
-                    <div
-                      onClick={() => openFolder("design")}
-                      class="hover:shadow-[0_8px_32px_rgba(0,240,255,0.25)] hover:scale-[1.02] transition-all cursor-pointer flex flex-col gap-y-4 w-96 h-full p-5 border-[1px] border-solid rounded-2xl"
-                      style="background-color: color-mix( in oklab , #1A1F3A 90% , transparent ); box-shadow: 0 0 rgba(0, 0, 0, 0), 0 0 rgba(0, 0, 0, 0), 0 0 rgba(0, 0, 0, 0), 0 0 rgba(0, 0, 0, 0), 0 4px 20px rgba(0, 240, 255, 0.08); border-color: color-mix( in oklab , #00F0FF 10% , transparent );"
-                    >
-                      <div
-                        style="background-color: color-mix( in oklab , #00F0FF 5% , transparent ); border-color: color-mix( in oklab , #00F0FF 15% , transparent );"
-                        class="flex justify-center items-center w-full grow border-[1px] border-solid rounded-lg overflow-hidden"
-                      >
-                        <img
-                          style="filter: brightness(90%) contrast(90%);"
-                          alt="UI Design"
-                          src="https://static.paraflowcontent.com/public/resource/image/7641c341-bc09-4527-a6a4-1075f23ad867.jpeg"
-                          class="w-full h-full object-cover rounded-lg"
-                        />
-                      </div>
-                      <div class="flex flex-col gap-y-2 shrink-0">
-                        <h3 style="color: rgba(232, 240, 255, 1);" class="text-lg font-semibold">
-                          界面设计
-                        </h3>
-                        <p style="color: rgba(138, 151, 170, 1);" class="text-sm font-normal">
-                          登录与仪表盘 UI
-                        </p>
-                        <div class="flex items-center gap-x-2 mt-2">
-                          <div
-                            style="background-color: color-mix( in oklab , #B026FF 20% , transparent ); color: rgba(176, 38, 255, 1); padding: 0.25rem 0.5rem;"
-                            class="text-xs rounded-lg"
-                          >
-                            设计
-                          </div>
-                          <span style="color: rgba(92, 104, 118, 1);" class="text-xs">
-                            HTML/CSS
-                          </span>
+                  <div class="h-full border border-[#00F0FF]/20 rounded-2xl bg-[#0F1624]/80 p-4 flex flex-col overflow-hidden">
+                    <div class="flex items-center justify-between mb-3">
+                      <div>
+                        <div class="text-base font-semibold text-[#E8F0FF]">
+                          User Stories
                         </div>
                       </div>
+                    </div>
+                    <div class="flex-1 overflow-auto geek-scroll px-2">
+                      <Show
+                        when={featureDocs().length}
+                        fallback={
+                          <div class="text-xs text-[#5C6876]">
+                            等待 Feature&Plan 目录下用户故事文档生成...
+                          </div>
+                        }
+                      >
+                        <div class="inline-flex gap-3 flex-wrap min-w-max">
+                          <For each={featureDocs()}>
+                            {(doc) => (
+                              <button
+                                type="button"
+                                title={doc.name}
+                                onMouseDown={(e) => e.stopPropagation()}
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  void openDocPreview(doc)
+                                }}
+                                class="min-w-[160px] max-w-[200px] text-left rounded-xl border border-[#00F0FF]/10 bg-[#141829]/80 hover:border-[#00F0FF]/60 hover:bg-[#141829] transition-all px-3 py-2 flex flex-col gap-2"
+                              >
+                                <div class="text-xs font-semibold text-[#E8F0FF] truncate">
+                                  {doc.name}
+                                </div>
+                                <div class="flex-1 text-[10px] text-[#8A97AA] whitespace-pre-wrap leading-relaxed overflow-hidden">
+                                  {doc.preview}
+                                </div>
+                              </button>
+                            )}
+                          </For>
+                        </div>
+                      </Show>
+                    </div>
+                  </div>
+
+                  <div class="h-full border border-[#00F0FF]/20 rounded-2xl bg-[#0F1624]/80 p-4 flex flex-col overflow-hidden">
+                    <div class="flex items-center justify-between mb-3">
+                      <div>
+                        <div class="text-base font-semibold text-[#E8F0FF]">
+                          Tokens & Patterns
+                        </div>
+                      </div>
+                    </div>
+                    <div class="flex-1 overflow-auto geek-scroll pr-2">
+                      <Show
+                        when={styleDocs().length}
+                        fallback={
+                          <div class="text-xs text-[#5C6876]">
+                            等待 Style&Guide 目录下样式与交互文档生成...
+                          </div>
+                        }
+                      >
+                        <div class="flex gap-3">
+                          <For each={styleDocs()}>
+                            {(doc) => (
+                              <button
+                                type="button"
+                                title={doc.name}
+                                onMouseDown={(e) => e.stopPropagation()}
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  void openDocPreview(doc)
+                                }}
+                                class="min-w-[160px] max-w-[200px] text-left rounded-xl border border-[#00F0FF]/10 bg-[#141829]/80 hover:border-[#00F0FF]/60 hover:bg-[#141829] transition-all px-3 py-2 flex flex-col gap-2"
+                              >
+                                <div class="text-xs font-semibold text-[#E8F0FF] truncate">
+                                  {doc.name}
+                                </div>
+                                <div class="flex-1 text-[10px] text-[#8A97AA] whitespace-pre-wrap leading-relaxed overflow-hidden">
+                                  {doc.preview}
+                                </div>
+                              </button>
+                            )}
+                          </For>
+                        </div>
+                      </Show>
+                    </div>
+                  </div>
+
+                  <div class="h-full border border-[#00F0FF]/20 rounded-2xl bg-[#0F1624]/80 p-4 flex flex-col overflow-hidden">
+                    <div class="flex items-center justify-between mb-3">
+                      <div>
+                        <div class="text-base font-semibold text-[#E8F0FF]">
+                          HTML Screens
+                        </div>
+                      </div>
+                    </div>
+                    <div class="flex-1 overflow-x-auto overflow-y-hidden rounded-xl bg黑/80 border border-[#00F0FF]/10">
+                      <Show
+                        when={screenDocs().length}
+                        fallback={
+                          <div class="w-full h-full flex items-center justify-center text-xs text-[#5C6876]">
+                            等待 Screen&Prototype 目录下 HTML 原型生成...
+                          </div>
+                        }
+                      >
+                        <div class="flex gap-4 h-full items-stretch px-3 py-3">
+                          <For each={screenDocs()}>
+                            {(doc) => (
+                              <button
+                                type="button"
+                                onMouseDown={(e) => e.stopPropagation()}
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  void openDocPreview(doc)
+                                }}
+                                class="group relative flex-none w-[260px] aspect-square rounded-xl border border-[#00F0FF]/20 bg-[#141829]/80 hover:border-[#00F0FF]/60 hover:bg-[#141829] transition-all overflow-hidden"
+                              >
+                                <div class="absolute inset-0">
+                                  <div class="w-full h-full bg-black rounded-lg overflow-hidden relative">
+                                    <Show when={doc.kind === "html"}>
+                                      <iframe
+                                        srcdoc={doc.preview}
+                                        class="w-[300%] h-[300%] border-none pointer-events-none scale-[0.3333] origin-top-left bg-white"
+                                        tabindex="-1"
+                                      />
+                                    </Show>
+                                    <div class="absolute inset-0 bg-transparent group-hover:bg白/5 transition-colors"></div>
+                                  </div>
+                                </div>
+                                <div class="absolute bottom-0 left-0 right-0 px-3 pb-3">
+                                  <div class="text-xs font-semibold text-[#E8F0FF] truncate">
+                                    {doc.name}
+                                  </div>
+                                  <div class="text-[10px] text-[#8A97AA] truncate">
+                                    点击放大查看原型
+                                  </div>
+                                </div>
+                              </button>
+                            )}
+                          </For>
+                        </div>
+                      </Show>
                     </div>
                   </div>
                 </div>
-
-                <img
-                  id="12:86"
-                  style="top: 0; right: 0; bottom: 0; left: 0; z-index: -1;"
-                  alt="SVG image #0"
-                  src="https://static.paraflowcontent.com/public/resource/image/32dcbf4b-6111-44b1-bdf6-dd1213293ac9.svg"
-                  class="absolute w-full h-full"
-                />
               </div>
-
-              <div
-                style="background-image: radial-gradient(circle, rgba(0, 240, 255, 1) 1px, transparent 1px); background-size: 20px 20px; top: 0; right: 0; bottom: 0; left: 0;"
-                class="opacity-10 absolute w-full h-full"
-              ></div>
             </Show>
-            
+
+            <Show when={isCanvasOrDesign()}>
+              <div class="pointer-events-none absolute inset-0">
+                <div class="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-3 pointer-events-auto">
+                  <Show when={currentView() !== "canvas"}>
+                    <button
+                      onClick={currentView() === "folder" ? backToCanvas : backToFolder}
+                      class="hover:bg-[#00F0FF]/15 hover:shadow-[0_0_12px_rgba(0,240,255,0.25)] flex justify-center items-center w-10 h-10 rounded-lg text-[#00F0FF] bg-[#1A1F3A]/90"
+                    >
+                      <iconify-icon icon="lucide:arrow-left" class="text-xl"></iconify-icon>
+                    </button>
+                  </Show>
+                  <button
+                    id="12:39"
+                    onClick={() => setActiveTool((t) => (t === "select" ? "hand" : "select"))}
+                    class={`hover:bg-[#00F0FF]/15 hover:shadow-[0_0_12px_rgba(0,240,255,0.25)] flex justify-center items-center w-10 h-10 rounded-lg bg-[#1A1F3A]/90 ${
+                      activeTool() === "hand"
+                        ? "bg-[#00F0FF]/20 shadow-[0_0_12px_rgba(0,240,255,0.25)]"
+                        : ""
+                    }`}
+                  >
+                    <div id="12:40" class="bg-transparent flex justify-center items-center w-5 h-5">
+                      <iconify-icon
+                        id="12:41"
+                        style="color: rgba(0, 240, 255, 1);"
+                        icon={activeTool() === "select" ? "lucide:mouse-pointer" : "lucide:hand"}
+                        class="text-base"
+                      ></iconify-icon>
+                    </div>
+                  </button>
+                  <button
+                    id="12:fullscreen"
+                    onClick={toggleFullScreen}
+                    class="hover:bg-[#00F0FF]/15 hover:shadow-[0_0_12px_rgba(0,240,255,0.25)] flex justify-center items-center w-10 h-10 rounded-lg bg-[#1A1F3A]/90"
+                  >
+                    <div class="bg-transparent flex justify-center items-center w-5 h-5">
+                      <iconify-icon
+                        style="color: rgba(0, 240, 255, 1);"
+                        icon={isFullScreen() ? "lucide:minimize" : "lucide:maximize"}
+                        class="text-base"
+                      ></iconify-icon>
+                    </div>
+                  </button>
+                </div>
+                <div class="absolute top-3 right-3 flex items-center gap-2 pointer-events-auto">
+                  <span id="12:46" style="color: rgba(138, 151, 170, 1);" class="text-sm">
+                    {Math.round(scale() * 100)}%
+                  </span>
+                  <button
+                    id="12:47"
+                    onClick={zoomIn}
+                    class="hover:bg-[#00F0FF]/15 hover:shadow-[0_0_12px_rgba(0,240,255,0.25)] flex justify-center items-center w-10 h-10 rounded-lg bg-[#1A1F3A]/90"
+                  >
+                    <div id="12:48" class="bg-transparent flex justify-center items-center w-5 h-5">
+                      <iconify-icon
+                        id="12:49"
+                        style="color: rgba(0, 240, 255, 1);"
+                        icon="lucide:zoom-in"
+                        class="text-base"
+                      ></iconify-icon>
+                    </div>
+                  </button>
+                  <button
+                    id="12:50"
+                    onClick={zoomOut}
+                    class="hover:bg-[#00F0FF]/15 hover:shadow-[0_0_12px_rgba(0,240,255,0.25)] flex justify-center items-center w-10 h-10 rounded-lg bg-[#1A1F3A]/90"
+                  >
+                    <div id="12:51" class="bg-transparent flex justify-center items-center w-5 h-5">
+                      <iconify-icon
+                        id="12:52"
+                        style="color: rgba(0, 240, 255, 1);"
+                        icon="lucide:zoom-out"
+                        class="text-base"
+                      ></iconify-icon>
+                    </div>
+                  </button>
+                </div>
+              </div>
+            </Show>
+
             {/* Design Folder View - Inside Transform */}
             <Show when={isDesignView()}>
               <div class="absolute inset-0 p-12 overflow-y-auto pointer-events-auto">
@@ -894,7 +1056,7 @@ const Workspace: Component<WorkspaceProps> = (props) => {
               <h2 class="text-3xl font-bold text-[#E8F0FF] mb-2">产品需求文档</h2>
               <p class="text-[#8A97AA]">产品需求与规格说明</p>
             </div>
-            <div class="flex-1 overflow-x-auto overflow-y-hidden pb-4">
+            <div class="flex-1 overflow-auto pb-4">
               <div class="flex gap-6 h-full min-w-max px-2">
                 <For each={mockDocs}>
                   {(doc) => (
@@ -933,15 +1095,9 @@ const Workspace: Component<WorkspaceProps> = (props) => {
 
         {/* Wireframe Folder View */}
         <Show when={currentView() === "folder" && activeFolder() === "wireframe"}>
-          <div
-            style="background: linear-gradient(135deg, rgba(10, 14, 26, 1) 0%, rgba(26, 19, 50, 1) 50%, rgba(13, 27, 42, 1) 100%), radial-gradient(circle at 20% 30%, rgba(0, 240, 255, 0.101961) 0%, transparent 50%), radial-gradient(circle at 80% 70%, rgba(255, 0, 110, 0.101961) 0%, transparent 50%);"
-            class="flex grow min-w-0 h-full overflow-y-auto"
-          >
-            <main
-              style="flex-basis: 0%; padding: 1.5rem 2rem;"
-              class="overflow-x-hidden flex flex-col grow shrink"
-            >
-              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mt-4">
+          <div class="flex grow min-w-0 h-full overflow-auto">
+            <main class="flex flex-col grow shrink p-6 overflow-auto">
+              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mt-4 min-w-max">
                 <For each={mockWireframeFiles}>
                   {(file) => (
                     <div
@@ -1065,47 +1221,90 @@ const Workspace: Component<WorkspaceProps> = (props) => {
         </Show>
       </div>
 
-      {/* Preview Modal */}
-          <Show when={previewFile()}>
-            <div 
-              class="fixed inset-0 z-[999] bg-black/80 flex flex-col items-center justify-center animate-fade-in"
-              onClick={() => setPreviewFile(null)}
-            >
-              <button 
-                class="absolute top-6 right-6 p-2 text-white/70 hover:text-white bg-white/10 hover:bg-white/20 rounded-lg transition-colors z-[1000]"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  setPreviewFile(null)
-                }}
-              >
-                <iconify-icon icon="lucide:x" class="text-2xl" />
-              </button>
-              <div class="relative w-[90%] h-[80%] flex gap-4">
-                <div class="flex-1 bg-white rounded-xl overflow-hidden shadow-2xl border border-[#00F0FF]/20">
-                   <iframe 
-                     id="preview-iframe"
-                     srcdoc={getPreviewContent(previewFile().content)} 
-                     class="w-full h-full border-none bg-white"
-                     onClick={(e) => e.stopPropagation()}
-                   />
+      <Show when={previewFile()}>
+        <div
+          class="fixed inset-0 z-[999] bg-black/80 flex flex-col items-center justify-center animate-fade-in"
+          onClick={() => setPreviewFile(null)}
+        >
+          <button
+            class="absolute top-6 right-6 p-2 text-white/70 hover:text-white bg-white/10 hover:bg-white/20 rounded-lg transition-colors z-[1000]"
+            onClick={(e) => {
+              e.stopPropagation()
+              setPreviewFile(null)
+            }}
+          >
+            <iconify-icon icon="lucide:x" class="text-2xl" />
+          </button>
+          <div class="relative w-[90%] h-[80%] flex gap-4" onClick={(e) => e.stopPropagation()}>
+            <Show when={!previewFile()?.kind || previewFile()?.kind === "html"}>
+              <div class="flex-1 bg-white rounded-xl overflow-hidden shadow-2xl border border-[#00F0FF]/20">
+                <iframe
+                  id="preview-iframe"
+                  srcdoc={getPreviewContent(previewFile().content)}
+                  class="w-full h-full border-none bg-white"
+                />
+              </div>
+            </Show>
+            <Show when={previewFile()?.kind === "md"}>
+              <div class="flex-1 flex flex-col bg-[#141829] rounded-xl overflow-hidden shadow-2xl border border-[#00F0FF]/20">
+                <div class="px-6 py-4 border-b border-[#00F0FF]/10 flex items-center justify-between bg-[#050816]/80">
+                  <div>
+                    <div class="text-sm font-semibold text-[#E8F0FF]">
+                      编辑 Markdown
+                    </div>
+                    <div class="text-xs text-[#8A97AA] mt-1 truncate max-w-md">
+                      {previewFile().name}
+                    </div>
+                  </div>
                 </div>
-             
-             <Show when={selectedHtml()}>
-               <div class="w-[400px] flex flex-col bg-[#1A1F3A] rounded-xl overflow-hidden border border-[#00F0FF]/20 shadow-2xl animate-fade-in-right" onClick={(e) => e.stopPropagation()}>
-                 <div class="p-4 border-b border-[#00F0FF]/10 flex justify-between items-center bg-[#141829]/50">
-                    <h3 class="text-[#E8F0FF] font-semibold text-sm">Selected Element</h3>
-                    <button 
-                      onClick={() => setSelectedHtml(null)}
-                      class="text-[#8A97AA] hover:text-white"
-                    >
-                       <iconify-icon icon="lucide:x" />
-                    </button>
-                 </div>
-                 <div class="flex-1 overflow-auto p-4 font-mono text-xs text-[#E8F0FF] whitespace-pre-wrap">
-                    {selectedHtml()}
-                 </div>
-               </div>
-             </Show>
+                <div class="flex-1 p-6 overflow-auto">
+                  <textarea
+                    class="w-full h-full bg-[#050816] border border-[#00F0FF]/15 focus:border-[#00F0FF]/60 outline-none rounded-lg px-4 py-3 text-sm font-mono text-[#E8F0FF] leading-relaxed resize-none"
+                    value={editValue()}
+                    onInput={(e) => setEditValue(e.currentTarget.value)}
+                    spellcheck={false}
+                  />
+                </div>
+                <div class="px-6 py-4 border-t border-[#00F0FF]/10 bg-[#050816]/80 flex justify-end gap-3">
+                  <button
+                    type="button"
+                    class="px-4 py-2 text-sm rounded-lg border border-transparent text-[#8A97AA] hover:text-[#E8F0FF] hover:bg-white/5 transition-colors"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setPreviewFile(null)
+                    }}
+                  >
+                    取消
+                  </button>
+                  <button
+                    type="button"
+                    class="px-4 py-2 text-sm rounded-lg bg-[#00F0FF] text-[#050816] font-medium hover:bg-[#33F2FF] transition-colors"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      void saveMarkdown()
+                    }}
+                  >
+                    保存
+                  </button>
+                </div>
+              </div>
+            </Show>
+            <Show when={selectedHtml() && (!previewFile()?.kind || previewFile()?.kind === "html")}>
+              <div class="w-[400px] flex flex-col bg-[#1A1F3A] rounded-xl overflow-hidden border border-[#00F0FF]/20 shadow-2xl animate-fade-in-right">
+                <div class="p-4 border-b border-[#00F0FF]/10 flex justify-between items-center bg-[#141829]/50">
+                  <h3 class="text-[#E8F0FF] font-semibold text-sm">Selected Element</h3>
+                  <button
+                    onClick={() => setSelectedHtml(null)}
+                    class="text-[#8A97AA] hover:text-white"
+                  >
+                    <iconify-icon icon="lucide:x" />
+                  </button>
+                </div>
+                <div class="flex-1 overflow-auto p-4 font-mono text-xs text-[#E8F0FF] whitespace-pre-wrap">
+                  {selectedHtml()}
+                </div>
+              </div>
+            </Show>
           </div>
         </div>
       </Show>

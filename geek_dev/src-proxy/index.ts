@@ -495,6 +495,79 @@ export const createProxy = (input: ProxyConfig = {}) => {
     return Response.json({ status: "ok", path: appPath }, { headers: baseHeaders })
   }
 
+  const readWorkspaceFile = async (req: Request) => {
+    const url = new URL(req.url)
+    const rawPath = url.searchParams.get("path") ?? ""
+    if (!rawPath) {
+      return Response.json({ error: "path required" }, { status: 400, headers: baseHeaders })
+    }
+    const trimmed = rawPath.startsWith("/") ? rawPath.slice(1) : rawPath
+    const workspaceRoot = path.resolve(config.workspace)
+    const workspacePrefix = "workspace/"
+    const relative =
+      trimmed.startsWith(workspacePrefix) ? trimmed.slice(workspacePrefix.length) : trimmed
+    const full = path.join(workspaceRoot, relative)
+    const resolvedFull = path.resolve(full)
+    if (!resolvedFull.startsWith(workspaceRoot)) {
+      return Response.json({ error: "forbidden" }, { status: 403, headers: baseHeaders })
+    }
+    try {
+      const file = Bun.file(full)
+      const size = file.size
+      const ext = path.extname(full).toLowerCase()
+      const isText =
+        [".md", ".txt", ".json", ".yaml", ".yml", ".js", ".ts", ".tsx", ".css", ".html"].includes(
+          ext,
+        )
+      const content = isText ? await file.text() : ""
+      return Response.json({ path: rawPath, ext, size, content }, { headers: baseHeaders })
+    } catch {
+      return Response.json({ error: "not found" }, { status: 404, headers: baseHeaders })
+    }
+  }
+
+  const writeWorkspaceFile = async (req: Request) => {
+    const body = await req.json().catch(() => null) as { path?: string; content?: string } | null
+    if (!body?.path || typeof body.path !== "string") {
+      return Response.json({ error: "path required" }, { status: 400, headers: baseHeaders })
+    }
+    const content = typeof body.content === "string" ? body.content : ""
+    const trimmed = body.path.startsWith("/") ? body.path.slice(1) : body.path
+    const workspaceRoot = path.resolve(config.workspace)
+    const workspacePrefix = "workspace/"
+    const relative =
+      trimmed.startsWith(workspacePrefix) ? trimmed.slice(workspacePrefix.length) : trimmed
+    const full = path.join(workspaceRoot, relative)
+    const resolvedFull = path.resolve(full)
+    if (!resolvedFull.startsWith(workspaceRoot)) {
+      return Response.json({ error: "forbidden" }, { status: 403, headers: baseHeaders })
+    }
+    try {
+      const dir = path.dirname(full)
+      await fs.mkdir(dir, { recursive: true })
+      await fs.writeFile(full, content, "utf-8")
+      return Response.json({ path: body.path, saved: true }, { headers: baseHeaders })
+    } catch {
+      return Response.json({ error: "write failed" }, { status: 500, headers: baseHeaders })
+    }
+  }
+
+  const workspaceTree = async (req: Request) => {
+    const url = new URL(req.url)
+    const sessionId = url.searchParams.get("session") ?? ""
+    if (!sessionId) {
+      return Response.json({ error: "session required" }, { status: 400, headers: baseHeaders })
+    }
+    const workspaceRoot = path.resolve(config.workspace)
+    const root = path.join(workspaceRoot, sessionId)
+    const exists = await fs.stat(root).then(() => true).catch(() => false)
+    if (!exists) {
+      return Response.json({ root, items: [] as TreeItem[] }, { headers: baseHeaders })
+    }
+    const items = await readTree(root, 0, config.pmDepth, config.pmMaxBytes)
+    return Response.json({ root, items }, { headers: baseHeaders })
+  }
+
   const proxyFetch = async (req: Request) => {
     const url = new URL(req.url)
     const target = new URL(url.pathname + url.search, config.baseUrl)
@@ -604,6 +677,9 @@ export const createProxy = (input: ProxyConfig = {}) => {
     if (url.pathname === "/apps" && req.method === "POST") return appsCreate(req)
     if (url.pathname === "/generate-title" && req.method === "POST") return generateTitle(req)
     if (url.pathname.endsWith("/ensure") && req.method === "POST") return ensureSessionDir(req)
+    if (url.pathname === "/workspace/file" && req.method === "GET") return readWorkspaceFile(req)
+    if (url.pathname === "/workspace/file" && req.method === "POST") return writeWorkspaceFile(req)
+    if (url.pathname === "/workspace/tree" && req.method === "GET") return workspaceTree(req)
     return proxyFetch(req)
   }
 

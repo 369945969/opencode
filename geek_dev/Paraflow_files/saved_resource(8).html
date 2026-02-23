@@ -1,0 +1,502 @@
+
+<!-- saved from url=(0012)about:srcdoc -->
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <link rel="stylesheet" href="https://static.paraflowcontent.com/public/css/font-awesome/font-awesome.672.css">
+    <link rel="stylesheet" href="https://static.paraflowcontent.com/public/css/tailwind/v4-preflight-1.css">
+    <script src="https://static.paraflowcontent.com/public/js/iconify/iconify-icon-3.0.0.js"></script>
+    <style>
+    * {
+        scrollbar-width: none;
+    }
+    textarea {
+        resize: none;
+    }
+    input::-webkit-calendar-picker-indicator {
+        visibility: hidden;
+    }
+    select {
+        appearance: none;
+    }
+    </style>
+    <script>
+        window.addEventListener('load', () => {
+            window.parent.postMessage({
+                type: 'setHeight',
+                id: 'element-frame-15:1',
+                height: document.body.scrollHeight
+            }, '*')
+
+            const observer = new MutationObserver(() => {
+                window.parent.postMessage({
+                    type: 'setHeight',
+                    id: 'element-frame-15:1',
+                    height: document.body.scrollHeight
+                }, '*')
+            })
+
+            observer.observe(document.body, {
+                childList: true,
+                subtree: true,
+                characterData: true,
+                attributes: true
+            })
+        })
+
+        window.addEventListener('resize', () => {
+            window.parent.postMessage({
+                type: 'setHeight',
+                id: 'element-frame-15:1',
+                height: document.body.scrollHeight
+            }, '*')
+        })
+    </script>
+    <style id="moxt-styled">
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@100;300;400;500;700;900&family=Open+Sans:wght@300;400;500;600;700;800&family=Montserrat:wght@100;200;300;400;500;600;700;800;900&family=Inter:wght@100;200;300;400;500;600;700;800;900&family=Poppins:wght@100;200;300;400;500;600;700;800;900&family=Roboto+Condensed:wght@100;200;300;400;500;600;700;800;900&family=Roboto+Mono:wght@100;200;300;400;500;600;700&family=PT+Serif:wght@400;700&family=Arimo:wght@400;500;600;700&family=Raleway:wght@100;200;300;400;500;600;700;800;900&family=Nunito:wght@200;300;400;500;600;700&;800;900&family=Rubik:wght@300;400;500;600;700;800;900&family=Playfair+Display:wght@400;500;600;700;800;900&family=Ubuntu:wght@300;400;500;700&family=Merriweather:wght@300;400;500;600;700;800;900&family=Roboto+Slab:wght@100;200;300;400;500;600;700&family=Libre+Baskerville:wght@400;700&family=Inconsolata:wght@200;300;400;500;600;700;800;900&family=Dancing+Script:wght@400;500;600;700&family=Kanit:wght@100;200;300;400;500;600;700;800;900&display=swap');
+
+.pf-e01ae2ff-BODY-daeb77407bcabd6359b1ced2469ba70b {font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: white / 95; font-size: 16px;}
+.pf-e01ae2ff-terminal-output {font-family: "SF Mono", Monaco, Inconsolata, "Roboto Mono", "Source Code Pro", Menlo, "Courier New", monospace;}
+</style></head>
+    <body id="15:1" title="workspace-quantum.html" class="font-[-apple-system,BlinkMacSystemFont,&#39;Segoe UI&#39;]" style="background-color: rgba(0, 0, 0, 1); width: 1440px; min-height: 900px; line-height: 1.5;">
+
+<header id="15:2" style="background-color: rgba(0, 0, 0, 1); width: 100%; border-top-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-right-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-bottom-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-left-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-bottom-style: solid; border-bottom-width: 1px;">
+<div id="15:3" style="display: flex; justify-content: space-between; align-items: center; padding-top: 1rem; padding-right: 1.5rem; padding-bottom: 1rem; padding-left: 1.5rem;">
+
+<div id="15:4" style="display: flex; align-items: center; row-gap: 2rem; column-gap: 2rem;">
+
+<div id="15:5" style="display: flex; align-items: center; row-gap: 0.75rem; column-gap: 0.75rem;">
+<div id="15:6" style="background-color: transparent; display: flex; justify-content: center; align-items: center; width: 2rem; height: 2rem; border-top-color: color-mix( in oklab , #4DD0E1 30% , transparent ); border-right-color: color-mix( in oklab , #4DD0E1 30% , transparent ); border-bottom-color: color-mix( in oklab , #4DD0E1 30% , transparent ); border-left-color: color-mix( in oklab , #4DD0E1 30% , transparent ); border-top-style: solid; border-right-style: solid; border-bottom-style: solid; border-left-style: solid; border-top-width: 1px; border-right-width: 1px; border-bottom-width: 1px; border-left-width: 1px;">
+<iconify-icon id="15:7" style="line-height: 1.4; color: rgba(77, 208, 225, 1); font-size: 1.25rem;" icon="lucide:cpu"><template shadowrootmode="open"><style data-style="data-style">:host{display:inline-block;vertical-align:0}span,svg{display:block;margin:auto}</style></template></iconify-icon>
+</div>
+<span id="15:8" style="line-height: 1.4; color: rgba(224, 247, 250, 1); font-size: 1.25rem; font-weight: 600;">CodeFlow AI</span>
+</div>
+
+<div id="15:9" style="display: flex; align-items: center; row-gap: 0.5rem; column-gap: 0.5rem; color: rgba(178, 235, 242, 1);">
+<iconify-icon id="15:10" style="line-height: 1.42857; font-size: 0.875rem;" icon="lucide:folder"><template shadowrootmode="open"><style data-style="data-style">:host{display:inline-block;vertical-align:0}span,svg{display:block;margin:auto}</style></template></iconify-icon>
+<span id="15:11" style="line-height: 1.5; font-size: 1rem;">my-react-app</span>
+</div>
+</div>
+
+<div id="15:12" style="display: flex; align-items: center; row-gap: 1rem; column-gap: 1rem;">
+
+<div id="15:13" style="display: flex; align-items: center; row-gap: 0.5rem; column-gap: 0.5rem; padding-top: 0.375rem; padding-right: 0.75rem; padding-bottom: 0.375rem; padding-left: 0.75rem; border-top-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-right-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-bottom-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-left-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-top-style: solid; border-right-style: solid; border-bottom-style: solid; border-left-style: solid; border-top-width: 1px; border-right-width: 1px; border-bottom-width: 1px; border-left-width: 1px;">
+<div id="15:14" style="background-color: rgba(38, 166, 154, 1); width: 0.5rem; height: 0.5rem; border-top-left-radius: 9999px; border-top-right-radius: 9999px; border-bottom-right-radius: 9999px; border-bottom-left-radius: 9999px;"></div>
+<span id="15:15" style="line-height: 1.42857; color: rgba(178, 235, 242, 1); font-size: 0.875rem;">运行中</span>
+</div>
+
+<button id="15:16" class="hover:border-[#4DD0E1]/30" style="display: flex; justify-content: center; align-items: center; width: 2.5rem; height: 2.5rem; border-top-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-right-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-bottom-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-left-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-top-style: solid; border-right-style: solid; border-bottom-style: solid; border-left-style: solid; border-top-width: 1px; border-right-width: 1px; border-bottom-width: 1px; border-left-width: 1px;">
+<iconify-icon id="15:17" style="line-height: 1.5; color: rgba(178, 235, 242, 1); font-size: 1rem;" icon="lucide:monitor"><template shadowrootmode="open"><style data-style="data-style">:host{display:inline-block;vertical-align:0}span,svg{display:block;margin:auto}</style></template></iconify-icon>
+</button>
+
+<button id="15:18" class="hover:border-[#4DD0E1]/30" style="display: flex; justify-content: center; align-items: center; width: 2.5rem; height: 2.5rem; border-top-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-right-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-bottom-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-left-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-top-style: solid; border-right-style: solid; border-bottom-style: solid; border-left-style: solid; border-top-width: 1px; border-right-width: 1px; border-bottom-width: 1px; border-left-width: 1px;">
+<iconify-icon id="15:19" style="line-height: 1.5; color: rgba(178, 235, 242, 1); font-size: 1rem;" icon="lucide:settings"><template shadowrootmode="open"><style data-style="data-style">:host{display:inline-block;vertical-align:0}span,svg{display:block;margin:auto}</style></template></iconify-icon>
+</button>
+
+<div id="15:20" style="display: flex; align-items: center; row-gap: 0.5rem; column-gap: 0.5rem;">
+<img id="15:21" style="filter: brightness(90%) contrast(90%); width: 2.5rem; height: 2.5rem; object-fit: cover; border-top-left-radius: 9999px; border-top-right-radius: 9999px; border-bottom-right-radius: 9999px; border-bottom-left-radius: 9999px;" alt="Chinese developer avatar, professional headshot, clean background" src="https://static.paraflowcontent.com/public/resource/image/28da6f52-a523-49db-a34f-55179c2aaf45.jpeg">
+<iconify-icon id="15:22" style="line-height: 1.42857; color: rgba(178, 235, 242, 1); font-size: 0.875rem;" icon="lucide:chevron-down"><template shadowrootmode="open"><style data-style="data-style">:host{display:inline-block;vertical-align:0}span,svg{display:block;margin:auto}</style></template></iconify-icon>
+</div>
+</div>
+</div>
+</header>
+
+<div id="15:23" style="display: flex; width: 100%; min-height: 836px;">
+
+<aside id="15:24" style="background-color: rgba(0, 0, 0, 1); display: flex; flex-direction: column; flex-shrink: 0; width: 20rem; border-top-color: color-mix( in oklab , #4DD0E1 15% , transparent ); border-right-color: color-mix( in oklab , #4DD0E1 15% , transparent ); border-bottom-color: color-mix( in oklab , #4DD0E1 15% , transparent ); border-left-color: color-mix( in oklab , #4DD0E1 15% , transparent ); border-right-style: solid; border-right-width: 1px;">
+
+<div id="15:25" style="overflow-x: hidden; overflow-y: hidden; display: flex; flex-direction: column; flex-grow: 1; flex-shrink: 1; flex-basis: 0%;">
+
+<div id="15:26" style="padding-top: 0.75rem; padding-right: 1rem; padding-bottom: 0.75rem; padding-left: 1rem; border-top-color: color-mix( in oklab , #4DD0E1 10% , transparent ); border-right-color: color-mix( in oklab , #4DD0E1 10% , transparent ); border-bottom-color: color-mix( in oklab , #4DD0E1 10% , transparent ); border-left-color: color-mix( in oklab , #4DD0E1 10% , transparent ); border-bottom-style: solid; border-bottom-width: 1px;">
+<h2 id="15:27" style="line-height: 1.55556; color: rgba(224, 247, 250, 1); font-size: 1.125rem; font-weight: 600;">AI 助手</h2>
+</div>
+
+<div id="15:28" style="overflow-y: auto; flex-grow: 1; flex-shrink: 1; flex-basis: 0%; padding-top: 1rem; padding-right: 1rem; padding-bottom: 1rem; padding-left: 1rem;">
+
+<div id="15:29" style="display: flex; flex-direction: column; row-gap: 0.5rem; column-gap: 0.5rem; margin-top: 0; margin-bottom: 1rem;">
+<div id="15:30" style="display: flex; align-items: center; row-gap: 0.5rem; column-gap: 0.5rem;">
+<div id="15:31" style="background-color: color-mix( in oklab , #4DD0E1 10% , transparent ); display: flex; justify-content: center; align-items: center; width: 1.5rem; height: 1.5rem; border-top-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-right-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-bottom-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-left-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-top-style: solid; border-right-style: solid; border-bottom-style: solid; border-left-style: solid; border-top-width: 1px; border-right-width: 1px; border-bottom-width: 1px; border-left-width: 1px; border-top-left-radius: 9999px; border-top-right-radius: 9999px; border-bottom-right-radius: 9999px; border-bottom-left-radius: 9999px;">
+<iconify-icon id="15:32" style="line-height: 1.33333; color: rgba(77, 208, 225, 1); font-size: 0.75rem;" icon="lucide:user"><template shadowrootmode="open"><style data-style="data-style">:host{display:inline-block;vertical-align:0}span,svg{display:block;margin:auto}</style></template></iconify-icon>
+</div>
+<span id="15:33" style="line-height: 1.33333; color: rgba(128, 222, 234, 1); font-size: 0.75rem;">14:23</span>
+</div>
+<div id="15:34" style="background-color: rgba(10, 10, 10, 1); margin-left: 2rem; padding-top: 0.75rem; padding-right: 0.75rem; padding-bottom: 0.75rem; padding-left: 0.75rem; border-top-color: color-mix( in oklab , #4DD0E1 15% , transparent ); border-right-color: color-mix( in oklab , #4DD0E1 15% , transparent ); border-bottom-color: color-mix( in oklab , #4DD0E1 15% , transparent ); border-left-color: color-mix( in oklab , #4DD0E1 15% , transparent ); border-top-style: solid; border-right-style: solid; border-bottom-style: solid; border-left-style: solid; border-top-width: 1px; border-right-width: 1px; border-bottom-width: 1px; border-left-width: 1px;">
+<p id="15:35" style="line-height: 1.42857; color: rgba(224, 247, 250, 1); font-size: 0.875rem;">请帮我创建一个新的React组件来显示用户列表</p>
+</div>
+</div>
+
+<div id="15:36" style="display: flex; flex-direction: column; row-gap: 0.5rem; column-gap: 0.5rem;">
+<div id="15:37" style="display: flex; align-items: center; row-gap: 0.5rem; column-gap: 0.5rem;">
+<div id="15:38" style="background-color: color-mix( in oklab , #4DD0E1 10% , transparent ); display: flex; justify-content: center; align-items: center; width: 1.5rem; height: 1.5rem; border-top-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-right-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-bottom-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-left-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-top-style: solid; border-right-style: solid; border-bottom-style: solid; border-left-style: solid; border-top-width: 1px; border-right-width: 1px; border-bottom-width: 1px; border-left-width: 1px; border-top-left-radius: 9999px; border-top-right-radius: 9999px; border-bottom-right-radius: 9999px; border-bottom-left-radius: 9999px;">
+<iconify-icon id="15:39" style="line-height: 1.33333; color: rgba(77, 208, 225, 1); font-size: 0.75rem;" icon="lucide:cpu"><template shadowrootmode="open"><style data-style="data-style">:host{display:inline-block;vertical-align:0}span,svg{display:block;margin:auto}</style></template></iconify-icon>
+</div>
+<span id="15:40" style="line-height: 1.33333; color: rgba(128, 222, 234, 1); font-size: 0.75rem;">14:23</span>
+<div id="15:41" style="display: flex; align-items: center; row-gap: 0.25rem; column-gap: 0.25rem; line-height: 1.33333; color: rgba(38, 166, 154, 1); font-size: 0.75rem;">
+<div id="15:42" style="background-color: rgba(38, 166, 154, 1); width: 0.375rem; height: 0.375rem; border-top-left-radius: 9999px; border-top-right-radius: 9999px; border-bottom-right-radius: 9999px; border-bottom-left-radius: 9999px;"></div>
+<span id="15:43">生成代码中</span>
+</div>
+</div>
+<div id="15:44" style="background-color: rgba(10, 10, 10, 1); margin-left: 2rem; padding-top: 0.75rem; padding-right: 0.75rem; padding-bottom: 0.75rem; padding-left: 0.75rem; border-top-color: color-mix( in oklab , #4DD0E1 15% , transparent ); border-right-color: color-mix( in oklab , #4DD0E1 15% , transparent ); border-bottom-color: color-mix( in oklab , #4DD0E1 15% , transparent ); border-left-color: color-mix( in oklab , #4DD0E1 15% , transparent ); border-top-style: solid; border-right-style: solid; border-bottom-style: solid; border-left-style: solid; border-top-width: 1px; border-right-width: 1px; border-bottom-width: 1px; border-left-width: 1px;">
+<p id="15:45" style="margin-bottom: 0.75rem; line-height: 1.42857; color: rgba(224, 247, 250, 1); font-size: 0.875rem;">我来帮你创建一个用户列表组件。让我分析一下当前的项目结构...</p>
+
+<div id="15:46" style="background-color: rgba(20, 20, 20, 1); font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, &quot;Liberation Mono&quot;, &quot;Courier New&quot;, monospace; padding-top: 0.75rem; padding-right: 0.75rem; padding-bottom: 0.75rem; padding-left: 0.75rem; line-height: 1.33333; border-top-color: color-mix( in oklab , #4DD0E1 10% , transparent ); border-right-color: color-mix( in oklab , #4DD0E1 10% , transparent ); border-bottom-color: color-mix( in oklab , #4DD0E1 10% , transparent ); border-left-color: color-mix( in oklab , #4DD0E1 10% , transparent ); border-top-style: solid; border-right-style: solid; border-bottom-style: solid; border-left-style: solid; border-top-width: 1px; border-right-width: 1px; border-bottom-width: 1px; border-left-width: 1px; font-size: 0.75rem;">
+<div id="15:47" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+<span id="15:48" style="color: rgba(128, 222, 234, 1);">UserList.tsx</span>
+<button id="15:49" class="hover:text-[#80DEEA]" style="display: flex; align-items: center; row-gap: 0.25rem; column-gap: 0.25rem; color: rgba(77, 208, 225, 1);">
+<iconify-icon id="15:50" style="line-height: 1.33333; font-size: 0.75rem;" icon="lucide:check"><template shadowrootmode="open"><style data-style="data-style">:host{display:inline-block;vertical-align:0}span,svg{display:block;margin:auto}</style></template></iconify-icon>
+<span id="15:51" style="line-height: 1.33333; font-size: 0.75rem;">应用</span>
+</button>
+</div>
+<pre id="15:52" style="overflow-x: auto; color: rgba(178, 235, 242, 1);">import React from 'react';
+
+interface User {
+  id: string;
+  name: string;
+  email: string;
+}
+
+const UserList = () =&gt; {
+  // 组件代码...
+};</pre>
+</div>
+</div>
+</div>
+</div>
+
+<div id="15:53" style="padding-top: 0.75rem; padding-right: 1rem; padding-bottom: 0.75rem; padding-left: 1rem; border-top-color: color-mix( in oklab , #4DD0E1 10% , transparent ); border-right-color: color-mix( in oklab , #4DD0E1 10% , transparent ); border-bottom-color: color-mix( in oklab , #4DD0E1 10% , transparent ); border-left-color: color-mix( in oklab , #4DD0E1 10% , transparent ); border-top-style: solid; border-top-width: 1px;">
+<div id="15:54" style="display: flex; flex-wrap: wrap; row-gap: 0.5rem; column-gap: 0.5rem;">
+<button id="15:55" class="hover:border-[#4DD0E1]/30" style="display: flex; align-items: center; row-gap: 0.5rem; column-gap: 0.5rem; padding-top: 0.375rem; padding-right: 0.75rem; padding-bottom: 0.375rem; padding-left: 0.75rem; line-height: 1.33333; color: rgba(178, 235, 242, 1); border-top-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-right-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-bottom-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-left-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-top-style: solid; border-right-style: solid; border-bottom-style: solid; border-left-style: solid; border-top-width: 1px; border-right-width: 1px; border-bottom-width: 1px; border-left-width: 1px; font-size: 0.75rem;">
+<iconify-icon id="15:56" style="line-height: 1.33333; font-size: 0.75rem;" icon="lucide:play"><template shadowrootmode="open"><style data-style="data-style">:host{display:inline-block;vertical-align:0}span,svg{display:block;margin:auto}</style></template></iconify-icon>
+<span id="15:57">运行测试</span>
+</button>
+<button id="15:58" class="hover:border-[#4DD0E1]/30" style="display: flex; align-items: center; row-gap: 0.5rem; column-gap: 0.5rem; padding-top: 0.375rem; padding-right: 0.75rem; padding-bottom: 0.375rem; padding-left: 0.75rem; line-height: 1.33333; color: rgba(178, 235, 242, 1); border-top-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-right-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-bottom-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-left-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-top-style: solid; border-right-style: solid; border-bottom-style: solid; border-left-style: solid; border-top-width: 1px; border-right-width: 1px; border-bottom-width: 1px; border-left-width: 1px; font-size: 0.75rem;">
+<iconify-icon id="15:59" style="line-height: 1.33333; font-size: 0.75rem;" icon="lucide:eye"><template shadowrootmode="open"><style data-style="data-style">:host{display:inline-block;vertical-align:0}span,svg{display:block;margin:auto}</style></template></iconify-icon>
+<span id="15:60">查看预览</span>
+</button>
+</div>
+</div>
+</div>
+
+<div id="15:61" style="padding-top: 1rem; padding-right: 1rem; padding-bottom: 1rem; padding-left: 1rem; border-top-color: color-mix( in oklab , #4DD0E1 15% , transparent ); border-right-color: color-mix( in oklab , #4DD0E1 15% , transparent ); border-bottom-color: color-mix( in oklab , #4DD0E1 15% , transparent ); border-left-color: color-mix( in oklab , #4DD0E1 15% , transparent ); border-top-style: solid; border-top-width: 1px;">
+<div id="15:62" style="display: flex; flex-direction: column; row-gap: 0.75rem; column-gap: 0.75rem;">
+<div id="15:63" style="position: relative;">
+<textarea id="15:64" class="focus:border-[#4DD0E1]/30" style="background-color: rgba(10, 10, 10, 1); width: 100%; height: 5rem; padding-top: 0.75rem; padding-right: 0.75rem; padding-bottom: 0.75rem; padding-left: 0.75rem; line-height: 1.42857; color: rgba(224, 247, 250, 1); border-top-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-right-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-bottom-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-left-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-top-style: solid; border-right-style: solid; border-bottom-style: solid; border-left-style: solid; border-top-width: 1px; border-right-width: 1px; border-bottom-width: 1px; border-left-width: 1px; font-size: 0.875rem;" placeholder="输入您的需求或问题..."></textarea>
+</div>
+<div id="15:65" style="display: flex; justify-content: space-between; align-items: center;">
+<div id="15:66" style="display: flex; align-items: center; row-gap: 0.5rem; column-gap: 0.5rem;">
+<button id="15:67" class="hover:border-[#4DD0E1]/30" style="display: flex; justify-content: center; align-items: center; width: 2rem; height: 2rem; border-top-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-right-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-bottom-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-left-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-top-style: solid; border-right-style: solid; border-bottom-style: solid; border-left-style: solid; border-top-width: 1px; border-right-width: 1px; border-bottom-width: 1px; border-left-width: 1px;">
+<iconify-icon id="15:68" style="line-height: 1.42857; color: rgba(178, 235, 242, 1); font-size: 0.875rem;" icon="lucide:paperclip"><template shadowrootmode="open"><style data-style="data-style">:host{display:inline-block;vertical-align:0}span,svg{display:block;margin:auto}</style></template></iconify-icon>
+</button>
+<button id="15:69" class="hover:border-[#4DD0E1]/30" style="display: flex; justify-content: center; align-items: center; width: 2rem; height: 2rem; border-top-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-right-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-bottom-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-left-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-top-style: solid; border-right-style: solid; border-bottom-style: solid; border-left-style: solid; border-top-width: 1px; border-right-width: 1px; border-bottom-width: 1px; border-left-width: 1px;">
+<iconify-icon id="15:70" style="line-height: 1.42857; color: rgba(178, 235, 242, 1); font-size: 0.875rem;" icon="lucide:image"><template shadowrootmode="open"><style data-style="data-style">:host{display:inline-block;vertical-align:0}span,svg{display:block;margin:auto}</style></template></iconify-icon>
+</button>
+</div>
+<div id="15:71" style="display: flex; align-items: center; row-gap: 0.5rem; column-gap: 0.5rem;">
+<span id="15:72" style="line-height: 1.33333; color: rgba(128, 222, 234, 1); font-size: 0.75rem;">Ctrl+Enter</span>
+<button id="15:73" class="hover:bg-[#4DD0E1]/15" style="background-color: color-mix( in oklab , #4DD0E1 10% , transparent ); display: flex; align-items: center; row-gap: 0.5rem; column-gap: 0.5rem; padding-top: 0.375rem; padding-right: 0.75rem; padding-bottom: 0.375rem; padding-left: 0.75rem; border-top-color: color-mix( in oklab , #4DD0E1 30% , transparent ); border-right-color: color-mix( in oklab , #4DD0E1 30% , transparent ); border-bottom-color: color-mix( in oklab , #4DD0E1 30% , transparent ); border-left-color: color-mix( in oklab , #4DD0E1 30% , transparent ); border-top-style: solid; border-right-style: solid; border-bottom-style: solid; border-left-style: solid; border-top-width: 1px; border-right-width: 1px; border-bottom-width: 1px; border-left-width: 1px;">
+<iconify-icon id="15:74" style="line-height: 1.42857; color: rgba(77, 208, 225, 1); font-size: 0.875rem;" icon="lucide:send"><template shadowrootmode="open"><style data-style="data-style">:host{display:inline-block;vertical-align:0}span,svg{display:block;margin:auto}</style></template></iconify-icon>
+<span id="15:75" style="line-height: 1.42857; color: rgba(224, 247, 250, 1); font-size: 0.875rem;">发送</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</aside>
+
+<main id="15:76" style="overflow-x: hidden; display: flex; flex-direction: column; flex-grow: 1; flex-shrink: 1; flex-basis: 0%;">
+
+<div id="15:77" style="background-color: rgba(0, 0, 0, 1); border-top-color: color-mix( in oklab , #4DD0E1 15% , transparent ); border-right-color: color-mix( in oklab , #4DD0E1 15% , transparent ); border-bottom-color: color-mix( in oklab , #4DD0E1 15% , transparent ); border-left-color: color-mix( in oklab , #4DD0E1 15% , transparent ); border-bottom-style: solid; border-bottom-width: 1px;">
+<div id="15:78" style="display: flex; justify-content: space-between; align-items: center; padding-right: 1rem; padding-left: 1rem;">
+
+<div id="15:79" style="display: flex; align-items: center;">
+<div id="15:80" style="background-color: color-mix( in oklab , #4DD0E1 5% , transparent ); display: flex; align-items: center; row-gap: 0.5rem; column-gap: 0.5rem; padding-top: 0.75rem; padding-right: 1rem; padding-bottom: 0.75rem; padding-left: 1rem; border-top-color: color-mix( in oklab , #4DD0E1 10% , transparent ); border-right-color: color-mix( in oklab , #4DD0E1 10% , transparent ); border-bottom-color: color-mix( in oklab , #4DD0E1 40% , transparent ); border-left-color: color-mix( in oklab , #4DD0E1 10% , transparent ); border-right-style: solid; border-bottom-style: solid; border-right-width: 1px; border-bottom-width: 2px;">
+<iconify-icon id="15:81" style="line-height: 1.42857; color: rgba(77, 208, 225, 1); font-size: 0.875rem;" icon="lucide:file-text"><template shadowrootmode="open"><style data-style="data-style">:host{display:inline-block;vertical-align:0}span,svg{display:block;margin:auto}</style></template></iconify-icon>
+<span id="15:82" style="line-height: 1.42857; color: rgba(224, 247, 250, 1); font-size: 0.875rem;">UserList.tsx</span>
+<div id="15:83" style="background-color: rgba(255, 167, 38, 1); width: 0.5rem; height: 0.5rem; border-top-left-radius: 9999px; border-top-right-radius: 9999px; border-bottom-right-radius: 9999px; border-bottom-left-radius: 9999px;"></div>
+<button id="15:84" class="hover:bg-[#4DD0E1]/20" style="display: flex; justify-content: center; align-items: center; width: 1rem; height: 1rem;">
+<iconify-icon id="15:85" style="line-height: 1.33333; color: rgba(178, 235, 242, 1); font-size: 0.75rem;" icon="lucide:x"><template shadowrootmode="open"><style data-style="data-style">:host{display:inline-block;vertical-align:0}span,svg{display:block;margin:auto}</style></template></iconify-icon>
+</button>
+</div>
+<div id="15:86" style="display: flex; align-items: center; row-gap: 0.5rem; column-gap: 0.5rem; padding-top: 0.75rem; padding-right: 1rem; padding-bottom: 0.75rem; padding-left: 1rem; border-top-color: color-mix( in oklab , #4DD0E1 10% , transparent ); border-right-color: color-mix( in oklab , #4DD0E1 10% , transparent ); border-bottom-color: color-mix( in oklab , #4DD0E1 10% , transparent ); border-left-color: color-mix( in oklab , #4DD0E1 10% , transparent ); border-right-style: solid; border-right-width: 1px;">
+<iconify-icon id="15:87" style="line-height: 1.42857; color: rgba(128, 222, 234, 1); font-size: 0.875rem;" icon="lucide:file-text"><template shadowrootmode="open"><style data-style="data-style">:host{display:inline-block;vertical-align:0}span,svg{display:block;margin:auto}</style></template></iconify-icon>
+<span id="15:88" style="line-height: 1.42857; color: rgba(178, 235, 242, 1); font-size: 0.875rem;">App.tsx</span>
+<button id="15:89" class="hover:bg-[#4DD0E1]/20" style="display: flex; justify-content: center; align-items: center; width: 1rem; height: 1rem;">
+<iconify-icon id="15:90" style="line-height: 1.33333; color: rgba(178, 235, 242, 1); font-size: 0.75rem;" icon="lucide:x"><template shadowrootmode="open"><style data-style="data-style">:host{display:inline-block;vertical-align:0}span,svg{display:block;margin:auto}</style></template></iconify-icon>
+</button>
+</div>
+</div>
+
+<div id="15:91" style="display: flex; align-items: center; row-gap: 0.25rem; column-gap: 0.25rem; border-top-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-right-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-bottom-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-left-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-top-style: solid; border-right-style: solid; border-bottom-style: solid; border-left-style: solid; border-top-width: 1px; border-right-width: 1px; border-bottom-width: 1px; border-left-width: 1px;">
+<button id="15:92" style="background-color: color-mix( in oklab , #4DD0E1 10% , transparent ); display: flex; align-items: center; row-gap: 0.5rem; column-gap: 0.5rem; padding-top: 0.375rem; padding-right: 0.75rem; padding-bottom: 0.375rem; padding-left: 0.75rem; color: rgba(224, 247, 250, 1); border-top-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-right-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-bottom-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-left-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-right-style: solid; border-right-width: 1px;">
+<iconify-icon id="15:93" style="line-height: 1.42857; font-size: 0.875rem;" icon="lucide:file-edit"><template shadowrootmode="open"><style data-style="data-style">:host{display:inline-block;vertical-align:0}span,svg{display:block;margin:auto}</style></template></iconify-icon>
+<span id="15:94" style="line-height: 1.33333; font-size: 0.75rem;">编辑</span>
+</button>
+<button id="15:95" class="hover:bg-[#4DD0E1]/5" style="display: flex; align-items: center; row-gap: 0.5rem; column-gap: 0.5rem; padding-top: 0.375rem; padding-right: 0.75rem; padding-bottom: 0.375rem; padding-left: 0.75rem; color: rgba(178, 235, 242, 1);">
+<iconify-icon id="15:96" style="line-height: 1.42857; font-size: 0.875rem;" icon="lucide:git-compare"><template shadowrootmode="open"><style data-style="data-style">:host{display:inline-block;vertical-align:0}span,svg{display:block;margin:auto}</style></template></iconify-icon>
+<span id="15:97" style="line-height: 1.33333; font-size: 0.75rem;">差异</span>
+</button>
+<button id="15:98" class="hover:bg-[#4DD0E1]/5" style="display: flex; align-items: center; row-gap: 0.5rem; column-gap: 0.5rem; padding-top: 0.375rem; padding-right: 0.75rem; padding-bottom: 0.375rem; padding-left: 0.75rem; color: rgba(178, 235, 242, 1);">
+<iconify-icon id="15:99" style="line-height: 1.42857; font-size: 0.875rem;" icon="lucide:columns"><template shadowrootmode="open"><style data-style="data-style">:host{display:inline-block;vertical-align:0}span,svg{display:block;margin:auto}</style></template></iconify-icon>
+<span id="15:100" style="line-height: 1.33333; font-size: 0.75rem;">分屏</span>
+</button>
+</div>
+</div>
+</div>
+
+<div id="15:101" style="display: flex; flex-direction: column; flex-grow: 1; flex-shrink: 1; flex-basis: 0%;">
+
+<div id="15:102" style="background-color: rgba(0, 0, 0, 1); display: flex; justify-content: space-between; align-items: center; padding-top: 0.5rem; padding-right: 1rem; padding-bottom: 0.5rem; padding-left: 1rem; border-top-color: color-mix( in oklab , #4DD0E1 10% , transparent ); border-right-color: color-mix( in oklab , #4DD0E1 10% , transparent ); border-bottom-color: color-mix( in oklab , #4DD0E1 10% , transparent ); border-left-color: color-mix( in oklab , #4DD0E1 10% , transparent ); border-bottom-style: solid; border-bottom-width: 1px;">
+<div id="15:103" style="display: flex; align-items: center; row-gap: 0.5rem; column-gap: 0.5rem;">
+<button id="15:104" class="hover:border-[#4DD0E1]/30" style="display: flex; justify-content: center; align-items: center; width: 2rem; height: 2rem; border-top-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-right-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-bottom-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-left-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-top-style: solid; border-right-style: solid; border-bottom-style: solid; border-left-style: solid; border-top-width: 1px; border-right-width: 1px; border-bottom-width: 1px; border-left-width: 1px;">
+<iconify-icon id="15:105" style="line-height: 1.42857; color: rgba(178, 235, 242, 1); font-size: 0.875rem;" icon="lucide:save"><template shadowrootmode="open"><style data-style="data-style">:host{display:inline-block;vertical-align:0}span,svg{display:block;margin:auto}</style></template></iconify-icon>
+</button>
+<button id="15:106" class="hover:border-[#4DD0E1]/30" style="display: flex; justify-content: center; align-items: center; width: 2rem; height: 2rem; border-top-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-right-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-bottom-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-left-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-top-style: solid; border-right-style: solid; border-bottom-style: solid; border-left-style: solid; border-top-width: 1px; border-right-width: 1px; border-bottom-width: 1px; border-left-width: 1px;">
+<iconify-icon id="15:107" style="line-height: 1.42857; color: rgba(178, 235, 242, 1); font-size: 0.875rem;" icon="lucide:search"><template shadowrootmode="open"><style data-style="data-style">:host{display:inline-block;vertical-align:0}span,svg{display:block;margin:auto}</style></template></iconify-icon>
+</button>
+<button id="15:108" class="hover:border-[#4DD0E1]/30" style="display: flex; justify-content: center; align-items: center; width: 2rem; height: 2rem; border-top-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-right-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-bottom-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-left-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-top-style: solid; border-right-style: solid; border-bottom-style: solid; border-left-style: solid; border-top-width: 1px; border-right-width: 1px; border-bottom-width: 1px; border-left-width: 1px;">
+<iconify-icon id="15:109" style="line-height: 1.42857; color: rgba(178, 235, 242, 1); font-size: 0.875rem;" icon="lucide:replace"><template shadowrootmode="open"><style data-style="data-style">:host{display:inline-block;vertical-align:0}span,svg{display:block;margin:auto}</style></template></iconify-icon>
+</button>
+<button id="15:110" class="hover:border-[#4DD0E1]/30" style="display: flex; justify-content: center; align-items: center; width: 2rem; height: 2rem; border-top-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-right-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-bottom-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-left-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-top-style: solid; border-right-style: solid; border-bottom-style: solid; border-left-style: solid; border-top-width: 1px; border-right-width: 1px; border-bottom-width: 1px; border-left-width: 1px;">
+<iconify-icon id="15:111" style="line-height: 1.42857; color: rgba(178, 235, 242, 1); font-size: 0.875rem;" icon="lucide:code"><template shadowrootmode="open"><style data-style="data-style">:host{display:inline-block;vertical-align:0}span,svg{display:block;margin:auto}</style></template></iconify-icon>
+</button>
+</div>
+<div id="15:112" style="display: flex; align-items: center; row-gap: 0.5rem; column-gap: 0.5rem; line-height: 1.33333; color: rgba(128, 222, 234, 1); font-size: 0.75rem;">
+<span id="15:113">Ln 24, Col 16</span>
+<span id="15:114">•</span>
+<span id="15:115">UTF-8</span>
+<span id="15:116">•</span>
+<span id="15:117">TypeScript</span>
+</div>
+</div>
+
+<div id="15:118" style="display: flex; flex-grow: 1; flex-shrink: 1; flex-basis: 0%;">
+
+<div id="15:119" style="background-color: rgba(0, 0, 0, 1); font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, &quot;Liberation Mono&quot;, &quot;Courier New&quot;, monospace; width: 3rem; padding-top: 0.5rem; padding-right: 0.5rem; padding-bottom: 0.5rem; padding-left: 0.5rem; line-height: 1.33333; color: rgba(128, 222, 234, 1); border-top-color: color-mix( in oklab , #4DD0E1 10% , transparent ); border-right-color: color-mix( in oklab , #4DD0E1 10% , transparent ); border-bottom-color: color-mix( in oklab , #4DD0E1 10% , transparent ); border-left-color: color-mix( in oklab , #4DD0E1 10% , transparent ); border-right-style: solid; border-right-width: 1px; font-size: 0.75rem;">
+<div id="15:120" style="text-align: right;">
+<div id="15:121" style="margin-top: 0; margin-bottom: 0.125rem;">1</div>
+<div id="15:122" style="margin-top: 0; margin-bottom: 0.125rem;">2</div>
+<div id="15:123" style="margin-top: 0; margin-bottom: 0.125rem;">3</div>
+<div id="15:124" style="margin-top: 0; margin-bottom: 0.125rem;">4</div>
+<div id="15:125" style="margin-top: 0; margin-bottom: 0.125rem;">5</div>
+<div id="15:126" style="margin-top: 0; margin-bottom: 0.125rem;">6</div>
+<div id="15:127" style="margin-top: 0; margin-bottom: 0.125rem;">7</div>
+<div id="15:128" style="margin-top: 0; margin-bottom: 0.125rem;">8</div>
+<div id="15:129" style="margin-top: 0; margin-bottom: 0.125rem;">9</div>
+<div id="15:130" style="margin-top: 0; margin-bottom: 0.125rem;">10</div>
+<div id="15:131" style="margin-top: 0; margin-bottom: 0.125rem;">11</div>
+<div id="15:132" style="margin-top: 0; margin-bottom: 0.125rem;">12</div>
+<div id="15:133" style="margin-top: 0; margin-bottom: 0.125rem;">13</div>
+<div id="15:134" style="margin-top: 0; margin-bottom: 0.125rem;">14</div>
+<div id="15:135" style="margin-top: 0; margin-bottom: 0.125rem;">15</div>
+<div id="15:136" style="margin-top: 0; margin-bottom: 0.125rem;">16</div>
+<div id="15:137" style="margin-top: 0; margin-bottom: 0.125rem;">17</div>
+<div id="15:138" style="margin-top: 0; margin-bottom: 0.125rem;">18</div>
+<div id="15:139" style="margin-top: 0; margin-bottom: 0.125rem;">19</div>
+<div id="15:140">20</div>
+</div>
+</div>
+
+<div id="15:141" style="overflow-x: auto; overflow-y: auto; background-color: rgba(0, 0, 0, 1); flex-grow: 1; flex-shrink: 1; flex-basis: 0%; padding-top: 1rem; padding-right: 1rem; padding-bottom: 1rem; padding-left: 1rem;">
+<pre id="15:142" style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, &quot;Liberation Mono&quot;, &quot;Courier New&quot;, monospace; line-height: 1.625; color: rgba(224, 247, 250, 1); font-size: 0.875rem;"><code id="15:143"><span id="15:144" style="color: rgba(179, 157, 219, 1);">import</span> <span id="15:145" style="color: rgba(224, 247, 250, 1);">React</span> <span id="15:146" style="color: rgba(179, 157, 219, 1);">from</span> <span id="15:147" style="color: rgba(159, 168, 218, 1);">'react'</span><span id="15:148" style="color: rgba(128, 222, 234, 1);">;</span>
+<span id="15:149" style="color: rgba(179, 157, 219, 1);">import</span> <span id="15:150" style="color: rgba(128, 222, 234, 1);">{ </span><span id="15:151" style="color: rgba(224, 247, 250, 1);">useState</span><span id="15:152" style="color: rgba(128, 222, 234, 1);">, </span><span id="15:153" style="color: rgba(224, 247, 250, 1);">useEffect</span><span id="15:154" style="color: rgba(128, 222, 234, 1);"> }</span> <span id="15:155" style="color: rgba(179, 157, 219, 1);">from</span> <span id="15:156" style="color: rgba(159, 168, 218, 1);">'react'</span><span id="15:157" style="color: rgba(128, 222, 234, 1);">;</span>
+
+<span id="15:158" style="color: rgba(179, 157, 219, 1);">interface</span> <span id="15:159" style="color: rgba(77, 208, 225, 1);">User</span> <span id="15:160" style="color: rgba(128, 222, 234, 1);">{</span>
+  <span id="15:161" style="color: rgba(224, 247, 250, 1);">id</span><span id="15:162" style="color: rgba(128, 222, 234, 1);">:</span> <span id="15:163" style="color: rgba(77, 208, 225, 1);">string</span><span id="15:164" style="color: rgba(128, 222, 234, 1);">;</span>
+  <span id="15:165" style="color: rgba(224, 247, 250, 1);">name</span><span id="15:166" style="color: rgba(128, 222, 234, 1);">:</span> <span id="15:167" style="color: rgba(77, 208, 225, 1);">string</span><span id="15:168" style="color: rgba(128, 222, 234, 1);">;</span>
+  <span id="15:169" style="color: rgba(224, 247, 250, 1);">email</span><span id="15:170" style="color: rgba(128, 222, 234, 1);">:</span> <span id="15:171" style="color: rgba(77, 208, 225, 1);">string</span><span id="15:172" style="color: rgba(128, 222, 234, 1);">;</span>
+<span id="15:173" style="color: rgba(128, 222, 234, 1);">}</span>
+
+<span id="15:174" style="color: rgba(179, 157, 219, 1);">const</span> <span id="15:175" style="color: rgba(77, 208, 225, 1);">UserList</span><span id="15:176" style="color: rgba(128, 222, 234, 1);">:</span> <span id="15:177" style="color: rgba(77, 208, 225, 1);">React</span><span id="15:178" style="color: rgba(128, 222, 234, 1);">.</span><span id="15:179" style="color: rgba(77, 208, 225, 1);">FC</span> <span id="15:180" style="color: rgba(128, 222, 234, 1);">=</span> <span id="15:181" style="color: rgba(128, 222, 234, 1);">()</span> <span id="15:182" style="color: rgba(128, 222, 234, 1);">=&gt;</span> <span id="15:183" style="color: rgba(128, 222, 234, 1);">{</span>
+  <span id="15:184" style="color: rgba(179, 157, 219, 1);">const</span> <span id="15:185" style="color: rgba(128, 222, 234, 1);">[</span><span id="15:186" style="color: rgba(224, 247, 250, 1);">users</span><span id="15:187" style="color: rgba(128, 222, 234, 1);">,</span> <span id="15:188" style="color: rgba(224, 247, 250, 1);">setUsers</span><span id="15:189" style="color: rgba(128, 222, 234, 1);">]</span> <span id="15:190" style="color: rgba(128, 222, 234, 1);">=</span> <span id="15:191" style="color: rgba(224, 247, 250, 1);">useState</span><span id="15:192" style="color: rgba(128, 222, 234, 1);">&lt;</span><span id="15:193" style="color: rgba(77, 208, 225, 1);">User</span><span id="15:194" style="color: rgba(128, 222, 234, 1);">[]&gt;([]);</span>
+  <span id="15:195" style="color: rgba(179, 157, 219, 1);">const</span> <span id="15:196" style="color: rgba(128, 222, 234, 1);">[</span><span id="15:197" style="color: rgba(224, 247, 250, 1);">loading</span><span id="15:198" style="color: rgba(128, 222, 234, 1);">,</span> <span id="15:199" style="color: rgba(224, 247, 250, 1);">setLoading</span><span id="15:200" style="color: rgba(128, 222, 234, 1);">]</span> <span id="15:201" style="color: rgba(128, 222, 234, 1);">=</span> <span id="15:202" style="color: rgba(224, 247, 250, 1);">useState</span><span id="15:203" style="color: rgba(128, 222, 234, 1);">(</span><span id="15:204" style="color: rgba(179, 157, 219, 1);">true</span><span id="15:205" style="color: rgba(128, 222, 234, 1);">);</span>
+
+  <span id="15:206" style="color: rgba(224, 247, 250, 1);">useEffect</span><span id="15:207" style="color: rgba(128, 222, 234, 1);">(()</span> <span id="15:208" style="color: rgba(128, 222, 234, 1);">=&gt;</span> <span id="15:209" style="color: rgba(128, 222, 234, 1);">{</span>
+    <span id="15:210" style="color: color-mix( in oklab , #4DD0E1 50% , transparent );">// 模拟API调用</span>
+    <span id="15:211" style="color: rgba(224, 247, 250, 1);">setTimeout</span><span id="15:212" style="color: rgba(128, 222, 234, 1);">(()</span> <span id="15:213" style="color: rgba(128, 222, 234, 1);">=&gt;</span> <span id="15:214" style="color: rgba(128, 222, 234, 1);">{</span>
+      <span id="15:215" style="color: rgba(224, 247, 250, 1);">setUsers</span><span id="15:216" style="color: rgba(128, 222, 234, 1);">([</span>
+        <span id="15:217" style="color: rgba(128, 222, 234, 1);">{</span> <span id="15:218" style="color: rgba(224, 247, 250, 1);">id</span><span id="15:219" style="color: rgba(128, 222, 234, 1);">:</span> <span id="15:220" style="color: rgba(159, 168, 218, 1);">'1'</span><span id="15:221" style="color: rgba(128, 222, 234, 1);">,</span> <span id="15:222" style="color: rgba(224, 247, 250, 1);">name</span><span id="15:223" style="color: rgba(128, 222, 234, 1);">:</span> <span id="15:224" style="color: rgba(159, 168, 218, 1);">'张三'</span><span id="15:225" style="color: rgba(128, 222, 234, 1);">,</span> <span id="15:226" style="color: rgba(224, 247, 250, 1);">email</span><span id="15:227" style="color: rgba(128, 222, 234, 1);">:</span> <span id="15:228" style="color: rgba(159, 168, 218, 1);">'zhang@example.com'</span> <span id="15:229" style="color: rgba(128, 222, 234, 1);">},</span>
+        <span id="15:230" style="color: rgba(128, 222, 234, 1);">{</span> <span id="15:231" style="color: rgba(224, 247, 250, 1);">id</span><span id="15:232" style="color: rgba(128, 222, 234, 1);">:</span> <span id="15:233" style="color: rgba(159, 168, 218, 1);">'2'</span><span id="15:234" style="color: rgba(128, 222, 234, 1);">,</span> <span id="15:235" style="color: rgba(224, 247, 250, 1);">name</span><span id="15:236" style="color: rgba(128, 222, 234, 1);">:</span> <span id="15:237" style="color: rgba(159, 168, 218, 1);">'李四'</span><span id="15:238" style="color: rgba(128, 222, 234, 1);">,</span> <span id="15:239" style="color: rgba(224, 247, 250, 1);">email</span><span id="15:240" style="color: rgba(128, 222, 234, 1);">:</span> <span id="15:241" style="color: rgba(159, 168, 218, 1);">'li@example.com'</span> <span id="15:242" style="color: rgba(128, 222, 234, 1);">}</span>
+      <span id="15:243" style="color: rgba(128, 222, 234, 1);">]);</span>
+      <span id="15:244" style="color: rgba(224, 247, 250, 1);">setLoading</span><span id="15:245" style="color: rgba(128, 222, 234, 1);">(</span><span id="15:246" style="color: rgba(179, 157, 219, 1);">false</span><span id="15:247" style="color: rgba(128, 222, 234, 1);">);</span>
+    <span id="15:248" style="color: rgba(128, 222, 234, 1);">},</span> <span id="15:249" style="color: rgba(179, 157, 219, 1);">1000</span><span id="15:250" style="color: rgba(128, 222, 234, 1);">);</span>
+  <span id="15:251" style="color: rgba(128, 222, 234, 1);">},</span> <span id="15:252" style="color: rgba(128, 222, 234, 1);">[]);</span>
+
+  <span id="15:253" style="color: rgba(179, 157, 219, 1);">return</span> <span id="15:254" style="color: rgba(128, 222, 234, 1);">(</span>
+    <span id="15:255" style="color: rgba(128, 222, 234, 1);">&lt;</span><span id="15:256" style="color: rgba(179, 157, 219, 1);">div</span> <span id="15:257" style="color: rgba(224, 247, 250, 1);">className</span><span id="15:258" style="color: rgba(128, 222, 234, 1);">=</span><span id="15:259" style="color: rgba(159, 168, 218, 1);">"user-list"</span><span id="15:260" style="color: rgba(128, 222, 234, 1);">&gt;</span>
+      <span id="15:261" style="color: rgba(128, 222, 234, 1);">&lt;</span><span id="15:262" style="color: rgba(179, 157, 219, 1);">h2</span><span id="15:263" style="color: rgba(128, 222, 234, 1);">&gt;</span><span id="15:264">用户列表</span><span id="15:265" style="color: rgba(128, 222, 234, 1);">&lt;</span><span id="15:266" style="color: rgba(179, 157, 219, 1);">/h2</span><span id="15:267" style="color: rgba(128, 222, 234, 1);">&gt;</span>
+    <span id="15:268" style="color: rgba(128, 222, 234, 1);">&lt;</span><span id="15:269" style="color: rgba(179, 157, 219, 1);">/div</span><span id="15:270" style="color: rgba(128, 222, 234, 1);">&gt;</span>
+  <span id="15:271" style="color: rgba(128, 222, 234, 1);">);</span>
+<span id="15:272" style="color: rgba(128, 222, 234, 1);">};</span>
+
+<span id="15:273" style="color: rgba(179, 157, 219, 1);">export</span> <span id="15:274" style="color: rgba(179, 157, 219, 1);">default</span> <span id="15:275" style="color: rgba(224, 247, 250, 1);">UserList</span><span id="15:276" style="color: rgba(128, 222, 234, 1);">;</span></code></pre>
+</div>
+</div>
+</div>
+</main>
+
+<aside id="15:277" style="background-color: rgba(0, 0, 0, 1); display: flex; flex-direction: column; flex-shrink: 0; width: 16rem; border-top-color: color-mix( in oklab , #4DD0E1 15% , transparent ); border-right-color: color-mix( in oklab , #4DD0E1 15% , transparent ); border-bottom-color: color-mix( in oklab , #4DD0E1 15% , transparent ); border-left-color: color-mix( in oklab , #4DD0E1 15% , transparent ); border-left-style: solid; border-left-width: 1px;">
+
+<div id="15:278" style="padding-top: 0.75rem; padding-right: 1rem; padding-bottom: 0.75rem; padding-left: 1rem; border-top-color: color-mix( in oklab , #4DD0E1 10% , transparent ); border-right-color: color-mix( in oklab , #4DD0E1 10% , transparent ); border-bottom-color: color-mix( in oklab , #4DD0E1 10% , transparent ); border-left-color: color-mix( in oklab , #4DD0E1 10% , transparent ); border-bottom-style: solid; border-bottom-width: 1px;">
+<div id="15:279" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+<h3 id="15:280" style="line-height: 1.5; color: rgba(224, 247, 250, 1); font-size: 1rem; font-weight: 600;">文件浏览器</h3>
+<button id="15:281" class="hover:border-[#4DD0E1]/30" style="display: flex; justify-content: center; align-items: center; width: 1.5rem; height: 1.5rem; border-top-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-right-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-bottom-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-left-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-top-style: solid; border-right-style: solid; border-bottom-style: solid; border-left-style: solid; border-top-width: 1px; border-right-width: 1px; border-bottom-width: 1px; border-left-width: 1px;">
+<iconify-icon id="15:282" style="line-height: 1.33333; color: rgba(178, 235, 242, 1); font-size: 0.75rem;" icon="lucide:plus"><template shadowrootmode="open"><style data-style="data-style">:host{display:inline-block;vertical-align:0}span,svg{display:block;margin:auto}</style></template></iconify-icon>
+</button>
+</div>
+
+<div id="15:283" style="position: relative; margin-bottom: 0.75rem;">
+<input id="15:284" class="focus:border-[#4DD0E1]/30" style="background-color: rgba(10, 10, 10, 1); width: 100%; height: 2rem; padding-right: 0.75rem; padding-left: 2rem; line-height: 1.42857; color: rgba(224, 247, 250, 1); border-top-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-right-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-bottom-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-left-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-top-style: solid; border-right-style: solid; border-bottom-style: solid; border-left-style: solid; border-top-width: 1px; border-right-width: 1px; border-bottom-width: 1px; border-left-width: 1px; font-size: 0.875rem;" type="text" placeholder="搜索文件...">
+<iconify-icon id="15:285" style="position: absolute; top: 0.5rem; left: 0.625rem; line-height: 1.33333; color: color-mix( in oklab , #4DD0E1 50% , transparent ); font-size: 0.75rem;" icon="lucide:search"><template shadowrootmode="open"><style data-style="data-style">:host{display:inline-block;vertical-align:0}span,svg{display:block;margin:auto}</style></template></iconify-icon>
+</div>
+
+<label id="15:286" style="display: flex; align-items: center; row-gap: 0.5rem; column-gap: 0.5rem; line-height: 1.33333; color: rgba(178, 235, 242, 1); font-size: 0.75rem;">
+<input id="15:287" class="peer" style="overflow-x: hidden; overflow-y: hidden; white-space: nowrap; position: absolute; width: 1px; height: 1px; margin-top: -1px; margin-right: -1px; margin-bottom: -1px; margin-left: -1px; padding-top: 0; padding-right: 0; padding-bottom: 0; padding-left: 0; border-top-width: 0; border-right-width: 0; border-bottom-width: 0; border-left-width: 0; clip-path: inset( 50% );" type="checkbox">
+<div id="15:288" style="display: flex; justify-content: center; align-items: center; width: 1rem; height: 1rem; color: transparent; border-top-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-right-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-bottom-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-left-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-top-style: solid; border-right-style: solid; border-bottom-style: solid; border-left-style: solid; border-top-width: 1px; border-right-width: 1px; border-bottom-width: 1px; border-left-width: 1px;">
+<iconify-icon id="15:289" style="line-height: 1.33333; font-size: 0.75rem;" icon="lucide:check"><template shadowrootmode="open"><style data-style="data-style">:host{display:inline-block;vertical-align:0}span,svg{display:block;margin:auto}</style></template></iconify-icon>
+</div>
+<span id="15:290">仅显示变更文件</span>
+</label>
+</div>
+
+<div id="15:291" style="overflow-y: auto; flex-grow: 1; flex-shrink: 1; flex-basis: 0%; padding-top: 0.5rem; padding-right: 1rem; padding-bottom: 0.5rem; padding-left: 1rem;">
+<div id="15:292">
+
+<div id="15:293" class="hover:bg-[#4DD0E1]/5" style="display: flex; align-items: center; row-gap: 0.5rem; column-gap: 0.5rem; margin-top: 0; margin-bottom: 0.25rem; padding-top: 0.25rem; padding-right: 0.5rem; padding-bottom: 0.25rem; padding-left: 0.5rem;">
+<iconify-icon id="15:294" style="line-height: 1.33333; color: rgba(128, 222, 234, 1); font-size: 0.75rem;" icon="lucide:chevron-down"><template shadowrootmode="open"><style data-style="data-style">:host{display:inline-block;vertical-align:0}span,svg{display:block;margin:auto}</style></template></iconify-icon>
+<iconify-icon id="15:295" style="line-height: 1.42857; color: rgba(128, 222, 234, 1); font-size: 0.875rem;" icon="lucide:folder"><template shadowrootmode="open"><style data-style="data-style">:host{display:inline-block;vertical-align:0}span,svg{display:block;margin:auto}</style></template></iconify-icon>
+<span id="15:296" style="line-height: 1.42857; color: rgba(224, 247, 250, 1); font-size: 0.875rem;">src</span>
+</div>
+
+<div id="15:297" style="margin-top: 0; margin-bottom: 0.25rem; margin-left: 1rem;">
+<div id="15:298" class="&lt;div class=" style="display: flex; align-items: center; row-gap: 0.5rem; column-gap: 0.5rem; margin-top: 0; margin-bottom: 0.25rem; padding-top: 0.25rem; padding-right: 0.5rem; padding-bottom: 0.25rem; padding-left: 0.5rem;">
+<iconify-icon id="15:299" style="line-height: 1.33333; color: rgba(128, 222, 234, 1); font-size: 0.75rem;" icon="lucide:chevron-down"><template shadowrootmode="open"><style data-style="data-style">:host{display:inline-block;vertical-align:0}span,svg{display:block;margin:auto}</style></template></iconify-icon>
+<iconify-icon id="15:300" style="line-height: 1.42857; color: rgba(128, 222, 234, 1); font-size: 0.875rem;" icon="lucide:folder"><template shadowrootmode="open"><style data-style="data-style">:host{display:inline-block;vertical-align:0}span,svg{display:block;margin:auto}</style></template></iconify-icon>
+<span id="15:301" style="line-height: 1.42857; color: rgba(224, 247, 250, 1); font-size: 0.875rem;">components</span>
+</div>
+<div id="15:302" style="margin-top: 0; margin-bottom: 0.25rem; margin-left: 1rem;">
+<div id="15:303" style="background-color: color-mix( in oklab , #4DD0E1 5% , transparent ); display: flex; align-items: center; row-gap: 0.5rem; column-gap: 0.5rem; padding-top: 0.25rem; padding-right: 0.5rem; padding-bottom: 0.25rem; padding-left: 0.5rem; border-left-color: color-mix( in oklab , #4DD0E1 40% , transparent ); border-left-style: solid; border-left-width: 2px;">
+<div id="15:304" style="width: 0.75rem; height: 0.75rem;"></div>
+<iconify-icon id="15:305" style="line-height: 1.42857; color: rgba(77, 208, 225, 1); font-size: 0.875rem;" icon="lucide:file-text"><template shadowrootmode="open"><style data-style="data-style">:host{display:inline-block;vertical-align:0}span,svg{display:block;margin:auto}</style></template></iconify-icon>
+<span id="15:306" style="line-height: 1.42857; color: rgba(224, 247, 250, 1); font-size: 0.875rem;">UserList.tsx</span>
+<div id="15:307" style="background-color: rgba(255, 167, 38, 1); width: 0.5rem; height: 0.5rem; margin-left: auto; border-top-left-radius: 9999px; border-top-right-radius: 9999px; border-bottom-right-radius: 9999px; border-bottom-left-radius: 9999px;"></div>
+</div>
+</div>
+<div id="15:308" class="hover:bg-[#4DD0E1]/5" style="display: flex; align-items: center; row-gap: 0.5rem; column-gap: 0.5rem; margin-top: 0; margin-bottom: 0.25rem; padding-top: 0.25rem; padding-right: 0.5rem; padding-bottom: 0.25rem; padding-left: 0.5rem;">
+<div id="15:309" style="width: 0.75rem; height: 0.75rem;"></div>
+<iconify-icon id="15:310" style="line-height: 1.42857; color: rgba(128, 222, 234, 1); font-size: 0.875rem;" icon="lucide:file-text"><template shadowrootmode="open"><style data-style="data-style">:host{display:inline-block;vertical-align:0}span,svg{display:block;margin:auto}</style></template></iconify-icon>
+<span id="15:311" style="line-height: 1.42857; color: rgba(178, 235, 242, 1); font-size: 0.875rem;">App.tsx</span>
+</div>
+<div id="15:312" class="hover:bg-[#4DD0E1]/5" style="display: flex; align-items: center; row-gap: 0.5rem; column-gap: 0.5rem; padding-top: 0.25rem; padding-right: 0.5rem; padding-bottom: 0.25rem; padding-left: 0.5rem;">
+<div id="15:313" style="width: 0.75rem; height: 0.75rem;"></div>
+<iconify-icon id="15:314" style="line-height: 1.42857; color: rgba(128, 222, 234, 1); font-size: 0.875rem;" icon="lucide:file-text"><template shadowrootmode="open"><style data-style="data-style">:host{display:inline-block;vertical-align:0}span,svg{display:block;margin:auto}</style></template></iconify-icon>
+<span id="15:315" style="line-height: 1.42857; color: rgba(178, 235, 242, 1); font-size: 0.875rem;">index.css</span>
+</div>
+</div>
+
+<div id="15:316" class="hover:bg-[#4DD0E1]/5" style="display: flex; align-items: center; row-gap: 0.5rem; column-gap: 0.5rem; margin-top: 0; margin-bottom: 0.25rem; padding-top: 0.25rem; padding-right: 0.5rem; padding-bottom: 0.25rem; padding-left: 0.5rem;">
+<div id="15:317" style="width: 0.75rem; height: 0.75rem;"></div>
+<iconify-icon id="15:318" style="line-height: 1.42857; color: rgba(128, 222, 234, 1); font-size: 0.875rem;" icon="lucide:package"><template shadowrootmode="open"><style data-style="data-style">:host{display:inline-block;vertical-align:0}span,svg{display:block;margin:auto}</style></template></iconify-icon>
+<span id="15:319" style="line-height: 1.42857; color: rgba(178, 235, 242, 1); font-size: 0.875rem;">package.json</span>
+</div>
+
+<div id="15:320" class="hover:bg-[#4DD0E1]/5" style="display: flex; align-items: center; row-gap: 0.5rem; column-gap: 0.5rem; padding-top: 0.25rem; padding-right: 0.5rem; padding-bottom: 0.25rem; padding-left: 0.5rem;">
+<div id="15:321" style="width: 0.75rem; height: 0.75rem;"></div>
+<iconify-icon id="15:322" style="line-height: 1.42857; color: rgba(128, 222, 234, 1); font-size: 0.875rem;" icon="lucide:file-text"><template shadowrootmode="open"><style data-style="data-style">:host{display:inline-block;vertical-align:0}span,svg{display:block;margin:auto}</style></template></iconify-icon>
+<span id="15:323" style="line-height: 1.42857; color: rgba(178, 235, 242, 1); font-size: 0.875rem;">README.md</span>
+</div>
+</div>
+</div>
+
+<div id="15:324" style="padding-top: 0.75rem; padding-right: 1rem; padding-bottom: 0.75rem; padding-left: 1rem; border-top-color: color-mix( in oklab , #4DD0E1 10% , transparent ); border-right-color: color-mix( in oklab , #4DD0E1 10% , transparent ); border-bottom-color: color-mix( in oklab , #4DD0E1 10% , transparent ); border-left-color: color-mix( in oklab , #4DD0E1 10% , transparent ); border-top-style: solid; border-top-width: 1px;">
+<div id="15:325" style="background-color: color-mix( in oklab , #4DD0E1 5% , transparent ); padding-top: 0.75rem; padding-right: 0.75rem; padding-bottom: 0.75rem; padding-left: 0.75rem; border-top-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-right-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-bottom-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-left-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-top-style: solid; border-right-style: solid; border-bottom-style: solid; border-left-style: solid; border-top-width: 1px; border-right-width: 1px; border-bottom-width: 1px; border-left-width: 1px;">
+<div id="15:326" style="display: flex; align-items: flex-start; row-gap: 0.5rem; column-gap: 0.5rem;">
+<iconify-icon id="15:327" style="margin-top: 0.125rem; line-height: 1.42857; color: rgba(77, 208, 225, 1); font-size: 0.875rem;" icon="lucide:lightbulb"><template shadowrootmode="open"><style data-style="data-style">:host{display:inline-block;vertical-align:0}span,svg{display:block;margin:auto}</style></template></iconify-icon>
+<div id="15:328" style="flex-grow: 1; flex-shrink: 1; flex-basis: 0%;">
+<p id="15:329" style="margin-bottom: 0.5rem; line-height: 1.33333; color: rgba(224, 247, 250, 1); font-size: 0.75rem;">AI 刚创建了新组件</p>
+<div id="15:330" style="display: flex; align-items: center; row-gap: 0.5rem; column-gap: 0.5rem;">
+<button id="15:331" class="hover:text-[#80DEEA]" style="line-height: 1.33333; color: rgba(77, 208, 225, 1); font-size: 0.75rem;">查看变更</button>
+<span id="15:332" style="line-height: 1.33333; color: rgba(128, 222, 234, 1); font-size: 0.75rem;">•</span>
+<button id="15:333" class="hover:text-[#80DEEA]" style="line-height: 1.33333; color: rgba(77, 208, 225, 1); font-size: 0.75rem;">应用修改</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</aside>
+</div>
+
+<div id="15:334" style="background-color: rgba(0, 0, 0, 1); display: flex; flex-direction: column; width: 100%; height: 16rem; border-top-color: color-mix( in oklab , #4DD0E1 15% , transparent ); border-right-color: color-mix( in oklab , #4DD0E1 15% , transparent ); border-bottom-color: color-mix( in oklab , #4DD0E1 15% , transparent ); border-left-color: color-mix( in oklab , #4DD0E1 15% , transparent ); border-top-style: solid; border-top-width: 1px;">
+
+<div id="15:335" style="display: flex; justify-content: space-between; align-items: center; padding-top: 0.5rem; padding-right: 1rem; padding-bottom: 0.5rem; padding-left: 1rem; border-top-color: color-mix( in oklab , #4DD0E1 10% , transparent ); border-right-color: color-mix( in oklab , #4DD0E1 10% , transparent ); border-bottom-color: color-mix( in oklab , #4DD0E1 10% , transparent ); border-left-color: color-mix( in oklab , #4DD0E1 10% , transparent ); border-bottom-style: solid; border-bottom-width: 1px;">
+<div id="15:336" style="display: flex; align-items: center; row-gap: 0.25rem; column-gap: 0.25rem;">
+<div id="15:337" style="background-color: color-mix( in oklab , #4DD0E1 10% , transparent ); display: flex; align-items: center; row-gap: 0.5rem; column-gap: 0.5rem; padding-top: 0.375rem; padding-right: 0.75rem; padding-bottom: 0.375rem; padding-left: 0.75rem; border-top-color: color-mix( in oklab , #4DD0E1 30% , transparent ); border-right-color: color-mix( in oklab , #4DD0E1 30% , transparent ); border-bottom-color: color-mix( in oklab , #4DD0E1 30% , transparent ); border-left-color: color-mix( in oklab , #4DD0E1 30% , transparent ); border-top-style: solid; border-right-style: solid; border-bottom-style: solid; border-left-style: solid; border-top-width: 1px; border-right-width: 1px; border-bottom-width: 1px; border-left-width: 1px;">
+<iconify-icon id="15:338" style="line-height: 1.42857; color: rgba(77, 208, 225, 1); font-size: 0.875rem;" icon="lucide:terminal"><template shadowrootmode="open"><style data-style="data-style">:host{display:inline-block;vertical-align:0}span,svg{display:block;margin:auto}</style></template></iconify-icon>
+<span id="15:339" style="line-height: 1.42857; color: rgba(224, 247, 250, 1); font-size: 0.875rem;">终端 1</span>
+<button id="15:340" class="hover:bg-[#4DD0E1]/20" style="display: flex; justify-content: center; align-items: center; width: 1rem; height: 1rem;">
+<iconify-icon id="15:341" style="line-height: 1.33333; color: rgba(178, 235, 242, 1); font-size: 0.75rem;" icon="lucide:x"><template shadowrootmode="open"><style data-style="data-style">:host{display:inline-block;vertical-align:0}span,svg{display:block;margin:auto}</style></template></iconify-icon>
+</button>
+</div>
+<button id="15:342" class="hover:border-[#4DD0E1]/30" style="display: flex; justify-content: center; align-items: center; width: 2rem; height: 2rem; border-top-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-right-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-bottom-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-left-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-top-style: solid; border-right-style: solid; border-bottom-style: solid; border-left-style: solid; border-top-width: 1px; border-right-width: 1px; border-bottom-width: 1px; border-left-width: 1px;">
+<iconify-icon id="15:343" style="line-height: 1.42857; color: rgba(178, 235, 242, 1); font-size: 0.875rem;" icon="lucide:plus"><template shadowrootmode="open"><style data-style="data-style">:host{display:inline-block;vertical-align:0}span,svg{display:block;margin:auto}</style></template></iconify-icon>
+</button>
+</div>
+<div id="15:344" style="display: flex; align-items: center; row-gap: 0.5rem; column-gap: 0.5rem;">
+<button id="15:345" class="hover:border-[#4DD0E1]/30" style="display: flex; justify-content: center; align-items: center; width: 2rem; height: 2rem; border-top-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-right-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-bottom-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-left-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-top-style: solid; border-right-style: solid; border-bottom-style: solid; border-left-style: solid; border-top-width: 1px; border-right-width: 1px; border-bottom-width: 1px; border-left-width: 1px;">
+<iconify-icon id="15:346" style="line-height: 1.42857; color: rgba(178, 235, 242, 1); font-size: 0.875rem;" icon="lucide:trash-2"><template shadowrootmode="open"><style data-style="data-style">:host{display:inline-block;vertical-align:0}span,svg{display:block;margin:auto}</style></template></iconify-icon>
+</button>
+<button id="15:347" class="hover:border-[#4DD0E1]/30" style="display: flex; justify-content: center; align-items: center; width: 2rem; height: 2rem; border-top-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-right-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-bottom-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-left-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-top-style: solid; border-right-style: solid; border-bottom-style: solid; border-left-style: solid; border-top-width: 1px; border-right-width: 1px; border-bottom-width: 1px; border-left-width: 1px;">
+<iconify-icon id="15:348" style="line-height: 1.42857; color: rgba(178, 235, 242, 1); font-size: 0.875rem;" icon="lucide:square"><template shadowrootmode="open"><style data-style="data-style">:host{display:inline-block;vertical-align:0}span,svg{display:block;margin:auto}</style></template></iconify-icon>
+</button>
+</div>
+</div>
+
+<div id="15:349" style="overflow-y: auto; background-color: rgba(10, 10, 10, 1); font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, &quot;Liberation Mono&quot;, &quot;Courier New&quot;, monospace; flex-grow: 1; flex-shrink: 1; flex-basis: 0%; padding-top: 1rem; padding-right: 1rem; padding-bottom: 1rem; padding-left: 1rem; line-height: 1.42857; font-size: 0.875rem;">
+<div id="15:350">
+<div id="15:351" style="margin-top: 0; margin-bottom: 0.25rem; color: rgba(178, 235, 242, 1);">
+<span id="15:352" style="color: rgba(77, 208, 225, 1);">➜</span>
+<span id="15:353" style="color: rgba(128, 222, 234, 1);">my-react-app</span>
+<span id="15:354" style="color: rgba(38, 166, 154, 1);">git:(</span><span id="15:355" style="color: rgba(239, 83, 80, 1);">main</span><span id="15:356" style="color: rgba(38, 166, 154, 1);">)</span>
+<span id="15:357" style="color: rgba(224, 247, 250, 1);">npm start</span>
+</div>
+<div id="15:358" style="margin-top: 0; margin-bottom: 0.25rem; color: rgba(178, 235, 242, 1);">
+<span id="15:359" style="color: rgba(128, 222, 234, 1);">Compiled successfully!</span>
+</div>
+<div id="15:360" style="margin-top: 0; margin-bottom: 0.25rem; color: rgba(178, 235, 242, 1);">
+<span id="15:361" style="color: rgba(128, 222, 234, 1);">You can now view my-react-app in the browser.</span>
+</div>
+<div id="15:362" style="margin-top: 0; margin-bottom: 0.25rem; color: rgba(178, 235, 242, 1);">
+<span id="15:363" style="color: rgba(128, 222, 234, 1);">Local:</span> <span id="15:364" style="color: rgba(77, 208, 225, 1);">http://localhost:3000</span>
+</div>
+<div id="15:365" style="margin-top: 0; margin-bottom: 0.25rem; color: rgba(178, 235, 242, 1);">
+<span id="15:366" style="color: rgba(128, 222, 234, 1);">On Your Network:</span> <span id="15:367" style="color: rgba(77, 208, 225, 1);">http://192.168.1.100:3000</span>
+</div>
+<div id="15:368" style="margin-top: 0; margin-bottom: 0.25rem; color: rgba(178, 235, 242, 1);">
+<span id="15:369" style="color: rgba(128, 222, 234, 1);">Note that the development build is not optimized.</span>
+</div>
+<div id="15:370" style="color: rgba(178, 235, 242, 1);">
+<span id="15:371" style="color: rgba(128, 222, 234, 1);">To create a production build, use </span><span id="15:372" style="color: rgba(77, 208, 225, 1);">npm run build</span><span id="15:373" style="color: rgba(128, 222, 234, 1);">.</span>
+</div>
+</div>
+</div>
+
+<div id="15:374" style="padding-top: 0.5rem; padding-right: 1rem; padding-bottom: 0.5rem; padding-left: 1rem; border-top-color: color-mix( in oklab , #4DD0E1 10% , transparent ); border-right-color: color-mix( in oklab , #4DD0E1 10% , transparent ); border-bottom-color: color-mix( in oklab , #4DD0E1 10% , transparent ); border-left-color: color-mix( in oklab , #4DD0E1 10% , transparent ); border-top-style: solid; border-top-width: 1px;">
+<div id="15:375" style="display: flex; justify-content: space-between; align-items: center;">
+<div id="15:376" style="display: flex; align-items: center; row-gap: 0.5rem; column-gap: 0.5rem;">
+<iconify-icon id="15:377" style="line-height: 1.42857; color: rgba(77, 208, 225, 1); font-size: 0.875rem;" icon="lucide:zap"><template shadowrootmode="open"><style data-style="data-style">:host{display:inline-block;vertical-align:0}span,svg{display:block;margin:auto}</style></template></iconify-icon>
+<span id="15:378" style="line-height: 1.33333; color: rgba(224, 247, 250, 1); font-size: 0.75rem;">应用启动成功</span>
+<button id="15:379" class="hover:text-[#80DEEA]" style="line-height: 1.33333; color: rgba(77, 208, 225, 1); font-size: 0.75rem;">打开预览</button>
+</div>
+
+<div id="15:380" style="display: flex; align-items: center; row-gap: 0.5rem; column-gap: 0.5rem;">
+<input id="15:381" class="focus:border-[#4DD0E1]/30" style="background-color: rgba(20, 20, 20, 1); width: 16rem; height: 2rem; padding-right: 0.75rem; padding-left: 0.75rem; line-height: 1.42857; color: rgba(224, 247, 250, 1); border-top-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-right-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-bottom-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-left-color: color-mix( in oklab , #4DD0E1 20% , transparent ); border-top-style: solid; border-right-style: solid; border-bottom-style: solid; border-left-style: solid; border-top-width: 1px; border-right-width: 1px; border-bottom-width: 1px; border-left-width: 1px; font-size: 0.875rem;" type="text" placeholder="输入命令...">
+<button id="15:382" class="hover:bg-[#4DD0E1]/15" style="background-color: color-mix( in oklab , #4DD0E1 10% , transparent ); display: flex; justify-content: center; align-items: center; width: 2rem; height: 2rem; border-top-color: color-mix( in oklab , #4DD0E1 30% , transparent ); border-right-color: color-mix( in oklab , #4DD0E1 30% , transparent ); border-bottom-color: color-mix( in oklab , #4DD0E1 30% , transparent ); border-left-color: color-mix( in oklab , #4DD0E1 30% , transparent ); border-top-style: solid; border-right-style: solid; border-bottom-style: solid; border-left-style: solid; border-top-width: 1px; border-right-width: 1px; border-bottom-width: 1px; border-left-width: 1px;">
+<iconify-icon id="15:383" style="line-height: 1.42857; color: rgba(77, 208, 225, 1); font-size: 0.875rem;" icon="lucide:send"><template shadowrootmode="open"><style data-style="data-style">:host{display:inline-block;vertical-align:0}span,svg{display:block;margin:auto}</style></template></iconify-icon>
+</button>
+</div>
+</div>
+</div>
+</div>
+
+
+
+    
+    </body></html>

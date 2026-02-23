@@ -1,0 +1,435 @@
+
+<!-- saved from url=(0012)about:srcdoc -->
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <link rel="stylesheet" href="https://static.paraflowcontent.com/public/css/font-awesome/font-awesome.672.css">
+    <link rel="stylesheet" href="https://static.paraflowcontent.com/public/css/tailwind/v4-preflight-1.css">
+    <script src="https://static.paraflowcontent.com/public/js/iconify/iconify-icon-3.0.0.js"></script>
+    <style>
+    * {
+        scrollbar-width: none;
+    }
+    textarea {
+        resize: none;
+    }
+    input::-webkit-calendar-picker-indicator {
+        visibility: hidden;
+    }
+    select {
+        appearance: none;
+    }
+    </style>
+    <script>
+        window.addEventListener('load', () => {
+            window.parent.postMessage({
+                type: 'setHeight',
+                id: 'element-frame-27:1',
+                height: document.body.scrollHeight
+            }, '*')
+
+            const observer = new MutationObserver(() => {
+                window.parent.postMessage({
+                    type: 'setHeight',
+                    id: 'element-frame-27:1',
+                    height: document.body.scrollHeight
+                }, '*')
+            })
+
+            observer.observe(document.body, {
+                childList: true,
+                subtree: true,
+                characterData: true,
+                attributes: true
+            })
+        })
+
+        window.addEventListener('resize', () => {
+            window.parent.postMessage({
+                type: 'setHeight',
+                id: 'element-frame-27:1',
+                height: document.body.scrollHeight
+            }, '*')
+        })
+    </script>
+    <style id="moxt-styled">
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@100;300;400;500;700;900&family=Open+Sans:wght@300;400;500;600;700;800&family=Montserrat:wght@100;200;300;400;500;600;700;800;900&family=Inter:wght@100;200;300;400;500;600;700;800;900&family=Poppins:wght@100;200;300;400;500;600;700;800;900&family=Roboto+Condensed:wght@100;200;300;400;500;600;700;800;900&family=Roboto+Mono:wght@100;200;300;400;500;600;700&family=PT+Serif:wght@400;700&family=Arimo:wght@400;500;600;700&family=Raleway:wght@100;200;300;400;500;600;700;800;900&family=Nunito:wght@200;300;400;500;600;700&;800;900&family=Rubik:wght@300;400;500;600;700;800;900&family=Playfair+Display:wght@400;500;600;700;800;900&family=Ubuntu:wght@300;400;500;700&family=Merriweather:wght@300;400;500;600;700;800;900&family=Roboto+Slab:wght@100;200;300;400;500;600;700&family=Libre+Baskerville:wght@400;700&family=Inconsolata:wght@200;300;400;500;600;700;800;900&family=Dancing+Script:wght@400;500;600;700&family=Kanit:wght@100;200;300;400;500;600;700;800;900&display=swap');
+
+.pf-e01ae2ff-BODY-daeb77407bcabd6359b1ced2469ba70b {font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: white / 95; font-size: 16px;}
+.pf-e01ae2ff-terminal-output {font-family: "SF Mono", Monaco, Inconsolata, "Roboto Mono", "Source Code Pro", Menlo, "Courier New", monospace;}
+</style></head>
+    <body id="27:1" title="data-workspace-elegant-dark.html" style="background-color: hsla( 210 , 25% , 10% , 1 ); font-family: &quot;Segoe UI&quot;, sans-serif; width: 1440px; min-height: 900px; color: color-mix( in oklab , #fff 90% , transparent );">
+
+<header id="27:2" style="background-color: hsla( 210 , 25% , 12% , 1 ); display: flex; align-items: center; width: 100%; height: 4rem; padding-right: 1.5rem; padding-left: 1.5rem; border-top-color: color-mix( in oklab , #fff 10% , transparent ); border-right-color: color-mix( in oklab , #fff 10% , transparent ); border-bottom-color: color-mix( in oklab , #fff 10% , transparent ); border-left-color: color-mix( in oklab , #fff 10% , transparent ); border-bottom-style: solid; border-bottom-width: 1px;">
+
+<div id="27:3" style="display: flex; align-items: center;">
+<div id="27:4" style="background-color: rgba(78, 205, 196, 1); display: flex; justify-content: center; align-items: center; width: 2rem; height: 2rem; margin-right: 0.75rem; border-top-left-radius: 0.5rem; border-top-right-radius: 0.5rem; border-bottom-right-radius: 0.5rem; border-bottom-left-radius: 0.5rem;">
+<iconify-icon id="27:5" style="line-height: 1.55556; color: rgba(255, 255, 255, 1); font-size: 1.125rem;" icon="lucide:bar-chart-3"><template shadowrootmode="open"><style data-style="data-style">:host{display:inline-block;vertical-align:0}span,svg{display:block;margin:auto}</style></template></iconify-icon>
+</div>
+<span id="27:6" style="line-height: 1.4; color: rgba(255, 255, 255, 1); font-size: 1.25rem; font-weight: 600;">DataFlow AI</span>
+</div>
+
+<div id="27:7" style="display: flex; align-items: center; margin-left: auto;">
+<button id="27:8" class="hover:bg-[#3AADA0]" style="background-color: rgba(78, 205, 196, 1); display: flex; align-items: center; margin-right: 1rem; margin-left: 0; padding-top: 0.5rem; padding-right: 1rem; padding-bottom: 0.5rem; padding-left: 1rem; line-height: 1.42857; color: rgba(255, 255, 255, 1); border-top-left-radius: 0.5rem; border-top-right-radius: 0.5rem; border-bottom-right-radius: 0.5rem; border-bottom-left-radius: 0.5rem; font-size: 0.875rem; font-weight: 500;">
+<div id="27:9" style="display: flex; justify-content: center; align-items: center; width: 1rem; height: 1rem; margin-right: 0.5rem;">
+<iconify-icon id="27:10" style="line-height: 1.42857; font-size: 0.875rem;" icon="lucide:plus"><template shadowrootmode="open"><style data-style="data-style">:host{display:inline-block;vertical-align:0}span,svg{display:block;margin:auto}</style></template></iconify-icon>
+</div>
+<span id="27:11">新建分析</span>
+</button>
+<button id="27:12" class="hover:bg-[#222930]" style="background-color: color-mix( in oklab , #222930 70% , transparent ); display: flex; align-items: center; margin-right: 1rem; margin-left: 0; padding-top: 0.5rem; padding-right: 1rem; padding-bottom: 0.5rem; padding-left: 1rem; line-height: 1.42857; color: color-mix( in oklab , #fff 70% , transparent ); border-top-left-radius: 0.5rem; border-top-right-radius: 0.5rem; border-bottom-right-radius: 0.5rem; border-bottom-left-radius: 0.5rem; font-size: 0.875rem; font-weight: 500;">
+<div id="27:13" style="display: flex; justify-content: center; align-items: center; width: 1rem; height: 1rem; margin-right: 0.5rem;">
+<iconify-icon id="27:14" style="line-height: 1.42857; font-size: 0.875rem;" icon="lucide:file-text"><template shadowrootmode="open"><style data-style="data-style">:host{display:inline-block;vertical-align:0}span,svg{display:block;margin:auto}</style></template></iconify-icon>
+</div>
+<span id="27:15">报告中心</span>
+</button>
+<button id="27:16" class="hover:bg-[#222930]" style="background-color: color-mix( in oklab , #222930 70% , transparent ); display: flex; align-items: center; margin-right: 1rem; margin-left: 0; padding-top: 0.5rem; padding-right: 1rem; padding-bottom: 0.5rem; padding-left: 1rem; line-height: 1.42857; color: color-mix( in oklab , #fff 70% , transparent ); border-top-left-radius: 0.5rem; border-top-right-radius: 0.5rem; border-bottom-right-radius: 0.5rem; border-bottom-left-radius: 0.5rem; font-size: 0.875rem; font-weight: 500;">
+<div id="27:17" style="display: flex; justify-content: center; align-items: center; width: 1rem; height: 1rem; margin-right: 0.5rem;">
+<iconify-icon id="27:18" style="line-height: 1.42857; font-size: 0.875rem;" icon="lucide:database"><template shadowrootmode="open"><style data-style="data-style">:host{display:inline-block;vertical-align:0}span,svg{display:block;margin:auto}</style></template></iconify-icon>
+</div>
+<span id="27:19">数据源</span>
+</button>
+<button id="27:20" class="hover:bg-[#222930]" style="background-color: color-mix( in oklab , #222930 70% , transparent ); display: flex; position: relative; justify-content: center; align-items: center; width: 2.5rem; height: 2.5rem; margin-right: 1rem; margin-left: 0; border-top-left-radius: 9999px; border-top-right-radius: 9999px; border-bottom-right-radius: 9999px; border-bottom-left-radius: 9999px;">
+<iconify-icon id="27:21" style="line-height: 1.5; color: rgba(78, 205, 196, 1); font-size: 1rem;" icon="lucide:bell"><template shadowrootmode="open"><style data-style="data-style">:host{display:inline-block;vertical-align:0}span,svg{display:block;margin:auto}</style></template></iconify-icon>
+<div id="27:22" style="background-color: rgba(255, 107, 107, 1); position: absolute; top: -0.25rem; right: -0.25rem; width: 0.75rem; height: 0.75rem; border-top-left-radius: 9999px; border-top-right-radius: 9999px; border-bottom-right-radius: 9999px; border-bottom-left-radius: 9999px;"></div>
+</button>
+<div id="27:23" style="overflow-x: hidden; overflow-y: hidden; background-color: rgba(140, 147, 163, 1); width: 2rem; height: 2rem; border-top-left-radius: 9999px; border-top-right-radius: 9999px; border-bottom-right-radius: 9999px; border-bottom-left-radius: 9999px;">
+<img id="27:24" style="filter: brightness(90%) contrast(90%); width: 100%; height: 100%; object-fit: cover;" alt="Professional headshot of a data analyst" src="https://static.paraflowcontent.com/public/resource/image/8d73a8ec-bd40-49db-a4cc-c6001fe51eef.jpeg">
+</div>
+</div>
+</header>
+
+<div id="27:25" style="display: flex; height: calc( 100% - 4rem );">
+
+<div id="27:26" style="background-color: color-mix( in oklab , #222930 50% , transparent ); display: flex; flex-direction: column; width: 24rem; border-top-color: color-mix( in oklab , #fff 10% , transparent ); border-right-color: color-mix( in oklab , #fff 10% , transparent ); border-bottom-color: color-mix( in oklab , #fff 10% , transparent ); border-left-color: color-mix( in oklab , #fff 10% , transparent ); border-right-style: solid; border-right-width: 1px;">
+
+<div id="27:27" style="padding-top: 1rem; padding-right: 1rem; padding-bottom: 1rem; padding-left: 1rem; border-top-color: color-mix( in oklab , #fff 10% , transparent ); border-right-color: color-mix( in oklab , #fff 10% , transparent ); border-bottom-color: color-mix( in oklab , #fff 10% , transparent ); border-left-color: color-mix( in oklab , #fff 10% , transparent ); border-bottom-style: solid; border-bottom-width: 1px;">
+<div id="27:28" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+<h2 id="27:29" style="line-height: 1.55556; color: rgba(255, 255, 255, 1); font-size: 1.125rem; font-weight: 600;">销售数据分析</h2>
+<button id="27:30" class="hover:bg-[#222930]" style="background-color: color-mix( in oklab , #222930 70% , transparent ); display: flex; justify-content: center; align-items: center; width: 2rem; height: 2rem; border-top-left-radius: 0.5rem; border-top-right-radius: 0.5rem; border-bottom-right-radius: 0.5rem; border-bottom-left-radius: 0.5rem;">
+<iconify-icon id="27:31" style="line-height: 1.42857; color: color-mix( in oklab , #fff 70% , transparent ); font-size: 0.875rem;" icon="lucide:more-horizontal"><template shadowrootmode="open"><style data-style="data-style">:host{display:inline-block;vertical-align:0}span,svg{display:block;margin:auto}</style></template></iconify-icon>
+</button>
+</div>
+<div id="27:32" style="display: flex; align-items: center;">
+<button id="27:33" style="background-color: color-mix( in oklab , #4ECDC4 20% , transparent ); display: flex; align-items: center; margin-right: 0.5rem; margin-left: 0; padding-top: 0.25rem; padding-right: 0.75rem; padding-bottom: 0.25rem; padding-left: 0.75rem; line-height: 1.33333; color: rgba(78, 205, 196, 1); border-top-left-radius: 0.5rem; border-top-right-radius: 0.5rem; border-bottom-right-radius: 0.5rem; border-bottom-left-radius: 0.5rem; font-size: 0.75rem; font-weight: 500;">
+<span id="27:34">保存为报告</span>
+</button>
+<button id="27:35" class="hover:text-white/70" style="background-color: color-mix( in oklab , #222930 70% , transparent ); display: flex; align-items: center; padding-top: 0.25rem; padding-right: 0.75rem; padding-bottom: 0.25rem; padding-left: 0.75rem; line-height: 1.33333; color: color-mix( in oklab , #fff 50% , transparent ); border-top-left-radius: 0.5rem; border-top-right-radius: 0.5rem; border-bottom-right-radius: 0.5rem; border-bottom-left-radius: 0.5rem; font-size: 0.75rem; font-weight: 500;">
+<span id="27:36">清空对话</span>
+</button>
+</div>
+</div>
+
+<div id="27:37" style="overflow-y: auto; flex-grow: 1; flex-shrink: 1; flex-basis: 0%; padding-top: 1rem; padding-right: 1rem; padding-bottom: 1rem; padding-left: 1rem;">
+
+<div id="27:38" style="display: flex; justify-content: flex-end; margin-top: 0; margin-bottom: 1rem;">
+<div id="27:39" style="background-color: color-mix( in oklab , #4ECDC4 20% , transparent ); max-width: 280px; padding-top: 0.75rem; padding-right: 0.75rem; padding-bottom: 0.75rem; padding-left: 0.75rem; border-top-left-radius: 0.75rem; border-top-right-radius: 0.75rem; border-bottom-right-radius: 0.75rem; border-bottom-left-radius: 0.75rem;">
+<p id="27:40" style="line-height: 1.42857; color: color-mix( in oklab , #fff 90% , transparent ); font-size: 0.875rem;">分析过去90天各品类的销售额趋势</p>
+<div id="27:41" style="margin-top: 0.5rem; line-height: 1.33333; color: color-mix( in oklab , #fff 50% , transparent ); font-size: 0.75rem;">10:30</div>
+</div>
+</div>
+
+<div id="27:42" style="margin-top: 0; margin-bottom: 1rem;">
+<div id="27:43" style="background-color: color-mix( in oklab , #222930 70% , transparent ); max-width: 280px; margin-top: 0; margin-bottom: 0.75rem; padding-top: 0.75rem; padding-right: 0.75rem; padding-bottom: 0.75rem; padding-left: 0.75rem; border-top-left-radius: 0.75rem; border-top-right-radius: 0.75rem; border-bottom-right-radius: 0.75rem; border-bottom-left-radius: 0.75rem;">
+<div id="27:44" style="display: flex; align-items: center; margin-bottom: 0.5rem;">
+<div id="27:45" style="background-color: rgba(78, 205, 196, 1); display: flex; justify-content: center; align-items: center; width: 1.25rem; height: 1.25rem; margin-right: 0.5rem; border-top-left-radius: 9999px; border-top-right-radius: 9999px; border-bottom-right-radius: 9999px; border-bottom-left-radius: 9999px;">
+<iconify-icon id="27:46" style="line-height: 1.33333; color: rgba(255, 255, 255, 1); font-size: 0.75rem;" icon="lucide:brain-circuit"><template shadowrootmode="open"><style data-style="data-style">:host{display:inline-block;vertical-align:0}span,svg{display:block;margin:auto}</style></template></iconify-icon>
+</div>
+<span id="27:47" style="line-height: 1.33333; color: rgba(78, 205, 196, 1); font-size: 0.75rem; font-weight: 500;">AI 理解</span>
+</div>
+<p id="27:48" style="margin-bottom: 0.5rem; line-height: 1.42857; color: color-mix( in oklab , #fff 90% , transparent ); font-size: 0.875rem;">查询过去90天各品类销售额趋势，分析销售表现和变化规律</p>
+<div id="27:49" style="margin-top: 0.75rem;">
+<div id="27:50" style="display: flex; align-items: center; margin-top: 0; margin-bottom: 0.5rem; line-height: 1.33333; color: color-mix( in oklab , #fff 70% , transparent ); font-size: 0.75rem;">
+<div id="27:51" style="background-color: rgba(56, 211, 154, 1); width: 0.5rem; height: 0.5rem; margin-right: 0.5rem; border-top-left-radius: 9999px; border-top-right-radius: 9999px; border-bottom-right-radius: 9999px; border-bottom-left-radius: 9999px;"></div>
+<span id="27:52">连接订单数据表</span>
+</div>
+<div id="27:53" style="display: flex; align-items: center; margin-top: 0; margin-bottom: 0.5rem; line-height: 1.33333; color: color-mix( in oklab , #fff 70% , transparent ); font-size: 0.75rem;">
+<div id="27:54" style="background-color: rgba(56, 211, 154, 1); width: 0.5rem; height: 0.5rem; margin-right: 0.5rem; border-top-left-radius: 9999px; border-top-right-radius: 9999px; border-bottom-right-radius: 9999px; border-bottom-left-radius: 9999px;"></div>
+<span id="27:55">按品类分组统计</span>
+</div>
+<div id="27:56" style="display: flex; align-items: center; line-height: 1.33333; color: color-mix( in oklab , #fff 70% , transparent ); font-size: 0.75rem;">
+<div id="27:57" style="background-color: rgba(253, 203, 110, 1); width: 0.5rem; height: 0.5rem; margin-right: 0.5rem; border-top-left-radius: 9999px; border-top-right-radius: 9999px; border-bottom-right-radius: 9999px; border-bottom-left-radius: 9999px;"></div>
+<span id="27:58">计算销售总额</span>
+</div>
+</div>
+</div>
+
+<div id="27:59" class="hover:bg-[#222930]" style="background-color: color-mix( in oklab , #222930 70% , transparent ); max-width: 280px; margin-top: 0; margin-bottom: 0.75rem; padding-top: 0.75rem; padding-right: 0.75rem; padding-bottom: 0.75rem; padding-left: 0.75rem; border-top-left-radius: 0.75rem; border-top-right-radius: 0.75rem; border-bottom-right-radius: 0.75rem; border-bottom-left-radius: 0.75rem;">
+<div id="27:60" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+<span id="27:61" style="line-height: 1.33333; color: color-mix( in oklab , #fff 70% , transparent ); font-size: 0.75rem;">生成图表</span>
+<iconify-icon id="27:62" style="line-height: 1.33333; color: color-mix( in oklab , #fff 50% , transparent ); font-size: 0.75rem;" icon="lucide:expand"><template shadowrootmode="open"><style data-style="data-style">:host{display:inline-block;vertical-align:0}span,svg{display:block;margin:auto}</style></template></iconify-icon>
+</div>
+<div id="27:63" style="background-color: color-mix( in oklab , #4ECDC4 10% , transparent ); display: flex; justify-content: center; align-items: center; width: 100%; height: 8rem; margin-bottom: 0.5rem; border-top-left-radius: 0.5rem; border-top-right-radius: 0.5rem; border-bottom-right-radius: 0.5rem; border-bottom-left-radius: 0.5rem;">
+<img id="27:64" style="filter: brightness(90%) contrast(90%); width: 100%; height: 100%; object-fit: cover; border-top-left-radius: 0.5rem; border-top-right-radius: 0.5rem; border-bottom-right-radius: 0.5rem; border-bottom-left-radius: 0.5rem;" alt="Bar chart showing sales trends by category over 90 days with multiple colored bars" src="https://static.paraflowcontent.com/public/resource/image/d28a2840-7691-4b9f-945d-dce17e3b98d9.jpeg">
+</div>
+<p id="27:65" style="line-height: 1.33333; color: color-mix( in oklab , #fff 70% , transparent ); font-size: 0.75rem;">各品类销售额趋势图</p>
+</div>
+
+<div id="27:66" style="background-color: color-mix( in oklab , #222930 70% , transparent ); max-width: 280px; margin-top: 0; margin-bottom: 0.75rem; padding-top: 0.75rem; padding-right: 0.75rem; padding-bottom: 0.75rem; padding-left: 0.75rem; border-top-left-radius: 0.75rem; border-top-right-radius: 0.75rem; border-bottom-right-radius: 0.75rem; border-bottom-left-radius: 0.75rem;">
+<div id="27:67" style="display: flex; align-items: center; margin-bottom: 0.5rem;">
+<div id="27:68" style="display: flex; justify-content: center; align-items: center; width: 1rem; height: 1rem; margin-right: 0.5rem;">
+<iconify-icon id="27:69" style="line-height: 1.33333; color: rgba(253, 203, 110, 1); font-size: 0.75rem;" icon="lucide:lightbulb"><template shadowrootmode="open"><style data-style="data-style">:host{display:inline-block;vertical-align:0}span,svg{display:block;margin:auto}</style></template></iconify-icon>
+</div>
+<span id="27:70" style="line-height: 1.33333; color: color-mix( in oklab , #fff 70% , transparent ); font-size: 0.75rem;">关键发现</span>
+</div>
+<p id="27:71" style="line-height: 1.42857; color: color-mix( in oklab , #fff 90% , transparent ); font-size: 0.875rem;">电子产品品类销售额增长最为显著，环比上升32%，服装品类保持稳定增长趋势</p>
+</div>
+<div id="27:72" style="margin-left: 0.75rem; line-height: 1.33333; color: color-mix( in oklab , #fff 50% , transparent ); font-size: 0.75rem;">10:31</div>
+</div>
+
+<div id="27:73">
+<div id="27:74" style="margin-top: 0; margin-bottom: 0.5rem; margin-left: 0.25rem; line-height: 1.33333; color: color-mix( in oklab , #fff 50% , transparent ); font-size: 0.75rem;">建议追问</div>
+<button id="27:75" class="hover:bg-[#4ECDC4]/20" style="background-color: color-mix( in oklab , #4ECDC4 10% , transparent ); text-align: left; width: 100%; max-width: 280px; margin-top: 0; margin-bottom: 0.5rem; padding-top: 0.5rem; padding-right: 0.5rem; padding-bottom: 0.5rem; padding-left: 0.5rem; border-top-left-radius: 0.5rem; border-top-right-radius: 0.5rem; border-bottom-right-radius: 0.5rem; border-bottom-left-radius: 0.5rem;">
+<p id="27:76" style="line-height: 1.42857; color: rgba(78, 205, 196, 1); font-size: 0.875rem;">哪个品类的增长率最高？</p>
+</button>
+<button id="27:77" class="hover:bg-[#4ECDC4]/20" style="background-color: color-mix( in oklab , #4ECDC4 10% , transparent ); text-align: left; width: 100%; max-width: 280px; padding-top: 0.5rem; padding-right: 0.5rem; padding-bottom: 0.5rem; padding-left: 0.5rem; border-top-left-radius: 0.5rem; border-top-right-radius: 0.5rem; border-bottom-right-radius: 0.5rem; border-bottom-left-radius: 0.5rem;">
+<p id="27:78" style="line-height: 1.42857; color: rgba(78, 205, 196, 1); font-size: 0.875rem;">分析电子产品增长的原因</p>
+</button>
+</div>
+</div>
+
+<div id="27:79" style="padding-top: 1rem; padding-right: 1rem; padding-bottom: 1rem; padding-left: 1rem; border-top-color: color-mix( in oklab , #fff 10% , transparent ); border-right-color: color-mix( in oklab , #fff 10% , transparent ); border-bottom-color: color-mix( in oklab , #fff 10% , transparent ); border-left-color: color-mix( in oklab , #fff 10% , transparent ); border-top-style: solid; border-top-width: 1px;">
+<div id="27:80" style="display: flex; align-items: center; margin-bottom: 0.75rem;">
+<button id="27:81" class="hover:bg-[#222930]" style="background-color: color-mix( in oklab , #222930 70% , transparent ); display: flex; justify-content: center; align-items: center; width: 2rem; height: 2rem; margin-right: 0.5rem; margin-left: 0; border-top-left-radius: 0.5rem; border-top-right-radius: 0.5rem; border-bottom-right-radius: 0.5rem; border-bottom-left-radius: 0.5rem;">
+<iconify-icon id="27:82" style="line-height: 1.42857; color: color-mix( in oklab , #fff 70% , transparent ); font-size: 0.875rem;" icon="lucide:paperclip"><template shadowrootmode="open"><style data-style="data-style">:host{display:inline-block;vertical-align:0}span,svg{display:block;margin:auto}</style></template></iconify-icon>
+</button>
+<button id="27:83" class="hover:bg-[#222930]" style="background-color: color-mix( in oklab , #222930 70% , transparent ); display: flex; justify-content: center; align-items: center; width: 2rem; height: 2rem; margin-right: 0.5rem; margin-left: 0; border-top-left-radius: 0.5rem; border-top-right-radius: 0.5rem; border-bottom-right-radius: 0.5rem; border-bottom-left-radius: 0.5rem;">
+<iconify-icon id="27:84" style="line-height: 1.42857; color: color-mix( in oklab , #fff 70% , transparent ); font-size: 0.875rem;" icon="lucide:database"><template shadowrootmode="open"><style data-style="data-style">:host{display:inline-block;vertical-align:0}span,svg{display:block;margin:auto}</style></template></iconify-icon>
+</button>
+<button id="27:85" class="hover:bg-[#222930]" style="background-color: color-mix( in oklab , #222930 70% , transparent ); display: flex; justify-content: center; align-items: center; width: 2rem; height: 2rem; border-top-left-radius: 0.5rem; border-top-right-radius: 0.5rem; border-bottom-right-radius: 0.5rem; border-bottom-left-radius: 0.5rem;">
+<iconify-icon id="27:86" style="line-height: 1.42857; color: color-mix( in oklab , #fff 70% , transparent ); font-size: 0.875rem;" icon="lucide:template"><template shadowrootmode="open"><style data-style="data-style">:host{display:inline-block;vertical-align:0}span,svg{display:block;margin:auto}</style></template></iconify-icon>
+</button>
+</div>
+<div id="27:87" style="position: relative;">
+<textarea id="27:88" class="focus:border-[#4ECDC4] focus:outline-none" style="background-color: color-mix( in oklab , #222930 70% , transparent ); width: 100%; height: 5rem; padding-top: 0.75rem; padding-right: 0.75rem; padding-bottom: 0.75rem; padding-left: 0.75rem; line-height: 1.42857; color: rgba(255, 255, 255, 1); border-top-color: color-mix( in oklab , #fff 10% , transparent ); border-right-color: color-mix( in oklab , #fff 10% , transparent ); border-bottom-color: color-mix( in oklab , #fff 10% , transparent ); border-left-color: color-mix( in oklab , #fff 10% , transparent ); border-top-style: solid; border-right-style: solid; border-bottom-style: solid; border-left-style: solid; border-top-width: 1px; border-right-width: 1px; border-bottom-width: 1px; border-left-width: 1px; border-top-left-radius: 0.5rem; border-top-right-radius: 0.5rem; border-bottom-right-radius: 0.5rem; border-bottom-left-radius: 0.5rem; font-size: 0.875rem;" placeholder="请输入您的数据分析问题..."></textarea>
+<div id="27:89" style="display: flex; position: absolute; right: 0.5rem; bottom: 0.5rem; align-items: center;">
+<span id="27:90" style="margin-right: 0.5rem; margin-left: 0; line-height: 1.33333; color: color-mix( in oklab , #fff 30% , transparent ); font-size: 0.75rem;">Ctrl+Enter</span>
+<button id="27:91" class="hover:bg-[#3AADA0]" style="background-color: rgba(78, 205, 196, 1); display: flex; justify-content: center; align-items: center; width: 2rem; height: 2rem; border-top-left-radius: 0.5rem; border-top-right-radius: 0.5rem; border-bottom-right-radius: 0.5rem; border-bottom-left-radius: 0.5rem;">
+<iconify-icon id="27:92" style="line-height: 1.42857; color: rgba(255, 255, 255, 1); font-size: 0.875rem;" icon="lucide:send"><template shadowrootmode="open"><style data-style="data-style">:host{display:inline-block;vertical-align:0}span,svg{display:block;margin:auto}</style></template></iconify-icon>
+</button>
+</div>
+</div>
+</div>
+</div>
+
+<div id="27:93" style="background-color: hsla( 210 , 25% , 10% , 1 ); display: flex; flex-direction: column; flex-grow: 1; flex-shrink: 1; flex-basis: 0%;">
+
+<div id="27:94" style="background-color: color-mix( in oklab , #222930 30% , transparent ); display: flex; align-items: center; height: 3.5rem; padding-right: 1.5rem; padding-left: 1.5rem; border-top-color: color-mix( in oklab , #fff 10% , transparent ); border-right-color: color-mix( in oklab , #fff 10% , transparent ); border-bottom-color: color-mix( in oklab , #fff 10% , transparent ); border-left-color: color-mix( in oklab , #fff 10% , transparent ); border-bottom-style: solid; border-bottom-width: 1px;">
+<div id="27:95" style="display: flex; align-items: center;">
+<div id="27:96" style="display: flex; align-items: center; margin-right: 1rem; margin-left: 0;">
+<span id="27:97" style="margin-right: 0.5rem; margin-left: 0; line-height: 1.42857; color: color-mix( in oklab , #fff 70% , transparent ); font-size: 0.875rem;">图表类型:</span>
+<select id="27:98" class="focus:border-[#4ECDC4] focus:outline-none" style="background-color: color-mix( in oklab , #222930 70% , transparent ); padding-top: 0.25rem; padding-right: 0.75rem; padding-bottom: 0.25rem; padding-left: 0.75rem; line-height: 1.42857; color: rgba(255, 255, 255, 1); border-top-color: color-mix( in oklab , #fff 10% , transparent ); border-right-color: color-mix( in oklab , #fff 10% , transparent ); border-bottom-color: color-mix( in oklab , #fff 10% , transparent ); border-left-color: color-mix( in oklab , #fff 10% , transparent ); border-top-style: solid; border-right-style: solid; border-bottom-style: solid; border-left-style: solid; border-top-width: 1px; border-right-width: 1px; border-bottom-width: 1px; border-left-width: 1px; border-top-left-radius: 0.5rem; border-top-right-radius: 0.5rem; border-bottom-right-radius: 0.5rem; border-bottom-left-radius: 0.5rem; font-size: 0.875rem;">
+<option id="27:99">柱状图</option>
+<option id="27:100">折线图</option>
+<option id="27:101">饼图</option>
+<option id="27:102">散点图</option>
+</select>
+</div>
+<div id="27:103" style="display: flex; align-items: center;">
+<span id="27:104" style="margin-right: 0.5rem; margin-left: 0; line-height: 1.42857; color: color-mix( in oklab , #fff 70% , transparent ); font-size: 0.875rem;">主题:</span>
+<div id="27:105" style="display: flex;">
+<div id="27:106" style="background-color: rgba(78, 205, 196, 1); width: 1.5rem; height: 1.5rem; margin-right: 0.25rem; margin-left: 0; border-top-color: color-mix( in oklab , #fff 50% , transparent ); border-right-color: color-mix( in oklab , #fff 50% , transparent ); border-bottom-color: color-mix( in oklab , #fff 50% , transparent ); border-left-color: color-mix( in oklab , #fff 50% , transparent ); border-top-style: solid; border-right-style: solid; border-bottom-style: solid; border-left-style: solid; border-top-width: 2px; border-right-width: 2px; border-bottom-width: 2px; border-left-width: 2px; border-top-left-radius: 0.25rem; border-top-right-radius: 0.25rem; border-bottom-right-radius: 0.25rem; border-bottom-left-radius: 0.25rem;"></div>
+<div id="27:107" style="background-color: rgba(140, 147, 163, 1); width: 1.5rem; height: 1.5rem; margin-right: 0.25rem; margin-left: 0; border-top-color: color-mix( in oklab , #fff 20% , transparent ); border-right-color: color-mix( in oklab , #fff 20% , transparent ); border-bottom-color: color-mix( in oklab , #fff 20% , transparent ); border-left-color: color-mix( in oklab , #fff 20% , transparent ); border-top-style: solid; border-right-style: solid; border-bottom-style: solid; border-left-style: solid; border-top-width: 1px; border-right-width: 1px; border-bottom-width: 1px; border-left-width: 1px; border-top-left-radius: 0.25rem; border-top-right-radius: 0.25rem; border-bottom-right-radius: 0.25rem; border-bottom-left-radius: 0.25rem;"></div>
+<div id="27:108" style="background-color: rgba(43, 140, 131, 1); width: 1.5rem; height: 1.5rem; border-top-color: color-mix( in oklab , #fff 20% , transparent ); border-right-color: color-mix( in oklab , #fff 20% , transparent ); border-bottom-color: color-mix( in oklab , #fff 20% , transparent ); border-left-color: color-mix( in oklab , #fff 20% , transparent ); border-top-style: solid; border-right-style: solid; border-bottom-style: solid; border-left-style: solid; border-top-width: 1px; border-right-width: 1px; border-bottom-width: 1px; border-left-width: 1px; border-top-left-radius: 0.25rem; border-top-right-radius: 0.25rem; border-bottom-right-radius: 0.25rem; border-bottom-left-radius: 0.25rem;"></div>
+</div>
+</div>
+</div>
+<div id="27:109" style="display: flex; align-items: center; margin-left: auto;">
+<button id="27:110" class="hover:bg-[#222930]" style="background-color: color-mix( in oklab , #222930 70% , transparent ); display: flex; justify-content: center; align-items: center; width: 2rem; height: 2rem; margin-right: 0.75rem; margin-left: 0; border-top-left-radius: 0.5rem; border-top-right-radius: 0.5rem; border-bottom-right-radius: 0.5rem; border-bottom-left-radius: 0.5rem;">
+<iconify-icon id="27:111" style="line-height: 1.42857; color: color-mix( in oklab , #fff 70% , transparent ); font-size: 0.875rem;" icon="lucide:download"><template shadowrootmode="open"><style data-style="data-style">:host{display:inline-block;vertical-align:0}span,svg{display:block;margin:auto}</style></template></iconify-icon>
+</button>
+<button id="27:112" class="hover:bg-[#222930]" style="background-color: color-mix( in oklab , #222930 70% , transparent ); display: flex; justify-content: center; align-items: center; width: 2rem; height: 2rem; border-top-left-radius: 0.5rem; border-top-right-radius: 0.5rem; border-bottom-right-radius: 0.5rem; border-bottom-left-radius: 0.5rem;">
+<iconify-icon id="27:113" style="line-height: 1.42857; color: color-mix( in oklab , #fff 70% , transparent ); font-size: 0.875rem;" icon="lucide:maximize-2"><template shadowrootmode="open"><style data-style="data-style">:host{display:inline-block;vertical-align:0}span,svg{display:block;margin:auto}</style></template></iconify-icon>
+</button>
+</div>
+</div>
+
+<div id="27:114" style="flex-grow: 1; flex-shrink: 1; flex-basis: 0%; padding-top: 1.5rem; padding-right: 1.5rem; padding-bottom: 1.5rem; padding-left: 1.5rem;">
+<div id="27:115" style="background-color: color-mix( in oklab , #222930 30% , transparent ); width: 100%; height: 100%; padding-top: 1.5rem; padding-right: 1.5rem; padding-bottom: 1.5rem; padding-left: 1.5rem; border-top-color: color-mix( in oklab , #fff 10% , transparent ); border-right-color: color-mix( in oklab , #fff 10% , transparent ); border-bottom-color: color-mix( in oklab , #fff 10% , transparent ); border-left-color: color-mix( in oklab , #fff 10% , transparent ); border-top-style: solid; border-right-style: solid; border-bottom-style: solid; border-left-style: solid; border-top-width: 1px; border-right-width: 1px; border-bottom-width: 1px; border-left-width: 1px; border-top-left-radius: 0.75rem; border-top-right-radius: 0.75rem; border-bottom-right-radius: 0.75rem; border-bottom-left-radius: 0.75rem;">
+<div id="27:116" style="display: flex; justify-content: center; align-items: center; width: 100%; height: 100%;">
+<img id="27:117" class="slot" style="width: 800px; height: 500px; max-width: 100%;" alt="description: {
+                        &quot;grid&quot;: {
+                            &quot;top&quot;: 60,
+                            &quot;right&quot;: 40,
+                            &quot;bottom&quot;: 60,
+                            &quot;left&quot;: 80,
+                            &quot;containLabel&quot;: true
+                        },
+                        &quot;xAxis&quot;: {
+                            &quot;type&quot;: &quot;category&quot;,
+                            &quot;data&quot;: [&quot;电子产品&quot;, &quot;服装&quot;, &quot;家居用品&quot;, &quot;运动户外&quot;, &quot;图书&quot;, &quot;美妆个护&quot;],
+                            &quot;axisLine&quot;: {
+                                &quot;lineStyle&quot;: {
+                                    &quot;color&quot;: &quot;rgba(255,255,255,0.2)&quot;
+                                }
+                            },
+                            &quot;axisLabel&quot;: {
+                                &quot;color&quot;: &quot;rgba(255,255,255,0.7)&quot;,
+                                &quot;fontSize&quot;: 12
+                            }
+                        },
+                        &quot;yAxis&quot;: {
+                            &quot;type&quot;: &quot;value&quot;,
+                            &quot;axisLine&quot;: {
+                                &quot;show&quot;: false
+                            },
+                            &quot;axisTick&quot;: {
+                                &quot;show&quot;: false
+                            },
+                            &quot;axisLabel&quot;: {
+                                &quot;color&quot;: &quot;rgba(255,255,255,0.7)&quot;,
+                                &quot;fontSize&quot;: 12,
+                                &quot;formatter&quot;: &quot;{value}万&quot;
+                            },
+                            &quot;splitLine&quot;: {
+                                &quot;lineStyle&quot;: {
+                                    &quot;color&quot;: &quot;rgba(255,255,255,0.1)&quot;
+                                }
+                            }
+                        },
+                        &quot;series&quot;: [
+                            {
+                                &quot;name&quot;: &quot;销售额&quot;,
+                                &quot;type&quot;: &quot;bar&quot;,
+                                &quot;data&quot;: [850, 520, 380, 290, 180, 240],
+                                &quot;itemStyle&quot;: {
+                                    &quot;color&quot;: &quot;#4ECDC4&quot;,
+                                    &quot;borderRadius&quot;: [4, 4, 0, 0]
+                                },
+                                &quot;emphasis&quot;: {
+                                    &quot;itemStyle&quot;: {
+                                        &quot;color&quot;: &quot;#6ED5D0&quot;
+                                    }
+                                }
+                            }
+                        ],
+                        &quot;tooltip&quot;: {
+                            &quot;trigger&quot;: &quot;axis&quot;,
+                            &quot;backgroundColor&quot;: &quot;rgba(34,41,48,0.95)&quot;,
+                            &quot;borderColor&quot;: &quot;rgba(255,255,255,0.1)&quot;,
+                            &quot;textStyle&quot;: {
+                                &quot;color&quot;: &quot;#ffffff&quot;
+                            }
+                        }
+                    }, width: 800px, height: 500px" src="https://static.paraflowcontent.com/public/resource/image/76b75f58-13ad-4974-9df2-0793ce1e5745.svg" placeholder="https://via.placeholder.com/800x500" width="800px" height="500px">
+</div>
+</div>
+</div>
+
+<div id="27:118" style="display: flex; align-items: center; height: 4rem; padding-right: 1.5rem; padding-left: 1.5rem; border-top-color: color-mix( in oklab , #fff 10% , transparent ); border-right-color: color-mix( in oklab , #fff 10% , transparent ); border-bottom-color: color-mix( in oklab , #fff 10% , transparent ); border-left-color: color-mix( in oklab , #fff 10% , transparent ); border-top-style: solid; border-top-width: 1px;">
+<div id="27:119" style="display: flex; align-items: center;">
+<span id="27:120" style="margin-right: 0.75rem; margin-left: 0; line-height: 1.42857; color: color-mix( in oklab , #fff 70% , transparent ); font-size: 0.875rem;">相关图表:</span>
+<div id="27:121" style="display: flex;">
+<div id="27:122" style="background-color: color-mix( in oklab , #4ECDC4 20% , transparent ); width: 3rem; height: 2rem; margin-right: 0.5rem; margin-left: 0; border-top-color: rgba(78, 205, 196, 1); border-right-color: rgba(78, 205, 196, 1); border-bottom-color: rgba(78, 205, 196, 1); border-left-color: rgba(78, 205, 196, 1); border-top-style: solid; border-right-style: solid; border-bottom-style: solid; border-left-style: solid; border-top-width: 2px; border-right-width: 2px; border-bottom-width: 2px; border-left-width: 2px; border-top-left-radius: 0.25rem; border-top-right-radius: 0.25rem; border-bottom-right-radius: 0.25rem; border-bottom-left-radius: 0.25rem;"></div>
+<div id="27:123" class="hover:border-white/40" style="background-color: color-mix( in oklab , #222930 70% , transparent ); width: 3rem; height: 2rem; margin-right: 0.5rem; margin-left: 0; border-top-color: color-mix( in oklab , #fff 20% , transparent ); border-right-color: color-mix( in oklab , #fff 20% , transparent ); border-bottom-color: color-mix( in oklab , #fff 20% , transparent ); border-left-color: color-mix( in oklab , #fff 20% , transparent ); border-top-style: solid; border-right-style: solid; border-bottom-style: solid; border-left-style: solid; border-top-width: 1px; border-right-width: 1px; border-bottom-width: 1px; border-left-width: 1px; border-top-left-radius: 0.25rem; border-top-right-radius: 0.25rem; border-bottom-right-radius: 0.25rem; border-bottom-left-radius: 0.25rem;"></div>
+<div id="27:124" class="hover:border-white/40" style="background-color: color-mix( in oklab , #222930 70% , transparent ); width: 3rem; height: 2rem; border-top-color: color-mix( in oklab , #fff 20% , transparent ); border-right-color: color-mix( in oklab , #fff 20% , transparent ); border-bottom-color: color-mix( in oklab , #fff 20% , transparent ); border-left-color: color-mix( in oklab , #fff 20% , transparent ); border-top-style: solid; border-right-style: solid; border-bottom-style: solid; border-left-style: solid; border-top-width: 1px; border-right-width: 1px; border-bottom-width: 1px; border-left-width: 1px; border-top-left-radius: 0.25rem; border-top-right-radius: 0.25rem; border-bottom-right-radius: 0.25rem; border-bottom-left-radius: 0.25rem;"></div>
+</div>
+</div>
+</div>
+</div>
+
+<div id="27:125" style="background-color: color-mix( in oklab , #222930 50% , transparent ); display: flex; flex-direction: column; width: 20rem; border-top-color: color-mix( in oklab , #fff 10% , transparent ); border-right-color: color-mix( in oklab , #fff 10% , transparent ); border-bottom-color: color-mix( in oklab , #fff 10% , transparent ); border-left-color: color-mix( in oklab , #fff 10% , transparent ); border-left-style: solid; border-left-width: 1px;">
+
+<div id="27:126" style="display: flex; height: 3.5rem; border-top-color: color-mix( in oklab , #fff 10% , transparent ); border-right-color: color-mix( in oklab , #fff 10% , transparent ); border-bottom-color: color-mix( in oklab , #fff 10% , transparent ); border-left-color: color-mix( in oklab , #fff 10% , transparent ); border-bottom-style: solid; border-bottom-width: 1px;">
+<button id="27:127" style="display: flex; flex-grow: 1; flex-shrink: 1; flex-basis: 0%; justify-content: center; align-items: center; line-height: 1.42857; color: rgba(78, 205, 196, 1); border-top-color: rgba(78, 205, 196, 1); border-right-color: rgba(78, 205, 196, 1); border-bottom-color: rgba(78, 205, 196, 1); border-left-color: rgba(78, 205, 196, 1); border-bottom-style: solid; border-bottom-width: 2px; font-size: 0.875rem; font-weight: 500;">
+<span id="27:128">数据视图</span>
+</button>
+<button id="27:129" class="hover:text-white/90" style="display: flex; flex-grow: 1; flex-shrink: 1; flex-basis: 0%; justify-content: center; align-items: center; line-height: 1.42857; color: color-mix( in oklab , #fff 70% , transparent ); font-size: 0.875rem; font-weight: 500;">
+<span id="27:130">分析过程</span>
+</button>
+<button id="27:131" class="hover:text-white/90" style="display: flex; flex-grow: 1; flex-shrink: 1; flex-basis: 0%; justify-content: center; align-items: center; line-height: 1.42857; color: color-mix( in oklab , #fff 70% , transparent ); font-size: 0.875rem; font-weight: 500;">
+<span id="27:132">洞察摘要</span>
+</button>
+</div>
+
+<div id="27:133" style="overflow-y: auto; flex-grow: 1; flex-shrink: 1; flex-basis: 0%; padding-top: 1rem; padding-right: 1rem; padding-bottom: 1rem; padding-left: 1rem;">
+
+<div id="27:134" style="margin-bottom: 1.5rem;">
+<h3 id="27:135" style="margin-top: 0; margin-bottom: 0.75rem; line-height: 1.42857; color: color-mix( in oklab , #fff 90% , transparent ); font-size: 0.875rem; font-weight: 500;">关键指标</h3>
+<div id="27:136" style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 0.75rem; column-gap: 0.75rem;">
+<div id="27:137" style="background-color: color-mix( in oklab , #222930 70% , transparent ); padding-top: 0.75rem; padding-right: 0.75rem; padding-bottom: 0.75rem; padding-left: 0.75rem; border-top-left-radius: 0.5rem; border-top-right-radius: 0.5rem; border-bottom-right-radius: 0.5rem; border-bottom-left-radius: 0.5rem;">
+<div id="27:138" style="margin-bottom: 0.25rem; line-height: 1.33333; color: color-mix( in oklab , #fff 50% , transparent ); font-size: 0.75rem;">总销售额</div>
+<div id="27:139" style="line-height: 1.55556; color: rgba(255, 255, 255, 1); font-size: 1.125rem; font-weight: 600;">2,460万</div>
+<div id="27:140" style="display: flex; align-items: center; margin-top: 0.25rem;">
+<iconify-icon id="27:141" style="margin-right: 0.25rem; line-height: 1.33333; color: rgba(56, 211, 154, 1); font-size: 0.75rem;" icon="lucide:trending-up"><template shadowrootmode="open"><style data-style="data-style">:host{display:inline-block;vertical-align:0}span,svg{display:block;margin:auto}</style></template></iconify-icon>
+<span id="27:142" style="line-height: 1.33333; color: rgba(56, 211, 154, 1); font-size: 0.75rem;">+12.5%</span>
+</div>
+</div>
+<div id="27:143" style="background-color: color-mix( in oklab , #222930 70% , transparent ); padding-top: 0.75rem; padding-right: 0.75rem; padding-bottom: 0.75rem; padding-left: 0.75rem; border-top-left-radius: 0.5rem; border-top-right-radius: 0.5rem; border-bottom-right-radius: 0.5rem; border-bottom-left-radius: 0.5rem;">
+<div id="27:144" style="margin-bottom: 0.25rem; line-height: 1.33333; color: color-mix( in oklab , #fff 50% , transparent ); font-size: 0.75rem;">平均值</div>
+<div id="27:145" style="line-height: 1.55556; color: rgba(255, 255, 255, 1); font-size: 1.125rem; font-weight: 600;">410万</div>
+<div id="27:146" style="display: flex; align-items: center; margin-top: 0.25rem;">
+<iconify-icon id="27:147" style="margin-right: 0.25rem; line-height: 1.33333; color: rgba(56, 211, 154, 1); font-size: 0.75rem;" icon="lucide:trending-up"><template shadowrootmode="open"><style data-style="data-style">:host{display:inline-block;vertical-align:0}span,svg{display:block;margin:auto}</style></template></iconify-icon>
+<span id="27:148" style="line-height: 1.33333; color: rgba(56, 211, 154, 1); font-size: 0.75rem;">+8.2%</span>
+</div>
+</div>
+</div>
+</div>
+
+<div id="27:149" style="overflow-x: hidden; overflow-y: hidden; background-color: color-mix( in oklab , #222930 70% , transparent ); border-top-left-radius: 0.5rem; border-top-right-radius: 0.5rem; border-bottom-right-radius: 0.5rem; border-bottom-left-radius: 0.5rem;">
+<div id="27:150" style="padding-top: 0.75rem; padding-right: 0.75rem; padding-bottom: 0.75rem; padding-left: 0.75rem; border-top-color: color-mix( in oklab , #fff 10% , transparent ); border-right-color: color-mix( in oklab , #fff 10% , transparent ); border-bottom-color: color-mix( in oklab , #fff 10% , transparent ); border-left-color: color-mix( in oklab , #fff 10% , transparent ); border-bottom-style: solid; border-bottom-width: 1px;">
+<h3 id="27:151" style="line-height: 1.42857; color: color-mix( in oklab , #fff 90% , transparent ); font-size: 0.875rem; font-weight: 500;">数据表格</h3>
+</div>
+<div id="27:152" style="overflow-x: auto;">
+<table id="27:153" style="width: 100%;">
+<thead id="27:154">
+<tr id="27:155" style="background-color: color-mix( in oklab , #4ECDC4 10% , transparent );">
+<th id="27:156" style="text-align: left; padding-top: 0.5rem; padding-right: 0.75rem; padding-bottom: 0.5rem; padding-left: 0.75rem; line-height: 1.33333; color: color-mix( in oklab , #fff 70% , transparent ); font-size: 0.75rem; font-weight: 500;">品类</th>
+<th id="27:157" style="text-align: left; padding-top: 0.5rem; padding-right: 0.75rem; padding-bottom: 0.5rem; padding-left: 0.75rem; line-height: 1.33333; color: color-mix( in oklab , #fff 70% , transparent ); font-size: 0.75rem; font-weight: 500;">销售额</th>
+</tr>
+</thead>
+<tbody id="27:158">
+<tr id="27:159" style="border-top-color: color-mix( in oklab , #fff 5% , transparent ); border-right-color: color-mix( in oklab , #fff 5% , transparent ); border-bottom-color: color-mix( in oklab , #fff 5% , transparent ); border-left-color: color-mix( in oklab , #fff 5% , transparent ); border-bottom-style: solid; border-bottom-width: 1px;">
+<td id="27:160" style="padding-top: 0.5rem; padding-right: 0.75rem; padding-bottom: 0.5rem; padding-left: 0.75rem; line-height: 1.42857; color: color-mix( in oklab , #fff 90% , transparent ); font-size: 0.875rem;">电子产品</td>
+<td id="27:161" style="padding-top: 0.5rem; padding-right: 0.75rem; padding-bottom: 0.5rem; padding-left: 0.75rem; line-height: 1.42857; color: color-mix( in oklab , #fff 90% , transparent ); font-size: 0.875rem;">850万</td>
+</tr>
+<tr id="27:162" style="border-top-color: color-mix( in oklab , #fff 5% , transparent ); border-right-color: color-mix( in oklab , #fff 5% , transparent ); border-bottom-color: color-mix( in oklab , #fff 5% , transparent ); border-left-color: color-mix( in oklab , #fff 5% , transparent ); border-bottom-style: solid; border-bottom-width: 1px;">
+<td id="27:163" style="padding-top: 0.5rem; padding-right: 0.75rem; padding-bottom: 0.5rem; padding-left: 0.75rem; line-height: 1.42857; color: color-mix( in oklab , #fff 90% , transparent ); font-size: 0.875rem;">服装</td>
+<td id="27:164" style="padding-top: 0.5rem; padding-right: 0.75rem; padding-bottom: 0.5rem; padding-left: 0.75rem; line-height: 1.42857; color: color-mix( in oklab , #fff 90% , transparent ); font-size: 0.875rem;">520万</td>
+</tr>
+<tr id="27:165" style="border-top-color: color-mix( in oklab , #fff 5% , transparent ); border-right-color: color-mix( in oklab , #fff 5% , transparent ); border-bottom-color: color-mix( in oklab , #fff 5% , transparent ); border-left-color: color-mix( in oklab , #fff 5% , transparent ); border-bottom-style: solid; border-bottom-width: 1px;">
+<td id="27:166" style="padding-top: 0.5rem; padding-right: 0.75rem; padding-bottom: 0.5rem; padding-left: 0.75rem; line-height: 1.42857; color: color-mix( in oklab , #fff 90% , transparent ); font-size: 0.875rem;">家居用品</td>
+<td id="27:167" style="padding-top: 0.5rem; padding-right: 0.75rem; padding-bottom: 0.5rem; padding-left: 0.75rem; line-height: 1.42857; color: color-mix( in oklab , #fff 90% , transparent ); font-size: 0.875rem;">380万</td>
+</tr>
+<tr id="27:168" style="border-top-color: color-mix( in oklab , #fff 5% , transparent ); border-right-color: color-mix( in oklab , #fff 5% , transparent ); border-bottom-color: color-mix( in oklab , #fff 5% , transparent ); border-left-color: color-mix( in oklab , #fff 5% , transparent ); border-bottom-style: solid; border-bottom-width: 1px;">
+<td id="27:169" style="padding-top: 0.5rem; padding-right: 0.75rem; padding-bottom: 0.5rem; padding-left: 0.75rem; line-height: 1.42857; color: color-mix( in oklab , #fff 90% , transparent ); font-size: 0.875rem;">运动户外</td>
+<td id="27:170" style="padding-top: 0.5rem; padding-right: 0.75rem; padding-bottom: 0.5rem; padding-left: 0.75rem; line-height: 1.42857; color: color-mix( in oklab , #fff 90% , transparent ); font-size: 0.875rem;">290万</td>
+</tr>
+<tr id="27:171" style="border-top-color: color-mix( in oklab , #fff 5% , transparent ); border-right-color: color-mix( in oklab , #fff 5% , transparent ); border-bottom-color: color-mix( in oklab , #fff 5% , transparent ); border-left-color: color-mix( in oklab , #fff 5% , transparent ); border-bottom-style: solid; border-bottom-width: 1px;">
+<td id="27:172" style="padding-top: 0.5rem; padding-right: 0.75rem; padding-bottom: 0.5rem; padding-left: 0.75rem; line-height: 1.42857; color: color-mix( in oklab , #fff 90% , transparent ); font-size: 0.875rem;">美妆个护</td>
+<td id="27:173" style="padding-top: 0.5rem; padding-right: 0.75rem; padding-bottom: 0.5rem; padding-left: 0.75rem; line-height: 1.42857; color: color-mix( in oklab , #fff 90% , transparent ); font-size: 0.875rem;">240万</td>
+</tr>
+<tr id="27:174">
+<td id="27:175" style="padding-top: 0.5rem; padding-right: 0.75rem; padding-bottom: 0.5rem; padding-left: 0.75rem; line-height: 1.42857; color: color-mix( in oklab , #fff 90% , transparent ); font-size: 0.875rem;">图书</td>
+<td id="27:176" style="padding-top: 0.5rem; padding-right: 0.75rem; padding-bottom: 0.5rem; padding-left: 0.75rem; line-height: 1.42857; color: color-mix( in oklab , #fff 90% , transparent ); font-size: 0.875rem;">180万</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="27:177" style="display: flex; justify-content: space-between; align-items: center; padding-top: 0.75rem; padding-right: 0.75rem; padding-bottom: 0.75rem; padding-left: 0.75rem; border-top-color: color-mix( in oklab , #fff 10% , transparent ); border-right-color: color-mix( in oklab , #fff 10% , transparent ); border-bottom-color: color-mix( in oklab , #fff 10% , transparent ); border-left-color: color-mix( in oklab , #fff 10% , transparent ); border-top-style: solid; border-top-width: 1px;">
+<span id="27:178" style="line-height: 1.33333; color: color-mix( in oklab , #fff 50% , transparent ); font-size: 0.75rem;">共6条记录</span>
+<div id="27:179" style="display: flex; align-items: center;">
+<button id="27:180" class="hover:bg-[#222930]" style="background-color: color-mix( in oklab , #222930 70% , transparent ); display: flex; justify-content: center; align-items: center; width: 1.5rem; height: 1.5rem; margin-right: 0.5rem; margin-left: 0; border-top-left-radius: 0.25rem; border-top-right-radius: 0.25rem; border-bottom-right-radius: 0.25rem; border-bottom-left-radius: 0.25rem;">
+<iconify-icon id="27:181" style="line-height: 1.33333; color: color-mix( in oklab , #fff 50% , transparent ); font-size: 0.75rem;" icon="lucide:chevron-left"><template shadowrootmode="open"><style data-style="data-style">:host{display:inline-block;vertical-align:0}span,svg{display:block;margin:auto}</style></template></iconify-icon>
+</button>
+<span id="27:182" style="margin-right: 0.5rem; margin-left: 0; line-height: 1.33333; color: color-mix( in oklab , #fff 70% , transparent ); font-size: 0.75rem;">1/1</span>
+<button id="27:183" class="hover:bg-[#222930]" style="background-color: color-mix( in oklab , #222930 70% , transparent ); display: flex; justify-content: center; align-items: center; width: 1.5rem; height: 1.5rem; border-top-left-radius: 0.25rem; border-top-right-radius: 0.25rem; border-bottom-right-radius: 0.25rem; border-bottom-left-radius: 0.25rem;">
+<iconify-icon id="27:184" style="line-height: 1.33333; color: color-mix( in oklab , #fff 50% , transparent ); font-size: 0.75rem;" icon="lucide:chevron-right"><template shadowrootmode="open"><style data-style="data-style">:host{display:inline-block;vertical-align:0}span,svg{display:block;margin:auto}</style></template></iconify-icon>
+</button>
+</div>
+</div>
+</div>
+
+<div id="27:185" style="background-color: color-mix( in oklab , #FDCB6E 10% , transparent ); margin-top: 1rem; padding-top: 0.75rem; padding-right: 0.75rem; padding-bottom: 0.75rem; padding-left: 0.75rem; border-top-color: color-mix( in oklab , #FDCB6E 20% , transparent ); border-right-color: color-mix( in oklab , #FDCB6E 20% , transparent ); border-bottom-color: color-mix( in oklab , #FDCB6E 20% , transparent ); border-left-color: color-mix( in oklab , #FDCB6E 20% , transparent ); border-top-style: solid; border-right-style: solid; border-bottom-style: solid; border-left-style: solid; border-top-width: 1px; border-right-width: 1px; border-bottom-width: 1px; border-left-width: 1px; border-top-left-radius: 0.5rem; border-top-right-radius: 0.5rem; border-bottom-right-radius: 0.5rem; border-bottom-left-radius: 0.5rem;">
+<div id="27:186" style="display: flex; align-items: center; margin-bottom: 0.5rem;">
+<iconify-icon id="27:187" style="margin-right: 0.5rem; line-height: 1.42857; color: rgba(253, 203, 110, 1); font-size: 0.875rem;" icon="lucide:alert-circle"><template shadowrootmode="open"><style data-style="data-style">:host{display:inline-block;vertical-align:0}span,svg{display:block;margin:auto}</style></template></iconify-icon>
+<span id="27:188" style="line-height: 1.42857; color: color-mix( in oklab , #fff 90% , transparent ); font-size: 0.875rem; font-weight: 500;">数据质量提示</span>
+</div>
+<p id="27:189" style="line-height: 1.33333; color: color-mix( in oklab , #fff 70% , transparent ); font-size: 0.75rem;">数据完整性良好，最后更新时间：2024-01-15 14:30</p>
+</div>
+</div>
+</div>
+</div>
+
+
+
+    
+    </body></html>
