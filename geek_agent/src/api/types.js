@@ -1,0 +1,2 @@
+// OpenCode API Types
+export {};
