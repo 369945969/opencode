@@ -221,6 +221,7 @@ const Workspace: Component<WorkspaceProps> = (props) => {
   const [dragStart, setDragStart] = createSignal({ x: 0, y: 0 })
   const [activeTool, setActiveTool] = createSignal<"select" | "hand">("select")
   const [isFullScreen, setIsFullScreen] = createSignal(false)
+  const [theme, setTheme] = createSignal<"dark" | "light">("dark")
 
   // New State for Folder/File View
   const [currentView, setCurrentView] = createSignal<"canvas" | "folder" | "file">("canvas")
@@ -316,17 +317,41 @@ const Workspace: Component<WorkspaceProps> = (props) => {
 
   const [previewFile, setPreviewFile] = createSignal<any | null>(null)
   const [editValue, setEditValue] = createSignal("")
+  const [toast, setToast] = createSignal<{ message: string } | null>(null)
   const [selectedHtml, setSelectedHtml] = createSignal<string | null>(null)
   const [sessionId, setSessionId] = createSignal("")
 
   onMount(() => {
+    try {
+      const stored = localStorage.getItem("workspace_theme")
+      if (stored === "light" || stored === "dark") setTheme(stored)
+    } catch {}
+  })
+
+  createEffect(() => {
+    try {
+      localStorage.setItem("workspace_theme", theme())
+    } catch {}
+  })
+
+  onMount(() => {
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent).detail as "dark" | "light" | undefined
+      if (detail !== "dark" && detail !== "light") return
+      setTheme(detail)
+    }
+    window.addEventListener("workspace_theme_toggle", handler as EventListener)
+    onCleanup(() => window.removeEventListener("workspace_theme_toggle", handler as EventListener))
+  })
+
+  onMount(() => {
     const handleMessage = (event: MessageEvent) => {
-      if (event.data.type === 'ELEMENT_SELECTED') {
+      if (event.data.type === "ELEMENT_SELECTED") {
         setSelectedHtml(formatHtml(event.data.html))
       }
     }
-    window.addEventListener('message', handleMessage)
-    onCleanup(() => window.removeEventListener('message', handleMessage))
+    window.addEventListener("message", handleMessage)
+    onCleanup(() => window.removeEventListener("message", handleMessage))
   })
 
   onMount(() => {
@@ -377,9 +402,9 @@ const Workspace: Component<WorkspaceProps> = (props) => {
     const makePreview = (text: string) => {
       if (!text) return ""
       const trimmed = text.trim()
-      const lines = trimmed.split("\n").slice(0, 6)
+      const lines = trimmed.split("\n").slice(0, 16)
       const snippet = lines.join("\n")
-      return snippet.length > 300 ? `${snippet.slice(0, 300)}...` : snippet
+      return snippet.length > 800 ? `${snippet.slice(0, 800)}...` : snippet
     }
     const compareName = (a: { name: string }, b: { name: string }) =>
       a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: "base" })
@@ -463,7 +488,11 @@ const Workspace: Component<WorkspaceProps> = (props) => {
       body: JSON.stringify({ path: file.path, content: editValue() }),
     }).catch(() => null)
     if (!res || !res.ok) return
-    setPreviewFile({ ...file, content: editValue() })
+    setPreviewFile(null)
+    setToast({ message: "Markdown 保存成功" })
+    setTimeout(() => {
+      setToast(null)
+    }, 1500)
     const sid = sessionId()
     if (!sid) return
     void loadWorkspaceDocs(sid)
@@ -678,8 +707,18 @@ const Workspace: Component<WorkspaceProps> = (props) => {
     <main
       id="12:31"
       style="flex-basis: 0%; padding: 0.75rem 1rem;"
-      class="overflow-x-hidden overflow-y-hidden flex flex-col grow shrink relative"
+      class={`
+        overflow-x-hidden overflow-y-hidden flex flex-col grow shrink relative
+        ${theme() === "light" ? "bg-[#F5F5FA] text-slate-900" : ""}
+      `}
     >
+      <Show when={toast()}>
+        <div class="pointer-events-none fixed top-4 inset-x-0 flex justify-center z-[1200]">
+          <div class="pointer-events-auto px-4 py-2 rounded-lg bg-[#00F0FF]/10 border border-[#00F0FF]/40 text-xs text-[#E8F0FF] shadow-lg">
+            {toast()!.message}
+          </div>
+        </div>
+      </Show>
       <Show when={currentView() !== "canvas"}>
         <div id="12:32" class="flex justify-between items-center mb-3 h-10 relative">
           <div class="flex items-center gap-x-4">
@@ -743,10 +782,22 @@ const Workspace: Component<WorkspaceProps> = (props) => {
                 class="absolute inset-0 overflow-hidden flex"
               >
                 <div class="w-full h-full grid grid-cols-2 grid-rows-2 gap-4">
-                  <div class="h-full border border-[#00F0FF]/20 rounded-2xl bg-[#0F1624]/80 p-4 flex flex-col overflow-hidden">
+                  <div
+                    class={
+                      theme() === "light"
+                        ? "h-full border border-slate-200 rounded-2xl bg-white p-4 flex flex-col overflow-hidden shadow-sm"
+                        : "h-full border border-[#00F0FF]/20 rounded-2xl bg-[#0F1624]/80 p-4 flex flex-col overflow-hidden"
+                    }
+                  >
                     <div class="flex items-center justify-between mb-3">
                       <div>
-                        <div class="text-base font-semibold text-[#E8F0FF]">
+                        <div
+                          class={
+                            theme() === "light"
+                              ? "text-base font-semibold text-slate-900"
+                              : "text-base font-semibold text-[#E8F0FF]"
+                          }
+                        >
                           PRD & Architecture
                         </div>
                       </div>
@@ -771,12 +822,28 @@ const Workspace: Component<WorkspaceProps> = (props) => {
                                   e.stopPropagation()
                                   void openDocPreview(doc)
                                 }}
-                                class="min-w-[160px] max-w-[200px] text-left rounded-xl border border-[#00F0FF]/10 bg-[#141829]/80 hover:border-[#00F0FF]/60 hover:bg-[#141829] transition-all px-3 py-2 flex flex-col gap-2"
+                                class={
+                                  theme() === "light"
+                                    ? "min-w-[160px] max-w-[200px] text-left rounded-xl border border-slate-200 bg-white hover:border-slate-400 hover:bg-slate-50 transition-all px-3 py-2 flex flex-col gap-2 shadow-sm"
+                                    : "min-w-[160px] max-w-[200px] text-left rounded-xl border border-[#00F0FF]/10 bg-[#141829]/80 hover:border-[#00F0FF]/60 hover:bg-[#141829] transition-all px-3 py-2 flex flex-col gap-2"
+                                }
                               >
-                                <div class="text-xs font-semibold text-[#E8F0FF] truncate">
+                                <div
+                                  class={
+                                    theme() === "light"
+                                      ? "text-xs font-semibold text-slate-900 truncate"
+                                      : "text-xs font-semibold text-[#E8F0FF] truncate"
+                                  }
+                                >
                                   {doc.name}
                                 </div>
-                                <div class="flex-1 text-[10px] text-[#8A97AA] whitespace-pre-wrap leading-relaxed overflow-hidden">
+                                <div
+                                  class={
+                                    theme() === "light"
+                                      ? "flex-1 text-[10px] text-slate-600 whitespace-pre-wrap leading-relaxed overflow-hidden"
+                                      : "flex-1 text-[10px] text-[#8A97AA] whitespace-pre-wrap leading-relaxed overflow-hidden"
+                                  }
+                                >
                                   {doc.preview}
                                 </div>
                               </button>
@@ -787,10 +854,22 @@ const Workspace: Component<WorkspaceProps> = (props) => {
                     </div>
                   </div>
 
-                  <div class="h-full border border-[#00F0FF]/20 rounded-2xl bg-[#0F1624]/80 p-4 flex flex-col overflow-hidden">
+                  <div
+                    class={
+                      theme() === "light"
+                        ? "h-full border border-slate-200 rounded-2xl bg-white p-4 flex flex-col overflow-hidden shadow-sm"
+                        : "h-full border border-[#00F0FF]/20 rounded-2xl bg-[#0F1624]/80 p-4 flex flex-col overflow-hidden"
+                    }
+                  >
                     <div class="flex items-center justify-between mb-3">
                       <div>
-                        <div class="text-base font-semibold text-[#E8F0FF]">
+                        <div
+                          class={
+                            theme() === "light"
+                              ? "text-base font-semibold text-slate-900"
+                              : "text-base font-semibold text-[#E8F0FF]"
+                          }
+                        >
                           User Stories
                         </div>
                       </div>
@@ -815,12 +894,28 @@ const Workspace: Component<WorkspaceProps> = (props) => {
                                   e.stopPropagation()
                                   void openDocPreview(doc)
                                 }}
-                                class="min-w-[160px] max-w-[200px] text-left rounded-xl border border-[#00F0FF]/10 bg-[#141829]/80 hover:border-[#00F0FF]/60 hover:bg-[#141829] transition-all px-3 py-2 flex flex-col gap-2"
+                                class={
+                                  theme() === "light"
+                                    ? "min-w-[160px] max-w-[200px] text-left rounded-xl border border-slate-200 bg-white hover:border-slate-400 hover:bg-slate-50 transition-all px-3 py-2 flex flex-col gap-2 shadow-sm"
+                                    : "min-w-[160px] max-w-[200px] text-left rounded-xl border border-[#00F0FF]/10 bg-[#141829]/80 hover:border-[#00F0FF]/60 hover:bg-[#141829] transition-all px-3 py-2 flex flex-col gap-2"
+                                }
                               >
-                                <div class="text-xs font-semibold text-[#E8F0FF] truncate">
+                                <div
+                                  class={
+                                    theme() === "light"
+                                      ? "text-xs font-semibold text-slate-900 truncate"
+                                      : "text-xs font-semibold text-[#E8F0FF] truncate"
+                                  }
+                                >
                                   {doc.name}
                                 </div>
-                                <div class="flex-1 text-[10px] text-[#8A97AA] whitespace-pre-wrap leading-relaxed overflow-hidden">
+                                <div
+                                  class={
+                                    theme() === "light"
+                                      ? "flex-1 text-[10px] text-slate-600 whitespace-pre-wrap leading-relaxed overflow-hidden"
+                                      : "flex-1 text-[10px] text-[#8A97AA] whitespace-pre-wrap leading-relaxed overflow-hidden"
+                                  }
+                                >
                                   {doc.preview}
                                 </div>
                               </button>
@@ -831,11 +926,23 @@ const Workspace: Component<WorkspaceProps> = (props) => {
                     </div>
                   </div>
 
-                  <div class="h-full border border-[#00F0FF]/20 rounded-2xl bg-[#0F1624]/80 p-4 flex flex-col overflow-hidden">
+                  <div
+                    class={
+                      theme() === "light"
+                        ? "h-full border border-slate-200 rounded-2xl bg-white p-4 flex flex-col overflow-hidden shadow-sm"
+                        : "h-full border border-[#00F0FF]/20 rounded-2xl bg-[#0F1624]/80 p-4 flex flex-col overflow-hidden"
+                    }
+                  >
                     <div class="flex items-center justify-between mb-3">
                       <div>
-                        <div class="text-base font-semibold text-[#E8F0FF]">
-                          Tokens & Patterns
+                        <div
+                          class={
+                            theme() === "light"
+                              ? "text-base font-semibold text-slate-900"
+                              : "text-base font-semibold text-[#E8F0FF]"
+                          }
+                        >
+                          Flow Logic & Style Guide
                         </div>
                       </div>
                     </div>
@@ -859,12 +966,28 @@ const Workspace: Component<WorkspaceProps> = (props) => {
                                   e.stopPropagation()
                                   void openDocPreview(doc)
                                 }}
-                                class="min-w-[160px] max-w-[200px] text-left rounded-xl border border-[#00F0FF]/10 bg-[#141829]/80 hover:border-[#00F0FF]/60 hover:bg-[#141829] transition-all px-3 py-2 flex flex-col gap-2"
+                                class={
+                                  theme() === "light"
+                                    ? "min-w-[160px] max-w-[200px] text-left rounded-xl border border-slate-200 bg-white hover:border-slate-400 hover:bg-slate-50 transition-all px-3 py-2 flex flex-col gap-2 shadow-sm"
+                                    : "min-w-[160px] max-w-[200px] text-left rounded-xl border border-[#00F0FF]/10 bg-[#141829]/80 hover:border-[#00F0FF]/60 hover:bg-[#141829] transition-all px-3 py-2 flex flex-col gap-2"
+                                }
                               >
-                                <div class="text-xs font-semibold text-[#E8F0FF] truncate">
+                                <div
+                                  class={
+                                    theme() === "light"
+                                      ? "text-xs font-semibold text-slate-900 truncate"
+                                      : "text-xs font-semibold text-[#E8F0FF] truncate"
+                                  }
+                                >
                                   {doc.name}
                                 </div>
-                                <div class="flex-1 text-[10px] text-[#8A97AA] whitespace-pre-wrap leading-relaxed overflow-hidden">
+                                <div
+                                  class={
+                                    theme() === "light"
+                                      ? "flex-1 text-[10px] text-slate-600 whitespace-pre-wrap leading-relaxed overflow-hidden"
+                                      : "flex-1 text-[10px] text-[#8A97AA] whitespace-pre-wrap leading-relaxed overflow-hidden"
+                                  }
+                                >
                                   {doc.preview}
                                 </div>
                               </button>
@@ -875,15 +998,33 @@ const Workspace: Component<WorkspaceProps> = (props) => {
                     </div>
                   </div>
 
-                  <div class="h-full border border-[#00F0FF]/20 rounded-2xl bg-[#0F1624]/80 p-4 flex flex-col overflow-hidden">
+                  <div
+                    class={
+                      theme() === "light"
+                        ? "h-full border border-slate-200 rounded-2xl bg-white p-4 flex flex-col overflow-hidden shadow-sm"
+                        : "h-full border border-[#00F0FF]/20 rounded-2xl bg-[#0F1624]/80 p-4 flex flex-col overflow-hidden"
+                    }
+                  >
                     <div class="flex items-center justify-between mb-3">
                       <div>
-                        <div class="text-base font-semibold text-[#E8F0FF]">
+                        <div
+                          class={
+                            theme() === "light"
+                              ? "text-base font-semibold text-slate-900"
+                              : "text-base font-semibold text-[#E8F0FF]"
+                          }
+                        >
                           HTML Screens
                         </div>
                       </div>
                     </div>
-                    <div class="flex-1 overflow-x-auto overflow-y-hidden rounded-xl bg黑/80 border border-[#00F0FF]/10">
+                    <div
+                      class={
+                        theme() === "light"
+                          ? "flex-1 overflow-x-auto overflow-y-hidden rounded-xl border border-slate-200 bg-slate-50 geek-scroll"
+                          : "flex-1 overflow-x-auto overflow-y-hidden rounded-xl bg-black/80 border border-[#00F0FF]/10 geek-scroll"
+                      }
+                    >
                       <Show
                         when={screenDocs().length}
                         fallback={
@@ -902,10 +1043,20 @@ const Workspace: Component<WorkspaceProps> = (props) => {
                                   e.stopPropagation()
                                   void openDocPreview(doc)
                                 }}
-                                class="group relative flex-none w-[260px] aspect-square rounded-xl border border-[#00F0FF]/20 bg-[#141829]/80 hover:border-[#00F0FF]/60 hover:bg-[#141829] transition-all overflow-hidden"
+                                class={
+                                  theme() === "light"
+                                    ? "group relative flex-none w-[260px] aspect-square rounded-xl border border-slate-200 bg-white hover:border-slate-400 hover:bg-slate-50 transition-all overflow-hidden shadow-sm"
+                                    : "group relative flex-none w-[260px] aspect-square rounded-xl border border-[#00F0FF]/20 bg-[#141829]/80 hover:border-[#00F0FF]/60 hover:bg-[#141829] transition-all overflow-hidden"
+                                }
                               >
                                 <div class="absolute inset-0">
-                                  <div class="w-full h-full bg-black rounded-lg overflow-hidden relative">
+                                  <div
+                                    class={
+                                      theme() === "light"
+                                        ? "w-full h-full bg-white rounded-lg overflow-hidden relative"
+                                        : "w-full h-full bg-black rounded-lg overflow-hidden relative"
+                                    }
+                                  >
                                     <Show when={doc.kind === "html"}>
                                       <iframe
                                         srcdoc={doc.preview}
@@ -913,14 +1064,32 @@ const Workspace: Component<WorkspaceProps> = (props) => {
                                         tabindex="-1"
                                       />
                                     </Show>
-                                    <div class="absolute inset-0 bg-transparent group-hover:bg白/5 transition-colors"></div>
+                                    <div
+                                      class={
+                                        theme() === "light"
+                                          ? "absolute inset-0 bg-transparent group-hover:bg-slate-900/5 transition-colors"
+                                          : "absolute inset-0 bg-transparent group-hover:bg-white/5 transition-colors"
+                                      }
+                                    ></div>
                                   </div>
                                 </div>
                                 <div class="absolute bottom-0 left-0 right-0 px-3 pb-3">
-                                  <div class="text-xs font-semibold text-[#E8F0FF] truncate">
+                                  <div
+                                    class={
+                                      theme() === "light"
+                                        ? "text-xs font-semibold text-slate-900 truncate"
+                                        : "text-xs font-semibold text-[#E8F0FF] truncate"
+                                    }
+                                  >
                                     {doc.name}
                                   </div>
-                                  <div class="text-[10px] text-[#8A97AA] truncate">
+                                  <div
+                                    class={
+                                      theme() === "light"
+                                        ? "text-[10px] text-slate-600 truncate"
+                                        : "text-[10px] text-[#8A97AA] truncate"
+                                    }
+                                  >
                                     点击放大查看原型
                                   </div>
                                 </div>
@@ -937,75 +1106,20 @@ const Workspace: Component<WorkspaceProps> = (props) => {
 
             <Show when={isCanvasOrDesign()}>
               <div class="pointer-events-none absolute inset-0">
-                <div class="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-3 pointer-events-auto">
-                  <Show when={currentView() !== "canvas"}>
-                    <button
-                      onClick={currentView() === "folder" ? backToCanvas : backToFolder}
-                      class="hover:bg-[#00F0FF]/15 hover:shadow-[0_0_12px_rgba(0,240,255,0.25)] flex justify-center items-center w-10 h-10 rounded-lg text-[#00F0FF] bg-[#1A1F3A]/90"
-                    >
-                      <iconify-icon icon="lucide:arrow-left" class="text-xl"></iconify-icon>
-                    </button>
-                  </Show>
-                  <button
-                    id="12:39"
-                    onClick={() => setActiveTool((t) => (t === "select" ? "hand" : "select"))}
-                    class={`hover:bg-[#00F0FF]/15 hover:shadow-[0_0_12px_rgba(0,240,255,0.25)] flex justify-center items-center w-10 h-10 rounded-lg bg-[#1A1F3A]/90 ${
-                      activeTool() === "hand"
-                        ? "bg-[#00F0FF]/20 shadow-[0_0_12px_rgba(0,240,255,0.25)]"
-                        : ""
-                    }`}
-                  >
-                    <div id="12:40" class="bg-transparent flex justify-center items-center w-5 h-5">
-                      <iconify-icon
-                        id="12:41"
-                        style="color: rgba(0, 240, 255, 1);"
-                        icon={activeTool() === "select" ? "lucide:mouse-pointer" : "lucide:hand"}
-                        class="text-base"
-                      ></iconify-icon>
-                    </div>
-                  </button>
+                <div class="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center pointer-events-auto">
                   <button
                     id="12:fullscreen"
                     onClick={toggleFullScreen}
-                    class="hover:bg-[#00F0FF]/15 hover:shadow-[0_0_12px_rgba(0,240,255,0.25)] flex justify-center items-center w-10 h-10 rounded-lg bg-[#1A1F3A]/90"
+                    class={
+                      theme() === "light"
+                        ? "flex justify-center items-center w-10 h-10 rounded-lg border border-slate-200 bg-white hover:border-[#00F0FF] hover:bg-slate-50 hover:shadow-[0_0_12px_rgba(0,240,255,0.25)]"
+                        : "flex justify-center items-center w-10 h-10 rounded-lg bg-[#1A1F3A]/90 hover:bg-[#00F0FF]/10 hover:shadow-[0_0_12px_rgba(0,240,255,0.25)]"
+                    }
                   >
                     <div class="bg-transparent flex justify-center items-center w-5 h-5">
                       <iconify-icon
                         style="color: rgba(0, 240, 255, 1);"
                         icon={isFullScreen() ? "lucide:minimize" : "lucide:maximize"}
-                        class="text-base"
-                      ></iconify-icon>
-                    </div>
-                  </button>
-                </div>
-                <div class="absolute top-3 right-3 flex items-center gap-2 pointer-events-auto">
-                  <span id="12:46" style="color: rgba(138, 151, 170, 1);" class="text-sm">
-                    {Math.round(scale() * 100)}%
-                  </span>
-                  <button
-                    id="12:47"
-                    onClick={zoomIn}
-                    class="hover:bg-[#00F0FF]/15 hover:shadow-[0_0_12px_rgba(0,240,255,0.25)] flex justify-center items-center w-10 h-10 rounded-lg bg-[#1A1F3A]/90"
-                  >
-                    <div id="12:48" class="bg-transparent flex justify-center items-center w-5 h-5">
-                      <iconify-icon
-                        id="12:49"
-                        style="color: rgba(0, 240, 255, 1);"
-                        icon="lucide:zoom-in"
-                        class="text-base"
-                      ></iconify-icon>
-                    </div>
-                  </button>
-                  <button
-                    id="12:50"
-                    onClick={zoomOut}
-                    class="hover:bg-[#00F0FF]/15 hover:shadow-[0_0_12px_rgba(0,240,255,0.25)] flex justify-center items-center w-10 h-10 rounded-lg bg-[#1A1F3A]/90"
-                  >
-                    <div id="12:51" class="bg-transparent flex justify-center items-center w-5 h-5">
-                      <iconify-icon
-                        id="12:52"
-                        style="color: rgba(0, 240, 255, 1);"
-                        icon="lucide:zoom-out"
                         class="text-base"
                       ></iconify-icon>
                     </div>
@@ -1226,16 +1340,7 @@ const Workspace: Component<WorkspaceProps> = (props) => {
           class="fixed inset-0 z-[999] bg-black/80 flex flex-col items-center justify-center animate-fade-in"
           onClick={() => setPreviewFile(null)}
         >
-          <button
-            class="absolute top-6 right-6 p-2 text-white/70 hover:text-white bg-white/10 hover:bg-white/20 rounded-lg transition-colors z-[1000]"
-            onClick={(e) => {
-              e.stopPropagation()
-              setPreviewFile(null)
-            }}
-          >
-            <iconify-icon icon="lucide:x" class="text-2xl" />
-          </button>
-          <div class="relative w-[90%] h-[80%] flex gap-4" onClick={(e) => e.stopPropagation()}>
+          <div class="relative w-[70%] h-[80%] flex gap-4" onClick={(e) => e.stopPropagation()}>
             <Show when={!previewFile()?.kind || previewFile()?.kind === "html"}>
               <div class="flex-1 bg-white rounded-xl overflow-hidden shadow-2xl border border-[#00F0FF]/20">
                 <iframe
@@ -1246,29 +1351,67 @@ const Workspace: Component<WorkspaceProps> = (props) => {
               </div>
             </Show>
             <Show when={previewFile()?.kind === "md"}>
-              <div class="flex-1 flex flex-col bg-[#141829] rounded-xl overflow-hidden shadow-2xl border border-[#00F0FF]/20">
-                <div class="px-6 py-4 border-b border-[#00F0FF]/10 flex items-center justify-between bg-[#050816]/80">
+              <div
+                class={
+                  theme() === "light"
+                    ? "flex-1 flex flex-col bg-white rounded-xl overflow-hidden shadow-2xl border border-slate-200"
+                    : "flex-1 flex flex-col bg-[#141829] rounded-xl overflow-hidden shadow-2xl border border-[#00F0FF]/20"
+                }
+              >
+                <div
+                  class={
+                    theme() === "light"
+                      ? "px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50"
+                      : "px-6 py-4 border-b border-[#00F0FF]/10 flex items-center justify-between bg-[#050816]/80"
+                  }
+                >
                   <div>
-                    <div class="text-sm font-semibold text-[#E8F0FF]">
+                    <div
+                      class={
+                        theme() === "light"
+                          ? "text-sm font-semibold text-slate-900"
+                          : "text-sm font-semibold text-[#E8F0FF]"
+                      }
+                    >
                       编辑 Markdown
                     </div>
-                    <div class="text-xs text-[#8A97AA] mt-1 truncate max-w-md">
+                    <div
+                      class={
+                        theme() === "light"
+                          ? "text-xs text-slate-500 mt-1 truncate max-w-md"
+                          : "text-xs text-[#8A97AA] mt-1 truncate max-w-md"
+                      }
+                    >
                       {previewFile().name}
                     </div>
                   </div>
                 </div>
                 <div class="flex-1 p-6 overflow-auto">
                   <textarea
-                    class="w-full h-full bg-[#050816] border border-[#00F0FF]/15 focus:border-[#00F0FF]/60 outline-none rounded-lg px-4 py-3 text-sm font-mono text-[#E8F0FF] leading-relaxed resize-none"
+                    class={
+                      theme() === "light"
+                        ? "w-full h-full bg-white border border-slate-200 focus:border-slate-400 outline-none rounded-lg px-4 py-3 text-sm font-mono text-slate-900 leading-relaxed resize-none"
+                        : "w-full h-full bg-[#050816] border border-[#00F0FF]/15 focus:border-[#00F0FF]/60 outline-none rounded-lg px-4 py-3 text-sm font-mono text-[#E8F0FF] leading-relaxed resize-none"
+                    }
                     value={editValue()}
                     onInput={(e) => setEditValue(e.currentTarget.value)}
                     spellcheck={false}
                   />
                 </div>
-                <div class="px-6 py-4 border-t border-[#00F0FF]/10 bg-[#050816]/80 flex justify-end gap-3">
+                <div
+                  class={
+                    theme() === "light"
+                      ? "px-6 py-4 border-t border-slate-200 bg-slate-50 flex justify-end gap-3"
+                      : "px-6 py-4 border-t border-[#00F0FF]/10 bg-[#050816]/80 flex justify-end gap-3"
+                  }
+                >
                   <button
                     type="button"
-                    class="px-4 py-2 text-sm rounded-lg border border-transparent text-[#8A97AA] hover:text-[#E8F0FF] hover:bg-white/5 transition-colors"
+                    class={
+                      theme() === "light"
+                        ? "px-4 py-2 text-sm rounded-lg border border-transparent text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors"
+                        : "px-4 py-2 text-sm rounded-lg border border-transparent text-[#8A97AA] hover:text-[#E8F0FF] hover:bg-white/5 transition-colors"
+                    }
                     onClick={(e) => {
                       e.stopPropagation()
                       setPreviewFile(null)
@@ -1278,7 +1421,11 @@ const Workspace: Component<WorkspaceProps> = (props) => {
                   </button>
                   <button
                     type="button"
-                    class="px-4 py-2 text-sm rounded-lg bg-[#00F0FF] text-[#050816] font-medium hover:bg-[#33F2FF] transition-colors"
+                    class={
+                      theme() === "light"
+                        ? "px-4 py-2 text-sm rounded-lg bg-[#0F172A] text-white font-medium hover:bg-[#020617] transition-colors"
+                        : "px-4 py-2 text-sm rounded-lg bg-[#00F0FF] text-[#050816] font-medium hover:bg-[#33F2FF] transition-colors"
+                    }
                     onClick={(e) => {
                       e.stopPropagation()
                       void saveMarkdown()

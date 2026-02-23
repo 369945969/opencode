@@ -163,6 +163,7 @@ type EventPayload = {
 
 const Sidebar: Component<SidebarProps> = (props) => {
   const base = import.meta.env.VITE_PROXY_URL ?? "http://localhost:4097"
+  const [theme, setTheme] = createSignal<"dark" | "light">("dark")
   const [inputHeight, setInputHeight] = createSignal(120)
   const [isDragging, setIsDragging] = createSignal(false)
   const [text, setText] = createSignal("")
@@ -253,6 +254,23 @@ const Sidebar: Component<SidebarProps> = (props) => {
   const setCookie = (key: string, value: string) => {
     document.cookie = `${key}=${encodeURIComponent(value)}; path=/`
   }
+
+  onMount(() => {
+    try {
+      const stored = cookieValue("workspace_theme") || globalThis.localStorage?.getItem?.("workspace_theme") || ""
+      if (stored === "light" || stored === "dark") setTheme(stored)
+    } catch {}
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent).detail as "dark" | "light" | undefined
+      if (detail !== "dark" && detail !== "light") return
+      setTheme(detail)
+      try {
+        setCookie("workspace_theme", detail)
+      } catch {}
+    }
+    window.addEventListener("workspace_theme_toggle", handler as EventListener)
+    onCleanup(() => window.removeEventListener("workspace_theme_toggle", handler as EventListener))
+  })
 
   const loadHistory = () => {
     try {
@@ -1156,8 +1174,16 @@ const Sidebar: Component<SidebarProps> = (props) => {
   return (
     <aside
       id="12:88"
-      style="background: linear-gradient(135deg, rgba(22, 33, 62, 1) 0%, rgba(15, 22, 36, 1) 100%);"
-      class="shrink-0 min-w-fit"
+      class={
+        theme() === "light"
+          ? "shrink-0 min-w-fit bg-[#F3FAFF] border-r border-slate-200 text-slate-900"
+          : "shrink-0 min-w-fit"
+      }
+      style={
+        theme() === "light"
+          ? "background: linear-gradient(180deg, #F8FBFF 0%, #F3FAFF 60%, #EDF5FF 100%);"
+          : "background: linear-gradient(135deg, rgba(22, 33, 62, 1) 0%, rgba(15, 22, 36, 1) 100%);"
+      }
     >
       <div id="12:89" class="flex flex-col h-full" style={`width: ${props.width}px`}>
         <div
@@ -1167,7 +1193,12 @@ const Sidebar: Component<SidebarProps> = (props) => {
         >
           <div id="12:91" class={`flex items-center ${props.isCollapsed ? 'justify-center' : 'gap-x-3'}`}>
             <Show when={!props.isCollapsed}>
-              <h2 id="12:94" style="color: rgba(232, 240, 255, 1);" class="text-lg font-semibold truncate max-w-[240px]" title={props.title || "极客开发区"}>
+              <h2
+                id="12:94"
+                class="text-lg font-semibold truncate max-w-[240px]"
+                style={theme() === "light" ? "color: #0F172A;" : "color: rgba(232, 240, 255, 1);"}
+                title={props.title || "极客开发区"}
+              >
                 {props.title || "极客开发区"}
               </h2>
             </Show>
@@ -1177,15 +1208,25 @@ const Sidebar: Component<SidebarProps> = (props) => {
               <button
                 onClick={handleNewSession}
                 title="New Chat"
-                class="hover:text-[#00F0FF] text-[#5C6876] transition-colors flex items-center justify-center w-8 h-8"
+                class={
+                  theme() === "light"
+                    ? "hover:text-slate-900 text-slate-400 transition-colors flex items-center justify-center w-8 h-8"
+                    : "hover:text-[#00F0FF] text-[#5C6876] transition-colors flex items-center justify-center w-8 h-8"
+                }
               >
                 <iconify-icon icon="lucide:plus" class="text-lg"></iconify-icon>
               </button>
               <button
                 onClick={() => setShowHistory(!showHistory())}
                 title="History"
-                class={`hover:text-[#00F0FF] transition-colors flex items-center justify-center w-8 h-8 ${
-                  showHistory() ? "text-[#00F0FF]" : "text-[#5C6876]"
+                class={`transition-colors flex items-center justify-center w-8 h-8 ${
+                  theme() === "light"
+                    ? showHistory()
+                      ? "text-slate-900"
+                      : "text-slate-400 hover:text-slate-900"
+                    : showHistory()
+                    ? "text-[#00F0FF]"
+                    : "text-[#5C6876] hover:text-[#00F0FF]"
                 }`}
               >
                 <iconify-icon icon="lucide:history" class="text-lg"></iconify-icon>
@@ -1215,25 +1256,63 @@ const Sidebar: Component<SidebarProps> = (props) => {
 
         <Show when={!props.isCollapsed}>
           <Show when={showHistory()}>
-            <div class="overflow-y-auto grow shrink geek-scroll p-4 flex flex-col gap-2">
-              <div class="text-[#5C6876] text-xs font-bold uppercase tracking-wider mb-2">History</div>
+            <div
+              class={
+                theme() === "light"
+                  ? "overflow-y-auto grow shrink geek-scroll p-4 flex flex-col gap-2 bg-[#EDF5FF]"
+                  : "overflow-y-auto grow shrink geek-scroll p-4 flex flex-col gap-2"
+              }
+            >
+              <div
+                class={
+                  theme() === "light"
+                    ? "text-slate-400 text-xs font-bold uppercase tracking-wider mb-2"
+                    : "text-[#5C6876] text-xs font-bold uppercase tracking-wider mb-2"
+                }
+              >
+                History
+              </div>
               <For each={history()}>
                 {(item) => (
                   <div
                     class={`flex items-center justify-between p-3 rounded cursor-pointer transition-colors group ${
                       item.id === sid()
-                        ? "bg-[#00F0FF]/10 border border-[#00F0FF]/30"
+                        ? theme() === "light"
+                          ? "bg-slate-200 border border-slate-300"
+                          : "bg-[#00F0FF]/10 border border-[#00F0FF]/30"
+                        : theme() === "light"
+                        ? "bg-white border border-transparent hover:border-slate-300"
                         : "bg-[#1A2333] border border-transparent hover:border-[#00F0FF]/30"
                     }`}
                     onClick={() => handleSwitchSession(item.id, item.title)}
                   >
                     <div class="flex flex-col overflow-hidden">
-                      <div class="text-[#E8F0FF] text-sm truncate font-medium">{item.title}</div>
-                      <div class="text-[#5C6876] text-xs">{new Date(item.ts).toLocaleString()}</div>
+                      <div
+                        class={
+                          theme() === "light"
+                            ? "text-slate-900 text-sm truncate font-medium"
+                            : "text-[#E8F0FF] text-sm truncate font-medium"
+                        }
+                      >
+                        {item.title}
+                      </div>
+                      <div
+                        class={
+                          theme() === "light"
+                            ? "text-slate-500 text-xs"
+                            : "text-[#5C6876] text-xs"
+                        }
+                      >
+                        {new Date(item.ts).toLocaleString()}
+                      </div>
                     </div>
                     <button
                       onClick={(e) => deleteHistoryItem(e, item.id)}
-                      class="opacity-0 group-hover:opacity-100 p-1 hover:text-red-400 text-[#5C6876] transition-all"
+                      class={
+                        theme() === "light"
+                          ? "opacity-0 group-hover:opacity-100 p-1 hover:text-red-500 text-slate-400 transition-all"
+                          : "opacity-0 group-hover:opacity-100 p-1 hover:text-red-400 text-[#5C6876] transition-all"
+                      }
                     >
                       <iconify-icon icon="lucide:trash-2"></iconify-icon>
                     </button>
@@ -1241,7 +1320,15 @@ const Sidebar: Component<SidebarProps> = (props) => {
                 )}
               </For>
               <Show when={history().length === 0}>
-                <div class="text-[#5C6876] text-sm text-center mt-10">No history found</div>
+                <div
+                  class={
+                    theme() === "light"
+                      ? "text-slate-400 text-sm text-center mt-10"
+                      : "text-[#5C6876] text-sm text-center mt-10"
+                  }
+                >
+                  No history found
+                </div>
               </Show>
             </div>
           </Show>
@@ -1249,9 +1336,13 @@ const Sidebar: Component<SidebarProps> = (props) => {
             <div
               ref={messagesRef}
               id="12:96"
-            class="overflow-y-auto grow shrink geek-scroll"
-            style="padding: 1rem 1.5rem;"
-          >
+              class={
+                theme() === "light"
+                  ? "overflow-y-auto grow shrink geek-scroll bg-[#EDF5FF]"
+                  : "overflow-y-auto grow shrink geek-scroll"
+              }
+              style="padding: 1rem 1.5rem;"
+            >
             <For each={visibleMsgs()}>
               {(msg) => {
                 const isUser = msg.role === "user"
@@ -1292,33 +1383,63 @@ const Sidebar: Component<SidebarProps> = (props) => {
                     </Show>
                     <div class={`${isUser ? "max-w-[80%]" : "grow shrink basis-0"}`}>
                       <div
-                        style={{
-                          "background-color": isUser
-                            ? "color-mix( in oklab , #00F0FF 15% , transparent )"
-                            : "transparent",
-                          "border-color": isUser
-                            ? "color-mix( in oklab , #00F0FF 30% , transparent )"
-                            : "transparent",
-                        }}
-                        class={`p-3 rounded-lg border-[1px] border-solid ${
-                          isUser ? "text-[#E8F0FF]" : "text-[#94A3B8]"
-                        } text-sm leading-relaxed break-words`}
+                        class={
+                          isUser
+                            ? theme() === "light"
+                              ? "p-3 rounded-lg border border-[#C7E2FF] bg-white text-slate-900 text-sm leading-relaxed break-words"
+                              : "p-3 rounded-lg border-[1px] border-solid text-[#E8F0FF] text-sm leading-relaxed break-words"
+                            : theme() === "light"
+                            ? "p-3 rounded-lg border border-slate-200 bg-white/80 text-slate-700 text-sm leading-relaxed break-words"
+                            : "p-3 rounded-lg border-[1px] border-solid text-[#94A3B8] text-sm leading-relaxed break-words"
+                        }
                       >
                         <Show
                           when={!isWelcome}
                           fallback={
-                            <div class="relative overflow-hidden rounded-xl border border-[#00F0FF]/25 bg-[#0F1624]/60 px-5 py-4">
+                            <div
+                              class={
+                                theme() === "light"
+                                  ? "relative overflow-hidden rounded-xl border border-slate-200 bg-white px-5 py-4"
+                                  : "relative overflow-hidden rounded-xl border border-[#00F0FF]/25 bg-[#0F1624]/60 px-5 py-4"
+                              }
+                            >
                               <div class="absolute -top-12 -right-12 w-32 h-32 rounded-full bg-[#00F0FF]/10 blur-2xl"></div>
                               <div class="absolute -bottom-10 -left-10 w-28 h-28 rounded-full bg-[#00F0FF]/10 blur-2xl"></div>
-                              <div class="text-[#E8F0FF] text-base font-semibold tracking-wide">
+                              <div
+                                class={
+                                  theme() === "light"
+                                    ? "text-slate-900 text-base font-semibold tracking-wide"
+                                    : "text-[#E8F0FF] text-base font-semibold tracking-wide"
+                                }
+                              >
                                 {welcomeTitle}
                               </div>
-                              <div class="mt-1 text-sm text-[#94A3B8]">{welcomeSubtitle}</div>
+                              <div
+                                class={
+                                  theme() === "light"
+                                    ? "mt-1 text-sm text-slate-500"
+                                    : "mt-1 text-sm text-[#94A3B8]"
+                                }
+                              >
+                                {welcomeSubtitle}
+                              </div>
                               <div class="mt-4 grid grid-cols-1 gap-2">
                                 <For each={welcomeItems}>
                                   {(item) => (
-                                    <div class="flex items-center gap-2 text-sm text-[#C8D2E0]">
-                                      <div class="w-1.5 h-1.5 rounded-full bg-[#00F0FF]"></div>
+                                    <div
+                                      class={
+                                        theme() === "light"
+                                          ? "flex items-center gap-2 text-sm text-slate-600"
+                                          : "flex items-center gap-2 text-sm text-[#C8D2E0]"
+                                      }
+                                    >
+                                      <div
+                                        class={
+                                          theme() === "light"
+                                            ? "w-1.5 h-1.5 rounded-full bg-sky-400"
+                                            : "w-1.5 h-1.5 rounded-full bg-[#00F0FF]"
+                                        }
+                                      ></div>
                                       <span>{item}</span>
                                     </div>
                                   )}
@@ -1330,11 +1451,23 @@ const Sidebar: Component<SidebarProps> = (props) => {
                         <Show when={hasThink}>
                           <div class="mb-2">
                             <div class="flex items-center gap-x-2 mb-2">
-                              <span class="text-xs font-mono text-[#5C6876] uppercase tracking-wider">
+                              <span
+                                class={
+                                  theme() === "light"
+                                    ? "text-xs font-mono text-slate-400 uppercase tracking-wider"
+                                    : "text-xs font-mono text-[#5C6876] uppercase tracking-wider"
+                                }
+                              >
                                 {msg.thinkDone ? "已思考" : "思考中..."}
                               </span>
                               <Show when={msg.thinkDone && msg.thinkDuration}>
-                                <span class="text-xs text-[#475569] font-mono">
+                                <span
+                                  class={
+                                    theme() === "light"
+                                      ? "text-xs text-slate-500 font-mono"
+                                      : "text-xs text-[#475569] font-mono"
+                                  }
+                                >
                                   {formatDuration(msg.thinkDuration!)}
                                 </span>
                               </Show>
@@ -1343,22 +1476,44 @@ const Sidebar: Component<SidebarProps> = (props) => {
                               >
                                 <iconify-icon
                                   icon="lucide:chevron-down"
-                                  class="text-[#5C6876] text-sm"
+                                  class={
+                                    theme() === "light"
+                                      ? "text-slate-400 text-sm"
+                                      : "text-[#5C6876] text-sm"
+                                  }
                                 ></iconify-icon>
                               </div>
                             </div>
                             <div
-                              class={`text-[#5C6876] text-xs font-mono border-l-2 border-[#1E293B] pl-3 py-1 ${
+                              class={`text-xs font-mono border-l-2 pl-3 py-1 ${
                                 msg.thinkDone ? "max-h-[200px] overflow-y-auto geek-scroll" : ""
+                              } ${
+                                theme() === "light"
+                                  ? "text-slate-400 border-slate-200"
+                                  : "text-[#5C6876] border-[#1E293B]"
                               }`}
                             >
                               {sanitizeBoxMarkers(msg.thinkText || "")}
                             </div>
                           </div>
                         </Show>
-                        <div class="whitespace-pre-wrap">{sanitizeBoxMarkers(msg.text)}</div>
+                        <div
+                          class={
+                            theme() === "light"
+                              ? "whitespace-pre-wrap text-slate-700"
+                              : "whitespace-pre-wrap"
+                          }
+                        >
+                          {sanitizeBoxMarkers(msg.text)}
+                        </div>
                         <Show when={msg.toolStatus}>
-                          <div class="mt-2 text-xs font-mono text-[#00F0FF] opacity-80">
+                          <div
+                            class={
+                              theme() === "light"
+                                ? "mt-2 text-xs font-mono text-slate-500 opacity-80"
+                                : "mt-2 text-xs font-mono text-[#00F0FF] opacity-80"
+                            }
+                          >
                             状态: {msg.toolStatus}
                           </div>
                         </Show>
@@ -1366,7 +1521,13 @@ const Sidebar: Component<SidebarProps> = (props) => {
                           <div class="mt-2 flex flex-col gap-1">
                             <For each={msg.filePaths}>
                               {(path) => (
-                                <div class="text-xs font-mono text-[#00F0FF] bg-[#00F0FF]/10 px-2 py-1 rounded border border-[#00F0FF]/20 flex items-center gap-2">
+                                <div
+                                  class={
+                                    theme() === "light"
+                                      ? "text-xs font-mono text-slate-600 bg-slate-100 px-2 py-1 rounded border border-slate-200 flex items-center gap-2"
+                                      : "text-xs font-mono text-[#00F0FF] bg-[#00F0FF]/10 px-2 py-1 rounded border border-[#00F0FF]/20 flex items-center gap-2"
+                                  }
+                                >
                                   <iconify-icon icon="lucide:file-code" class="text-sm"></iconify-icon>
                                   {path}
                                 </div>
@@ -1412,31 +1573,83 @@ const Sidebar: Component<SidebarProps> = (props) => {
                 </div>
                 <div class="grow shrink basis-0">
                   <div class="flex items-center gap-x-1 h-10 px-3">
-                    <div class="w-1.5 h-1.5 rounded-full bg-[#00F0FF] animate-bounce" style="animation-delay: 0ms"></div>
-                    <div class="w-1.5 h-1.5 rounded-full bg-[#00F0FF] animate-bounce" style="animation-delay: 150ms"></div>
-                    <div class="w-1.5 h-1.5 rounded-full bg-[#00F0FF] animate-bounce" style="animation-delay: 300ms"></div>
+                    <div
+                      class={
+                        theme() === "light"
+                          ? "w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce"
+                          : "w-1.5 h-1.5 rounded-full bg-[#00F0FF] animate-bounce"
+                      }
+                      style="animation-delay: 0ms"
+                    ></div>
+                    <div
+                      class={
+                        theme() === "light"
+                          ? "w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce"
+                          : "w-1.5 h-1.5 rounded-full bg-[#00F0FF] animate-bounce"
+                      }
+                      style="animation-delay: 150ms"
+                    ></div>
+                    <div
+                      class={
+                        theme() === "light"
+                          ? "w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce"
+                          : "w-1.5 h-1.5 rounded-full bg-[#00F0FF] animate-bounce"
+                      }
+                      style="animation-delay: 300ms"
+                    ></div>
                   </div>
                 </div>
               </div>
             </Show>
             
             <Show when={questionState.activeQuestion}>
-              <div class="flex flex-col gap-4 mb-4 p-4 rounded-xl border border-[#00F0FF]/30 bg-[#00F0FF]/5">
+              <div
+                class={
+                  theme() === "light"
+                    ? "flex flex-col gap-4 mb-4 p-4 rounded-xl border border-slate-200 bg-white"
+                    : "flex flex-col gap-4 mb-4 p-4 rounded-xl border border-[#00F0FF]/30 bg-[#00F0FF]/5"
+                }
+              >
                 <div class="flex items-center gap-2 mb-2">
-                  <iconify-icon icon="lucide:clipboard-list" class="text-[#00F0FF] text-xl"></iconify-icon>
-                  <span class="text-[#E8F0FF] font-semibold">请回答以下问题以继续</span>
+                  <iconify-icon
+                    icon="lucide:clipboard-list"
+                    class={theme() === "light" ? "text-slate-600 text-xl" : "text-[#00F0FF] text-xl"}
+                  ></iconify-icon>
+                  <span
+                    class={theme() === "light" ? "text-slate-900 font-semibold" : "text-[#E8F0FF] font-semibold"}
+                  >
+                    请回答以下问题以继续
+                  </span>
                 </div>
                 <Show when={currentQuestion()}>
                   {(q) => (
                     <div class="flex flex-col gap-2">
                       <div class="flex items-center justify-between">
-                        <div class="text-[#E8F0FF] font-medium text-sm">
+                        <div
+                          class={
+                            theme() === "light"
+                              ? "text-slate-900 font-medium text-sm"
+                              : "text-[#E8F0FF] font-medium text-sm"
+                          }
+                        >
                           {questionIndex() + 1}. {q().question}
-                          <span class="text-xs text-[#5C6876] ml-2">
+                          <span
+                            class={
+                              theme() === "light"
+                                ? "text-xs text-slate-400 ml-2"
+                                : "text-xs text-[#5C6876] ml-2"
+                            }
+                          >
                             {q().multiple ? "(多选)" : "(单选)"}
                           </span>
                         </div>
-                        <div class="text-xs text-[#5C6876]">
+                        <div
+                          class={
+                            theme() === "light"
+                              ? "text-xs text-slate-400"
+                              : "text-xs text-[#5C6876]"
+                          }
+                        >
                           {questionIndex() + 1}/{totalQuestions()}
                         </div>
                       </div>
@@ -1449,7 +1662,11 @@ const Sidebar: Component<SidebarProps> = (props) => {
                               <div
                                 class={`p-3 rounded-lg border transition-colors ${
                                   isSelected()
-                                    ? "border-[#00F0FF] bg-[#00F0FF]/10"
+                                    ? theme() === "light"
+                                      ? "border-slate-400 bg-slate-100"
+                                      : "border-[#00F0FF] bg-[#00F0FF]/10"
+                                    : theme() === "light"
+                                    ? "border-slate-200 bg-white hover:border-slate-400"
                                     : "border-[#1E293B] bg-[#1E293B]/50 hover:border-[#00F0FF]/50"
                                 }`}
                               >
@@ -1460,7 +1677,11 @@ const Sidebar: Component<SidebarProps> = (props) => {
                                   <div
                                     class={`mt-1 w-4 h-4 shrink-0 flex items-center justify-center border rounded ${
                                       isSelected()
-                                        ? "bg-[#00F0FF] border-[#00F0FF] text-[#0F1624]"
+                                        ? theme() === "light"
+                                          ? "bg-slate-900 border-slate-900 text-white"
+                                          : "bg-[#00F0FF] border-[#00F0FF] text-[#0F1624]"
+                                        : theme() === "light"
+                                        ? "border-slate-300"
                                         : "border-[#5C6876]"
                                     }`}
                                   >
@@ -1469,11 +1690,29 @@ const Sidebar: Component<SidebarProps> = (props) => {
                                     </Show>
                                   </div>
                                   <div class="flex flex-col gap-0.5">
-                                    <span class={`text-sm ${isSelected() ? "text-[#00F0FF]" : "text-[#E8F0FF]"}`}>
+                                    <span
+                                      class={`text-sm ${
+                                        isSelected()
+                                          ? theme() === "light"
+                                            ? "text-slate-900"
+                                            : "text-[#00F0FF]"
+                                          : theme() === "light"
+                                          ? "text-slate-700"
+                                          : "text-[#E8F0FF]"
+                                      }`}
+                                    >
                                       {opt.label}
                                     </span>
                                     <Show when={opt.description}>
-                                      <span class="text-xs text-[#94A3B8]">{opt.description}</span>
+                                      <span
+                                        class={
+                                          theme() === "light"
+                                            ? "text-xs text-slate-500"
+                                            : "text-xs text-[#94A3B8]"
+                                        }
+                                      >
+                                        {opt.description}
+                                      </span>
                                     </Show>
                                   </div>
                                 </div>
@@ -1482,25 +1721,37 @@ const Sidebar: Component<SidebarProps> = (props) => {
                           }}
                         </For>
                       </div>
-                      <input
-                        type="text"
-                        placeholder="补充说明（可选）"
-                        class="mt-2 w-full bg-transparent border-b border-[#5C6876] focus:border-[#00F0FF] outline-none text-xs text-[#E8F0FF] py-1 transition-colors placeholder:text-[#5C6876]/50"
-                        value={questionState.answers[questionIndex()]?.customInput || ""}
-                        onInput={(e) => updateCustomInput(questionIndex(), e.currentTarget.value)}
-                      />
+                        <input
+                          type="text"
+                          placeholder="补充说明（可选）"
+                          class={
+                            theme() === "light"
+                              ? "mt-2 w-full bg-transparent border-b border-slate-300 focus:border-slate-900 outline-none text-xs text-slate-900 py-1 transition-colors placeholder:text-slate-400"
+                              : "mt-2 w-full bg-transparent border-b border-[#5C6876] focus:border-[#00F0FF] outline-none text-xs text-[#E8F0FF] py-1 transition-colors placeholder:text-[#5C6876]/50"
+                          }
+                          value={questionState.answers[questionIndex()]?.customInput || ""}
+                          onInput={(e) => updateCustomInput(questionIndex(), e.currentTarget.value)}
+                        />
                       <div class="flex items-center justify-between mt-2">
                         <Show when={questionIndex() > 0}>
                           <button
                             onClick={prevQuestion}
-                            class="py-2 px-3 border border-[#00F0FF]/40 text-[#00F0FF] rounded-lg hover:bg-[#00F0FF]/10 transition-colors"
+                            class={
+                              theme() === "light"
+                                ? "py-2 px-3 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-100 transition-colors"
+                                : "py-2 px-3 border border-[#00F0FF]/40 text-[#00F0FF] rounded-lg hover:bg-[#00F0FF]/10 transition-colors"
+                            }
                           >
                             上一个
                           </button>
                         </Show>
                         <button
                           onClick={nextQuestion}
-                          class="py-2 px-4 bg-[#00F0FF] hover:bg-[#00F0FF]/90 text-[#0F1624] font-semibold rounded-lg transition-colors flex items-center justify-center gap-2"
+                          class={
+                            theme() === "light"
+                              ? "py-2 px-4 bg-slate-900 hover:bg-black text-white font-semibold rounded-lg transition-colors flex items-center justify-center gap-2"
+                              : "py-2 px-4 bg-[#00F0FF] hover:bg-[#00F0FF]/90 text-[#0F1624] font-semibold rounded-lg transition-colors flex items-center justify-center gap-2"
+                          }
                         >
                           <iconify-icon
                             icon={isLastQuestion() ? "lucide:send" : "lucide:arrow-right"}
@@ -1520,52 +1771,71 @@ const Sidebar: Component<SidebarProps> = (props) => {
         <div
           ref={resizerRef}
           onMouseDown={startDrag}
-          class="h-1 cursor-row-resize hover:bg-[#00F0FF]/50 transition-colors shrink-0 mx-4 mt-4"
-          style="background-color: color-mix( in oklab , #00F0FF 15% , transparent );"
+          class={
+            theme() === "light"
+              ? "h-1 cursor-row-resize transition-colors shrink-0 mx-4 mt-4 bg-slate-200 hover:bg-slate-400"
+              : "h-1 cursor-row-resize hover:bg-[#00F0FF]/50 transition-colors shrink-0 mx-4 mt-4"
+          }
+          style={
+            theme() === "light"
+              ? ""
+              : "background-color: color-mix( in oklab , #00F0FF 15% , transparent );"
+          }
         ></div>
 
-        <div id="12:125" class="shrink-0 mx-4 mb-4 mt-4" style={`height: ${inputHeight()}px;`}>
-          <div
-            id="12:126"
-            class="h-full flex flex-col hover:border-[#00F0FF]/50 border-[1px] border-solid rounded-2xl"
-            style="background-color: color-mix( in oklab , #1A1F3A 80% , transparent ); border-color: color-mix( in oklab , #00F0FF 30% , transparent ); padding: 1rem 1.5rem;"
-          >
-            <textarea
-              ref={textareaRef}
-              id="12:127"
-              style="color: rgba(232, 240, 255, 1); resize: none;"
-              placeholder="请描述你的需求..."
-              class="flex-grow w-full bg-transparent outline-none text-sm"
-              value={text()}
-              onInput={(e) => setText(e.currentTarget.value)}
-              onKeyDown={(e) => {
-                if (e.key !== "Enter" || e.shiftKey) return
-                e.preventDefault()
-                send()
-              }}
-            ></textarea>
-            <div class="flex justify-between items-center mt-3">
-              <span class="text-xs" style="color: rgba(92, 104, 118, 1);">
-                按 Enter 发送，Shift + Enter 换行
-              </span>
-              <button
-                id="12:128"
-                class={`hover:shadow-[0_0_20px_rgba(0,240,255,0.4)] flex justify-center items-center w-8 h-8 rounded-lg ${busy() && !streaming() ? "opacity-60 cursor-not-allowed" : ""}`}
-                style={`background-color: ${streaming() ? "rgba(255, 90, 90, 1)" : "rgba(0, 240, 255, 1)"};`}
-                onClick={() => (streaming() ? stopStream() : send())}
+            <div id="12:125" class="shrink-0 mx-4 mb-4 mt-4" style={`height: ${inputHeight()}px;`}>
+              <div
+                id="12:126"
+                class="h-full flex flex-col hover:border-[#00F0FF]/50 border-[1px] border-solid rounded-2xl"
+                style={
+                  theme() === "light"
+                    ? "background-color: #FFFFFF; border-color: rgba(148, 163, 184, 0.4); padding: 1rem 1.5rem;"
+                    : "background-color: color-mix( in oklab , #1A1F3A 80% , transparent ); border-color: color-mix( in oklab , #00F0FF 30% , transparent ); padding: 1rem 1.5rem;"
+                }
               >
-                <div id="12:129" class="bg-transparent flex justify-center items-center w-4 h-4">
-                  <iconify-icon
-                    id="12:130"
-                    style={`color: ${streaming() ? "rgba(10, 14, 26, 1)" : "rgba(10, 14, 26, 1)"};`}
-                    icon={streaming() ? "lucide:square" : "lucide:send"}
-                    class="text-sm"
-                  ></iconify-icon>
+                <textarea
+                  ref={textareaRef}
+                  id="12:127"
+                  style={
+                    theme() === "light"
+                      ? "color: #0F172A; resize: none;"
+                      : "color: rgba(232, 240, 255, 1); resize: none;"
+                  }
+                  placeholder="请描述你的需求..."
+                  class="flex-grow w-full bg-transparent outline-none text-sm"
+                  value={text()}
+                  onInput={(e) => setText(e.currentTarget.value)}
+                  onKeyDown={(e) => {
+                    if (e.key !== "Enter" || e.shiftKey) return
+                    e.preventDefault()
+                    send()
+                  }}
+                ></textarea>
+                <div class="flex justify-between items-center mt-3">
+                  <span
+                    class="text-xs"
+                    style={theme() === "light" ? "color: #64748B;" : "color: rgba(92, 104, 118, 1);"}
+                  >
+                    按 Enter 发送，Shift + Enter 换行
+                  </span>
+                  <button
+                    id="12:128"
+                    class={`hover:shadow-[0_0_20px_rgba(0,240,255,0.4)] flex justify-center items-center w-8 h-8 rounded-lg ${busy() && !streaming() ? "opacity-60 cursor-not-allowed" : ""}`}
+                    style={`background-color: ${streaming() ? "rgba(255, 90, 90, 1)" : "rgba(0, 240, 255, 1)"};`}
+                    onClick={() => (streaming() ? stopStream() : send())}
+                  >
+                    <div id="12:129" class="bg-transparent flex justify-center items-center w-4 h-4">
+                      <iconify-icon
+                        id="12:130"
+                        style={`color: ${streaming() ? "rgba(10, 14, 26, 1)" : "rgba(10, 14, 26, 1)"};`}
+                        icon={streaming() ? "lucide:square" : "lucide:send"}
+                        class="text-sm"
+                      ></iconify-icon>
+                    </div>
+                  </button>
                 </div>
-              </button>
+              </div>
             </div>
-          </div>
-        </div>
         </Show>
       </div>
     </aside>

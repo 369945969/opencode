@@ -1,5 +1,5 @@
 import type { Component } from "solid-js"
-import { For, createSignal, onMount } from "solid-js"
+import { For, createSignal, onCleanup, onMount } from "solid-js"
 
 interface HomeProps {
   onNavigate: (page: string) => void
@@ -8,6 +8,7 @@ interface HomeProps {
 const Home: Component<HomeProps> = () => {
   const base = import.meta.env.VITE_PROXY_URL ?? "http://localhost:4097"
   const [creating, setCreating] = createSignal(false)
+  const [theme, setTheme] = createSignal<"dark" | "light">("dark")
   const examples = [
     {
       title: "制造运营大屏",
@@ -38,6 +39,20 @@ const Home: Component<HomeProps> = () => {
     }
     return ""
   }
+
+  onMount(() => {
+    try {
+      const stored = globalThis.localStorage?.getItem?.("workspace_theme") || ""
+      if (stored === "light" || stored === "dark") setTheme(stored)
+    } catch {}
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent).detail as "dark" | "light" | undefined
+      if (detail !== "dark" && detail !== "light") return
+      setTheme(detail)
+    }
+    window.addEventListener("workspace_theme_toggle", handler as EventListener)
+    onCleanup(() => window.removeEventListener("workspace_theme_toggle", handler as EventListener))
+  })
 
   onMount(async () => {
     const cookieSession = cookieValue("app_session")
@@ -76,8 +91,16 @@ const Home: Component<HomeProps> = () => {
     <main id="14:31" style="padding: 1.5rem 2rem;" class="overflow-hidden flex flex-col grow shrink">
       <div
         id="14:53"
-        style="background-color: color-mix( in oklab , #141829 80% , transparent ); flex-basis: 0%; border-color: color-mix( in oklab , #00F0FF 10% , transparent );"
-        class="overflow-hidden relative grow shrink border-[1px] border-solid rounded-2xl"
+        style={
+          theme() === "light"
+            ? "flex-basis: 0%;"
+            : "background-color: color-mix( in oklab , #141829 80% , transparent ); flex-basis: 0%; border-color: color-mix( in oklab , #00F0FF 10% , transparent );"
+        }
+        class={
+          theme() === "light"
+            ? "overflow-hidden relative grow shrink border border-slate-200 rounded-2xl bg-white shadow-sm"
+            : "overflow-hidden relative grow shrink border-[1px] border-solid rounded-2xl"
+        }
       >
         <div
           id="14:54"
@@ -108,10 +131,18 @@ const Home: Component<HomeProps> = () => {
               </div>
             </div>
 
-            <h2 id="14:61" style="color: rgba(232, 240, 255, 1);" class="text-4xl mb-4 font-bold">
+            <h2
+              id="14:61"
+              style={theme() === "light" ? "color: #0F172A;" : "color: rgba(232, 240, 255, 1);"}
+              class="text-4xl mb-4 font-bold"
+            >
               欢迎来到极客设计工坊
             </h2>
-            <p id="14:62" style="color: rgba(138, 151, 170, 1);" class="text-lg mb-6 whitespace-nowrap">
+            <p
+              id="14:62"
+              style={theme() === "light" ? "color: #64748B;" : "color: rgba(138, 151, 170, 1);"}
+              class="text-lg mb-6 whitespace-nowrap"
+            >
               {creating() ? "正在初始化默认会话..." : "在这里开始你的创意之旅，轻松快速构建产品原型和设计稿"}
             </p>
             <div class="flex flex-nowrap justify-center gap-4 max-w-[1100px] overflow-x-auto geek-scroll px-2">
@@ -119,11 +150,19 @@ const Home: Component<HomeProps> = () => {
                 {(item: { title: string; desc: string; prompt: string }) => (
                   <button
                     onClick={() => handleExampleClick(item.prompt)}
-                    class="text-left w-64 shrink-0 px-4 py-3 rounded-xl border border-[#00F0FF]/15 bg-[#0F1624]/70 hover:bg-[#00F0FF]/10 hover:border-[#00F0FF]/50 transition-colors"
+                    class={
+                      theme() === "light"
+                        ? "text-left w-64 shrink-0 px-4 py-3 rounded-xl border border-slate-200 bg-white hover:border-slate-400 hover:bg-slate-50 transition-colors"
+                        : "text-left w-64 shrink-0 px-4 py-3 rounded-xl border border-[#00F0FF]/15 bg-[#0F1624]/70 hover:bg-[#00F0FF]/10 hover:border-[#00F0FF]/50 transition-colors"
+                    }
                   >
-                    <div class="text-sm text-[#E8F0FF] font-semibold">{item.title}</div>
                     <div
-                      class="text-xs text-[#8A97AA] mt-1"
+                      class={theme() === "light" ? "text-sm text-slate-900 font-semibold" : "text-sm text-[#E8F0FF] font-semibold"}
+                    >
+                      {item.title}
+                    </div>
+                    <div
+                      class={theme() === "light" ? "text-xs text-slate-600 mt-1" : "text-xs text-[#8A97AA] mt-1"}
                       style="-webkit-line-clamp: 2; display: -webkit-box; -webkit-box-orient: vertical; overflow: hidden;"
                     >
                       {item.desc}

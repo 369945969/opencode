@@ -1,10 +1,26 @@
-import type { Component } from 'solid-js';
+import { type Component, createSignal, onCleanup, onMount } from "solid-js"
 
 interface ProjectListProps {
   onNavigate: (page: string) => void;
 }
 
 const ProjectList: Component<ProjectListProps> = (props) => {
+  const [theme, setTheme] = createSignal<"dark" | "light">("dark")
+
+  onMount(() => {
+    try {
+      const stored = globalThis.localStorage?.getItem?.("workspace_theme") || ""
+      if (stored === "light" || stored === "dark") setTheme(stored)
+    } catch {}
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent).detail as "dark" | "light" | undefined
+      if (detail !== "dark" && detail !== "light") return
+      setTheme(detail)
+    }
+    window.addEventListener("workspace_theme_toggle", handler as EventListener)
+    onCleanup(() => window.removeEventListener("workspace_theme_toggle", handler as EventListener))
+  })
+
   return (
     <main 
       id="13:31" 
@@ -13,8 +29,28 @@ const ProjectList: Component<ProjectListProps> = (props) => {
     >
       <div id="13:32" class="flex justify-between items-center mb-8 shrink-0">
         <div id="13:33" class="flex items-center gap-y-4 gap-x-4">
-          <h1 id="13:34" style="color: rgba(232, 240, 255, 1);" class="text-2xl font-bold">Skills 列表</h1>
-          <div id="13:35" style="background-color: color-mix( in oklab , #00F0FF 15% , transparent ); color: rgba(0, 240, 255, 1); padding: 0.25rem 0.5rem;" class="text-xs rounded-lg">12个 Skills</div>
+          <h1
+            id="13:34"
+            style={theme() === "light" ? "color: #0F172A;" : "color: rgba(232, 240, 255, 1);"}
+            class="text-2xl font-bold"
+          >
+            Skills 列表
+          </h1>
+          <div
+            id="13:35"
+            class={
+              theme() === "light"
+                ? "text-xs rounded-lg bg-sky-50 text-sky-700 border border-sky-200 px-2 py-1"
+                : "text-xs rounded-lg"
+            }
+            style={
+              theme() === "light"
+                ? ""
+                : "background-color: color-mix( in oklab , #00F0FF 15% , transparent ); color: rgba(0, 240, 255, 1); padding: 0.25rem 0.5rem;"
+            }
+          >
+            12个 Skills
+          </div>
         </div>
         <div id="13:36" class="flex items-center gap-y-4 gap-x-4">
           
@@ -26,12 +62,36 @@ const ProjectList: Component<ProjectListProps> = (props) => {
           </button>
           
           <div id="13:41" class="flex items-center gap-y-2 gap-x-2">
-            <button id="13:42" class="hover:bg-[#00F0FF]/15 hover:shadow-[0_0_12px_rgba(0,240,255,0.25)] flex justify-center items-center w-10 h-10 rounded-lg" style="background-color: color-mix( in oklab , #1A1F3A 90% , transparent );">
+            <button
+              id="13:42"
+              class={
+                theme() === "light"
+                  ? "flex justify-center items-center w-10 h-10 rounded-lg border border-slate-200 bg-white hover:border-slate-400 hover:bg-slate-50 transition-colors"
+                  : "hover:bg-[#00F0FF]/15 hover:shadow-[0_0_12px_rgba(0,240,255,0.25)] flex justify-center items-center w-10 h-10 rounded-lg"
+              }
+              style={
+                theme() === "light"
+                  ? ""
+                  : "background-color: color-mix( in oklab , #1A1F3A 90% , transparent );"
+              }
+            >
               <div id="13:43" class="bg-transparent flex justify-center items-center w-5 h-5">
                 <iconify-icon id="13:44" style="color: rgba(0, 240, 255, 1);" icon="lucide:layout-grid" class="text-base"></iconify-icon>
               </div>
             </button>
-            <button id="13:45" class="hover:bg-[#00F0FF]/15 hover:shadow-[0_0_12px_rgba(0,240,255,0.25)] flex justify-center items-center w-10 h-10 rounded-lg" style="background-color: color-mix( in oklab , #1A1F3A 90% , transparent );">
+            <button
+              id="13:45"
+              class={
+                theme() === "light"
+                  ? "flex justify-center items-center w-10 h-10 rounded-lg border border-slate-200 bg-white hover:border-slate-400 hover:bg-slate-50 transition-colors"
+                  : "hover:bg-[#00F0FF]/15 hover:shadow-[0_0_12px_rgba(0,240,255,0.25)] flex justify-center items-center w-10 h-10 rounded-lg"
+              }
+              style={
+                theme() === "light"
+                  ? ""
+                  : "background-color: color-mix( in oklab , #1A1F3A 90% , transparent );"
+              }
+            >
               <div id="13:46" class="bg-transparent flex justify-center items-center w-5 h-5">
                 <iconify-icon id="13:47" style="color: rgba(184, 197, 217, 1);" icon="lucide:list" class="text-base"></iconify-icon>
               </div>
@@ -45,25 +105,73 @@ const ProjectList: Component<ProjectListProps> = (props) => {
         <div id="13:49" class="overflow-x-auto flex gap-y-2 gap-x-2">
           <label id="13:50" class="whitespace-nowrap">
             <input id="13:51" class="peer overflow-x-hidden overflow-y-hidden whitespace-nowrap absolute w-px h-px -m-px" style="clip-path: inset( 50% ); padding: 0; border-width: 0;" type="radio" checked />
-            <div id="13:52" class="hover:border-[#00F0FF]/40 border-[1px] border-solid rounded-lg" style="background-color: color-mix( in oklab , #1A1F3A 80% , transparent ); color: rgba(184, 197, 217, 1); padding: 0.5rem 1rem; border-color: color-mix( in oklab , #00F0FF 20% , transparent );">
+            <div
+              id="13:52"
+              class={
+                theme() === "light"
+                  ? "border rounded-lg px-4 py-2 bg-white text-slate-700 border-slate-300"
+                  : "hover:border-[#00F0FF]/40 border-[1px] border-solid rounded-lg"
+              }
+              style={
+                theme() === "light"
+                  ? ""
+                  : "background-color: color-mix( in oklab , #1A1F3A 80% , transparent ); color: rgba(184, 197, 217, 1); padding: 0.5rem 1rem; border-color: color-mix( in oklab , #00F0FF 20% , transparent );"
+              }
+            >
               <span id="13:53">全部</span>
             </div>
           </label>
           <label id="13:54" class="whitespace-nowrap">
             <input id="13:55" class="peer overflow-x-hidden overflow-y-hidden whitespace-nowrap absolute w-px h-px -m-px" style="clip-path: inset( 50% ); padding: 0; border-width: 0;" type="radio" />
-            <div id="13:56" class="hover:border-[#00F0FF]/40 border-[1px] border-solid rounded-lg" style="background-color: color-mix( in oklab , #1A1F3A 80% , transparent ); color: rgba(184, 197, 217, 1); padding: 0.5rem 1rem; border-color: color-mix( in oklab , #00F0FF 20% , transparent );">
+            <div
+              id="13:56"
+              class={
+                theme() === "light"
+                  ? "border rounded-lg px-4 py-2 bg-white text-slate-600 border-slate-200 hover:border-slate-400 hover:bg-slate-50"
+                  : "hover:border-[#00F0FF]/40 border-[1px] border-solid rounded-lg"
+              }
+              style={
+                theme() === "light"
+                  ? ""
+                  : "background-color: color-mix( in oklab , #1A1F3A 80% , transparent ); color: rgba(184, 197, 217, 1); padding: 0.5rem 1rem; border-color: color-mix( in oklab , #00F0FF 20% , transparent );"
+              }
+            >
               <span id="13:57">设计稿</span>
             </div>
           </label>
           <label id="13:58" class="whitespace-nowrap">
             <input id="13:59" class="peer overflow-x-hidden overflow-y-hidden whitespace-nowrap absolute w-px h-px -m-px" style="clip-path: inset( 50% ); padding: 0; border-width: 0;" type="radio" />
-            <div id="13:60" class="hover:border-[#00F0FF]/40 border-[1px] border-solid rounded-lg" style="background-color: color-mix( in oklab , #1A1F3A 80% , transparent ); color: rgba(184, 197, 217, 1); padding: 0.5rem 1rem; border-color: color-mix( in oklab , #00F0FF 20% , transparent );">
+            <div
+              id="13:60"
+              class={
+                theme() === "light"
+                  ? "border rounded-lg px-4 py-2 bg-white text-slate-600 border-slate-200 hover:border-slate-400 hover:bg-slate-50"
+                  : "hover:border-[#00F0FF]/40 border-[1px] border-solid rounded-lg"
+              }
+              style={
+                theme() === "light"
+                  ? ""
+                  : "background-color: color-mix( in oklab , #1A1F3A 80% , transparent ); color: rgba(184, 197, 217, 1); padding: 0.5rem 1rem; border-color: color-mix( in oklab , #00F0FF 20% , transparent );"
+              }
+            >
               <span id="13:61">文档</span>
             </div>
           </label>
           <label id="13:62" class="whitespace-nowrap">
             <input id="13:63" class="peer overflow-x-hidden overflow-y-hidden whitespace-nowrap absolute w-px h-px -m-px" style="clip-path: inset( 50% ); padding: 0; border-width: 0;" type="radio" />
-            <div id="13:64" class="hover:border-[#00F0FF]/40 border-[1px] border-solid rounded-lg" style="background-color: color-mix( in oklab , #1A1F3A 80% , transparent ); color: rgba(184, 197, 217, 1); padding: 0.5rem 1rem; border-color: color-mix( in oklab , #00F0FF 20% , transparent );">
+            <div
+              id="13:64"
+              class={
+                theme() === "light"
+                  ? "border rounded-lg px-4 py-2 bg-white text-slate-600 border-slate-200 hover:border-slate-400 hover:bg-slate-50"
+                  : "hover:border-[#00F0FF]/40 border-[1px] border-solid rounded-lg"
+              }
+              style={
+                theme() === "light"
+                  ? ""
+                  : "background-color: color-mix( in oklab , #1A1F3A 80% , transparent ); color: rgba(184, 197, 217, 1); padding: 0.5rem 1rem; border-color: color-mix( in oklab , #00F0FF 20% , transparent );"
+              }
+            >
               <span id="13:65">原型</span>
             </div>
           </label>
@@ -71,8 +179,26 @@ const ProjectList: Component<ProjectListProps> = (props) => {
         
         <div id="13:66" class="flex items-center gap-y-4 gap-x-4">
           <span id="13:67" style="color: rgba(138, 151, 170, 1);" class="text-sm">排序</span>
-          <div id="13:68" class="hover:border-[#00F0FF]/50 flex items-center gap-y-2 gap-x-2 border-[1px] border-solid rounded-lg" style="background-color: color-mix( in oklab , #1A1F3A 80% , transparent ); padding: 0.5rem 1rem; border-color: color-mix( in oklab , #00F0FF 30% , transparent );">
-            <span id="13:69" style="color: rgba(232, 240, 255, 1);" class="text-sm">最近更新</span>
+          <div
+            id="13:68"
+            class={
+              theme() === "light"
+                ? "flex items-center gap-y-2 gap-x-2 border rounded-lg px-4 py-2 bg-white border-slate-200 hover:border-slate-400 hover:bg-slate-50 transition-colors"
+                : "hover:border-[#00F0FF]/50 flex items-center gap-y-2 gap-x-2 border-[1px] border-solid rounded-lg"
+            }
+            style={
+              theme() === "light"
+                ? ""
+                : "background-color: color-mix( in oklab , #1A1F3A 80% , transparent ); padding: 0.5rem 1rem; border-color: color-mix( in oklab , #00F0FF 30% , transparent );"
+            }
+          >
+            <span
+              id="13:69"
+              style={theme() === "light" ? "color: #0F172A;" : "color: rgba(232, 240, 255, 1);"}
+              class="text-sm"
+            >
+              最近更新
+            </span>
             <div id="13:70" class="bg-transparent flex justify-center items-center w-4 h-4">
               <iconify-icon id="13:71" style="color: rgba(0, 240, 255, 1);" icon="lucide:chevron-down" class="text-sm"></iconify-icon>
             </div>
@@ -82,7 +208,19 @@ const ProjectList: Component<ProjectListProps> = (props) => {
       
       <div id="13:72" class="grid grid-cols-3 gap-y-6 gap-x-6">
         
-        <div id="13:73" class="hover:shadow-[0_8px_32px_rgba(0,240,255,0.12)] group flex flex-col border-[1px] border-solid rounded-2xl" style="background-color: color-mix( in oklab , #1A1F3A 90% , transparent ); box-shadow: 0 0 rgba(0, 0, 0, 0), 0 0 rgba(0, 0, 0, 0), 0 0 rgba(0, 0, 0, 0), 0 0 rgba(0, 0, 0, 0), 0 4px 20px rgba(0, 240, 255, 0.08); border-color: color-mix( in oklab , #00F0FF 10% , transparent );">
+        <div
+          id="13:73"
+          class={
+            theme() === "light"
+              ? "group flex flex-col rounded-2xl border border-slate-200 bg-white hover:shadow-[0_8px_24px_rgba(15,23,42,0.08)]"
+              : "hover:shadow-[0_8px_32px_rgba(0,240,255,0.12)] group flex flex-col border-[1px] border-solid rounded-2xl"
+          }
+          style={
+            theme() === "light"
+              ? ""
+              : "background-color: color-mix( in oklab , #1A1F3A 90% , transparent ); box-shadow: 0 0 rgba(0, 0, 0, 0), 0 0 rgba(0, 0, 0, 0), 0 0 rgba(0, 0, 0, 0), 0 0 rgba(0, 0, 0, 0), 0 4px 20px rgba(0, 240, 255, 0.08); border-color: color-mix( in oklab , #00F0FF 10% , transparent );"
+          }
+        >
           
           <div id="13:74" class="relative">
             <img id="13:75" alt="AI协作设计平台登录界面预览，赛博朋克风格，深色主题配霓虹蓝色高亮" src="https://static.paraflowcontent.com/public/resource/image/4763fd91-8bb1-4a84-bba6-e2e240810c35.jpeg" class="w-full h-48 object-cover rounded-tl-2xl rounded-tr-2xl" />
@@ -120,7 +258,19 @@ const ProjectList: Component<ProjectListProps> = (props) => {
               <button onClick={() => props.onNavigate('workspace')} id="13:93" class="hover:shadow-[0_0_15px_rgba(0,240,255,0.3)] flex grow shrink items-center gap-y-2 gap-x-2 rounded-lg" style="background-color: rgba(0, 240, 255, 1); flex-basis: 0%; color: rgba(10, 14, 26, 1); padding: 0.5rem 1rem;">
                 <span id="13:94" class="text-sm font-semibold">打开</span>
               </button>
-              <button id="13:95" class="hover:bg-[#FF006E]/20 hover:border-[#FF006E]/50 flex justify-center items-center w-10 h-10 border-[1px] border-solid rounded-lg" style="background-color: color-mix( in oklab , #1A1F3A 80% , transparent ); border-color: color-mix( in oklab , #00F0FF 20% , transparent );">
+              <button
+                id="13:95"
+                class={
+                  theme() === "light"
+                    ? "flex justify-center items-center w-10 h-10 border rounded-lg border-slate-200 bg-white hover:border-slate-400 hover:bg-slate-50 transition-colors"
+                    : "hover:bg-[#FF006E]/20 hover:border-[#FF006E]/50 flex justify-center items-center w-10 h-10 border-[1px] border-solid rounded-lg"
+                }
+                style={
+                  theme() === "light"
+                    ? ""
+                    : "background-color: color-mix( in oklab , #1A1F3A 80% , transparent ); border-color: color-mix( in oklab , #00F0FF 20% , transparent );"
+                }
+              >
                 <div id="13:96" class="bg-transparent flex justify-center items-center w-5 h-5">
                   <iconify-icon id="13:97" style="color: rgba(138, 151, 170, 1);" icon="lucide:more-horizontal" class="text-base"></iconify-icon>
                 </div>
@@ -129,7 +279,19 @@ const ProjectList: Component<ProjectListProps> = (props) => {
           </div>
         </div>
         
-        <div id="13:98" class="hover:shadow-[0_8px_32px_rgba(0,240,255,0.12)] group flex flex-col border-[1px] border-solid rounded-2xl" style="background-color: color-mix( in oklab , #1A1F3A 90% , transparent ); box-shadow: 0 0 rgba(0, 0, 0, 0), 0 0 rgba(0, 0, 0, 0), 0 0 rgba(0, 0, 0, 0), 0 0 rgba(0, 0, 0, 0), 0 4px 20px rgba(0, 240, 255, 0.08); border-color: color-mix( in oklab , #00F0FF 10% , transparent );">
+        <div
+          id="13:98"
+          class={
+            theme() === "light"
+              ? "group flex flex-col rounded-2xl border border-slate-200 bg-white hover:shadow-[0_8px_24px_rgba(15,23,42,0.08)]"
+              : "hover:shadow-[0_8px_32px_rgba(0,240,255,0.12)] group flex flex-col border-[1px] border-solid rounded-2xl"
+          }
+          style={
+            theme() === "light"
+              ? ""
+              : "background-color: color-mix( in oklab , #1A1F3A 90% , transparent ); box-shadow: 0 0 rgba(0, 0, 0, 0), 0 0 rgba(0, 0, 0, 0), 0 0 rgba(0, 0, 0, 0), 0 0 rgba(0, 0, 0, 0), 0 4px 20px rgba(0, 240, 255, 0.08); border-color: color-mix( in oklab , #00F0FF 10% , transparent );"
+          }
+        >
           
           <div id="13:99" class="relative">
             <img id="13:100" alt="产品需求文档界面，现代化文档编辑器界面，深色主题" src="https://static.paraflowcontent.com/public/resource/image/0d5c8dbb-8c9b-4c73-aeb0-ab5d9c182769.jpeg" class="w-full h-48 object-cover rounded-tl-2xl rounded-tr-2xl" />
@@ -158,7 +320,21 @@ const ProjectList: Component<ProjectListProps> = (props) => {
             
             <div id="13:113" class="flex justify-between items-center mt-2">
               <div id="13:114" class="flex items-center gap-y-2 gap-x-2">
-                <div id="13:115" style="background-color: color-mix( in oklab , #00F0FF 15% , transparent ); color: rgba(0, 240, 255, 1); padding: 0.25rem 0.5rem;" class="text-xs rounded-lg">文档</div>
+        <div
+          id="13:115"
+          class={
+            theme() === "light"
+              ? "text-xs rounded-lg bg-sky-50 text-sky-700 px-2 py-1"
+              : "text-xs rounded-lg"
+          }
+          style={
+            theme() === "light"
+              ? ""
+              : "background-color: color-mix( in oklab , #00F0FF 15% , transparent ); color: rgba(0, 240, 255, 1); padding: 0.25rem 0.5rem;"
+          }
+        >
+          文档
+        </div>
               </div>
               <span id="13:116" style="color: rgba(92, 104, 118, 1);" class="text-xs">3天前</span>
             </div>
@@ -167,7 +343,19 @@ const ProjectList: Component<ProjectListProps> = (props) => {
               <button onClick={() => props.onNavigate('workspace')} id="13:118" class="hover:shadow-[0_0_15px_rgba(0,240,255,0.3)] flex grow shrink items-center gap-y-2 gap-x-2 rounded-lg" style="background-color: rgba(0, 240, 255, 1); flex-basis: 0%; color: rgba(10, 14, 26, 1); padding: 0.5rem 1rem;">
                 <span id="13:119" class="text-sm font-semibold">打开</span>
               </button>
-              <button id="13:120" class="hover:bg-[#FF006E]/20 hover:border-[#FF006E]/50 flex justify-center items-center w-10 h-10 border-[1px] border-solid rounded-lg" style="background-color: color-mix( in oklab , #1A1F3A 80% , transparent ); border-color: color-mix( in oklab , #00F0FF 20% , transparent );">
+              <button
+                id="13:120"
+                class={
+                  theme() === "light"
+                    ? "flex justify-center items-center w-10 h-10 border rounded-lg border-slate-200 bg-white hover:border-slate-400 hover:bg-slate-50 transition-colors"
+                    : "hover:bg-[#FF006E]/20 hover:border-[#FF006E]/50 flex justify-center items-center w-10 h-10 border-[1px] border-solid rounded-lg"
+                }
+                style={
+                  theme() === "light"
+                    ? ""
+                    : "background-color: color-mix( in oklab , #1A1F3A 80% , transparent ); border-color: color-mix( in oklab , #00F0FF 20% , transparent );"
+                }
+              >
                 <div id="13:121" class="bg-transparent flex justify-center items-center w-5 h-5">
                   <iconify-icon id="13:122" style="color: rgba(138, 151, 170, 1);" icon="lucide:more-horizontal" class="text-base"></iconify-icon>
                 </div>
@@ -176,7 +364,19 @@ const ProjectList: Component<ProjectListProps> = (props) => {
           </div>
         </div>
         
-        <div id="13:123" class="hover:shadow-[0_8px_32px_rgba(0,240,255,0.12)] group flex flex-col border-[1px] border-solid rounded-2xl" style="background-color: color-mix( in oklab , #1A1F3A 90% , transparent ); box-shadow: 0 0 rgba(0, 0, 0, 0), 0 0 rgba(0, 0, 0, 0), 0 0 rgba(0, 0, 0, 0), 0 0 rgba(0, 0, 0, 0), 0 4px 20px rgba(0, 240, 255, 0.08); border-color: color-mix( in oklab , #00F0FF 10% , transparent );">
+        <div
+          id="13:123"
+          class={
+            theme() === "light"
+              ? "group flex flex-col rounded-2xl border border-slate-200 bg-white hover:shadow-[0_8px_24px_rgba(15,23,42,0.08)]"
+              : "hover:shadow-[0_8px_32px_rgba(0,240,255,0.12)] group flex flex-col border-[1px] border-solid rounded-2xl"
+          }
+          style={
+            theme() === "light"
+              ? ""
+              : "background-color: color-mix( in oklab , #1A1F3A 90% , transparent ); box-shadow: 0 0 rgba(0, 0, 0, 0), 0 0 rgba(0, 0, 0, 0), 0 0 rgba(0, 0, 0, 0), 0 0 rgba(0, 0, 0, 0), 0 4px 20px rgba(0, 240, 255, 0.08); border-color: color-mix( in oklab , #00F0FF 10% , transparent );"
+          }
+        >
           
           <div id="13:124" class="relative">
             <img id="13:125" alt="主界面线框图，界面原型设计，画布和聊天面板布局" src="https://static.paraflowcontent.com/public/resource/image/3e5724b3-fc8a-4d92-82df-d7bce259a9a7.jpeg" class="w-full h-48 object-cover rounded-tl-2xl rounded-tr-2xl" />
@@ -205,7 +405,21 @@ const ProjectList: Component<ProjectListProps> = (props) => {
             
             <div id="13:138" class="flex justify-between items-center mt-2">
               <div id="13:139" class="flex items-center gap-y-2 gap-x-2">
-                <div id="13:140" style="background-color: color-mix( in oklab , #FF006E 20% , transparent ); color: rgba(255, 0, 110, 1); padding: 0.25rem 0.5rem;" class="text-xs rounded-lg">原型</div>
+        <div
+          id="13:140"
+          class={
+            theme() === "light"
+              ? "text-xs rounded-lg bg-rose-50 text-rose-700 px-2 py-1"
+              : "text-xs rounded-lg"
+          }
+          style={
+            theme() === "light"
+              ? ""
+              : "background-color: color-mix( in oklab , #FF006E 20% , transparent ); color: rgba(255, 0, 110, 1); padding: 0.25rem 0.5rem;"
+          }
+        >
+          原型
+        </div>
               </div>
               <span id="13:141" style="color: rgba(92, 104, 118, 1);" class="text-xs">5天前</span>
             </div>
@@ -214,7 +428,19 @@ const ProjectList: Component<ProjectListProps> = (props) => {
               <button onClick={() => props.onNavigate('workspace')} id="13:143" class="hover:shadow-[0_0_15px_rgba(0,240,255,0.3)] flex grow shrink items-center gap-y-2 gap-x-2 rounded-lg" style="background-color: rgba(0, 240, 255, 1); flex-basis: 0%; color: rgba(10, 14, 26, 1); padding: 0.5rem 1rem;">
                 <span id="13:144" class="text-sm font-semibold">打开</span>
               </button>
-              <button id="13:145" class="hover:bg-[#FF006E]/20 hover:border-[#FF006E]/50 flex justify-center items-center w-10 h-10 border-[1px] border-solid rounded-lg" style="background-color: color-mix( in oklab , #1A1F3A 80% , transparent ); border-color: color-mix( in oklab , #00F0FF 20% , transparent );">
+              <button
+                id="13:145"
+                class={
+                  theme() === "light"
+                    ? "flex justify-center items-center w-10 h-10 border rounded-lg border-slate-200 bg-white hover:border-slate-400 hover:bg-slate-50 transition-colors"
+                    : "hover:bg-[#FF006E]/20 hover:border-[#FF006E]/50 flex justify-center items-center w-10 h-10 border-[1px] border-solid rounded-lg"
+                }
+                style={
+                  theme() === "light"
+                    ? ""
+                    : "background-color: color-mix( in oklab , #1A1F3A 80% , transparent ); border-color: color-mix( in oklab , #00F0FF 20% , transparent );"
+                }
+              >
                 <div id="13:146" class="bg-transparent flex justify-center items-center w-5 h-5">
                   <iconify-icon id="13:147" style="color: rgba(138, 151, 170, 1);" icon="lucide:more-horizontal" class="text-base"></iconify-icon>
                 </div>
@@ -223,7 +449,19 @@ const ProjectList: Component<ProjectListProps> = (props) => {
           </div>
         </div>
         
-        <div id="13:148" class="hover:shadow-[0_8px_32px_rgba(0,240,255,0.12)] group flex flex-col border-[1px] border-solid rounded-2xl" style="background-color: color-mix( in oklab , #1A1F3A 90% , transparent ); box-shadow: 0 0 rgba(0, 0, 0, 0), 0 0 rgba(0, 0, 0, 0), 0 0 rgba(0, 0, 0, 0), 0 0 rgba(0, 0, 0, 0), 0 4px 20px rgba(0, 240, 255, 0.08); border-color: color-mix( in oklab , #00F0FF 10% , transparent );">
+        <div
+          id="13:148"
+          class={
+            theme() === "light"
+              ? "group flex flex-col rounded-2xl border border-slate-200 bg-white hover:shadow-[0_8px_24px_rgba(15,23,42,0.08)]"
+              : "hover:shadow-[0_8px_32px_rgba(0,240,255,0.12)] group flex flex-col border-[1px] border-solid rounded-2xl"
+          }
+          style={
+            theme() === "light"
+              ? ""
+              : "background-color: color-mix( in oklab , #1A1F3A 90% , transparent ); box-shadow: 0 0 rgba(0, 0, 0, 0), 0 0 rgba(0, 0, 0, 0), 0 0 rgba(0, 0, 0, 0), 0 0 rgba(0, 0, 0, 0), 0 4px 20px rgba(0, 240, 255, 0.08); border-color: color-mix( in oklab , #00F0FF 10% , transparent );"
+          }
+        >
           
           <div id="13:149" class="relative">
             <img id="13:150" alt="用户注册页面设计，现代UI设计，暗色主题配霓虹色彩" src="https://static.paraflowcontent.com/public/resource/image/01236d12-30dc-4e14-9a0d-8c3753c456d5.jpeg" class="w-full h-48 object-cover rounded-tl-2xl rounded-tr-2xl" />
@@ -252,7 +490,21 @@ const ProjectList: Component<ProjectListProps> = (props) => {
             
             <div id="13:163" class="flex justify-between items-center mt-2">
               <div id="13:164" class="flex items-center gap-y-2 gap-x-2">
-                <div id="13:165" style="background-color: color-mix( in oklab , #B026FF 20% , transparent ); color: rgba(176, 38, 255, 1); padding: 0.25rem 0.5rem;" class="text-xs rounded-lg">设计稿</div>
+          <div
+            id="13:165"
+            class={
+              theme() === "light"
+                ? "text-xs rounded-lg bg-violet-50 text-violet-700 px-2 py-1"
+                : "text-xs rounded-lg"
+            }
+            style={
+              theme() === "light"
+                ? ""
+                : "background-color: color-mix( in oklab , #B026FF 20% , transparent ); color: rgba(176, 38, 255, 1); padding: 0.25rem 0.5rem;"
+            }
+          >
+            设计稿
+          </div>
               </div>
               <span id="13:166" style="color: rgba(92, 104, 118, 1);" class="text-xs">1周前</span>
             </div>
@@ -270,7 +522,19 @@ const ProjectList: Component<ProjectListProps> = (props) => {
           </div>
         </div>
         
-        <div id="13:173" class="hover:shadow-[0_8px_32px_rgba(0,240,255,0.12)] group flex flex-col border-[1px] border-solid rounded-2xl" style="background-color: color-mix( in oklab , #1A1F3A 90% , transparent ); box-shadow: 0 0 rgba(0, 0, 0, 0), 0 0 rgba(0, 0, 0, 0), 0 0 rgba(0, 0, 0, 0), 0 0 rgba(0, 0, 0, 0), 0 4px 20px rgba(0, 240, 255, 0.08); border-color: color-mix( in oklab , #00F0FF 10% , transparent );">
+        <div
+          id="13:173"
+          class={
+            theme() === "light"
+              ? "group flex flex-col rounded-2xl border border-slate-200 bg-white hover:shadow-[0_8px_24px_rgba(15,23,42,0.08)]"
+              : "hover:shadow-[0_8px_32px_rgba(0,240,255,0.12)] group flex flex-col border-[1px] border-solid rounded-2xl"
+          }
+          style={
+            theme() === "light"
+              ? ""
+              : "background-color: color-mix( in oklab , #1A1F3A 90% , transparent ); box-shadow: 0 0 rgba(0, 0, 0, 0), 0 0 rgba(0, 0, 0, 0), 0 0 rgba(0, 0, 0, 0), 0 0 rgba(0, 0, 0, 0), 0 4px 20px rgba(0, 240, 255, 0.08); border-color: color-mix( in oklab , #00F0FF 10% , transparent );"
+          }
+        >
           
           <div id="13:174" class="relative">
             <img id="13:175" alt="仪表板界面设计，数据可视化界面，现代化暗色主题" src="https://static.paraflowcontent.com/public/resource/image/12c3585a-9400-4043-8f86-67950e8d1a43.jpeg" class="w-full h-48 object-cover rounded-tl-2xl rounded-tr-2xl" />
@@ -299,7 +563,21 @@ const ProjectList: Component<ProjectListProps> = (props) => {
             
             <div id="13:188" class="flex justify-between items-center mt-2">
               <div id="13:189" class="flex items-center gap-y-2 gap-x-2">
-                <div id="13:190" style="background-color: color-mix( in oklab , #B026FF 20% , transparent ); color: rgba(176, 38, 255, 1); padding: 0.25rem 0.5rem;" class="text-xs rounded-lg">设计稿</div>
+          <div
+            id="13:190"
+            class={
+              theme() === "light"
+                ? "text-xs rounded-lg bg-violet-50 text-violet-700 px-2 py-1"
+                : "text-xs rounded-lg"
+            }
+            style={
+              theme() === "light"
+                ? ""
+                : "background-color: color-mix( in oklab , #B026FF 20% , transparent ); color: rgba(176, 38, 255, 1); padding: 0.25rem 0.5rem;"
+            }
+          >
+            设计稿
+          </div>
               </div>
               <span id="13:191" style="color: rgba(92, 104, 118, 1);" class="text-xs">2周前</span>
             </div>
@@ -317,7 +595,19 @@ const ProjectList: Component<ProjectListProps> = (props) => {
           </div>
         </div>
         
-        <div id="13:198" class="hover:shadow-[0_8px_32px_rgba(0,240,255,0.12)] group flex flex-col border-[1px] border-solid rounded-2xl" style="background-color: color-mix( in oklab , #1A1F3A 90% , transparent ); box-shadow: 0 0 rgba(0, 0, 0, 0), 0 0 rgba(0, 0, 0, 0), 0 0 rgba(0, 0, 0, 0), 0 0 rgba(0, 0, 0, 0), 0 4px 20px rgba(0, 240, 255, 0.08); border-color: color-mix( in oklab , #00F0FF 10% , transparent );">
+        <div
+          id="13:198"
+          class={
+            theme() === "light"
+              ? "group flex flex-col rounded-2xl border border-slate-200 bg-white hover:shadow-[0_8px_24px_rgba(15,23,42,0.08)]"
+              : "hover:shadow-[0_8px_32px_rgba(0,240,255,0.12)] group flex flex-col border-[1px] border-solid rounded-2xl"
+          }
+          style={
+            theme() === "light"
+              ? ""
+              : "background-color: color-mix( in oklab , #1A1F3A 90% , transparent ); box-shadow: 0 0 rgba(0, 0, 0, 0), 0 0 rgba(0, 0, 0, 0), 0 0 rgba(0, 0, 0, 0), 0 0 rgba(0, 0, 0, 0), 0 4px 20px rgba(0, 240, 255, 0.08); border-color: color-mix( in oklab , #00F0FF 10% , transparent );"
+          }
+        >
           
           <div id="13:199" class="relative">
             <img id="13:200" alt="移动应用界面设计，手机APP设计稿，现代化移动端界面" src="https://static.paraflowcontent.com/public/resource/image/aa88354a-31d6-49db-a129-8fc48c67d219.jpeg" class="w-full h-48 object-cover rounded-tl-2xl rounded-tr-2xl" />
@@ -346,7 +636,21 @@ const ProjectList: Component<ProjectListProps> = (props) => {
             
             <div id="13:213" class="flex justify-between items-center mt-2">
               <div id="13:214" class="flex items-center gap-y-2 gap-x-2">
-                <div id="13:215" style="background-color: color-mix( in oklab , #B026FF 20% , transparent ); color: rgba(176, 38, 255, 1); padding: 0.25rem 0.5rem;" class="text-xs rounded-lg">设计稿</div>
+          <div
+            id="13:215"
+            class={
+              theme() === "light"
+                ? "text-xs rounded-lg bg-violet-50 text-violet-700 px-2 py-1"
+                : "text-xs rounded-lg"
+            }
+            style={
+              theme() === "light"
+                ? ""
+                : "background-color: color-mix( in oklab , #B026FF 20% , transparent ); color: rgba(176, 38, 255, 1); padding: 0.25rem 0.5rem;"
+            }
+          >
+            设计稿
+          </div>
               </div>
               <span id="13:216" style="color: rgba(92, 104, 118, 1);" class="text-xs">3周前</span>
             </div>
@@ -366,19 +670,81 @@ const ProjectList: Component<ProjectListProps> = (props) => {
       </div>
       
       <div id="13:223" class="flex justify-center items-center gap-y-2 gap-x-2 mt-12 shrink-0">
-        <button id="13:224" class="hover:border-[#00F0FF]/50 hover:bg-[#00F0FF]/10 flex justify-center items-center w-10 h-10 border-[1px] border-solid rounded-lg" style="background-color: color-mix( in oklab , #1A1F3A 80% , transparent ); border-color: color-mix( in oklab , #00F0FF 20% , transparent );">
+        <button
+          id="13:224"
+          class={
+            theme() === "light"
+              ? "flex justify-center items-center w-10 h-10 rounded-lg border border-slate-200 bg-white hover:border-slate-400 hover:bg-slate-50 transition-colors"
+              : "hover:border-[#00F0FF]/50 hover:bg-[#00F0FF]/10 flex justify-center items-center w-10 h-10 border-[1px] border-solid rounded-lg"
+          }
+          style={
+            theme() === "light"
+              ? ""
+              : "background-color: color-mix( in oklab , #1A1F3A 80% , transparent ); border-color: color-mix( in oklab , #00F0FF 20% , transparent );"
+          }
+        >
           <div id="13:225" class="bg-transparent flex justify-center items-center w-5 h-5">
             <iconify-icon id="13:226" style="color: rgba(0, 240, 255, 1);" icon="lucide:chevron-left" class="text-base"></iconify-icon>
           </div>
         </button>
-        <button id="13:227" style="background-color: color-mix( in oklab , #00F0FF 15% , transparent ); box-shadow: 0 0 rgba(0, 0, 0, 0), 0 0 rgba(0, 0, 0, 0), 0 0 rgba(0, 0, 0, 0), 0 0 rgba(0, 0, 0, 0), 0 0 12px rgba(0, 240, 255, 0.2); color: rgba(0, 240, 255, 1); border-color: color-mix( in oklab , #00F0FF 50% , transparent );" class="flex justify-center items-center w-10 h-10 border-[1px] border-solid rounded-lg">
-          <span id="13:228" class="text-sm font-semibold">1</span>
+        <button
+          id="13:227"
+          class={
+            theme() === "light"
+              ? "flex justify-center items-center w-10 h-10 rounded-lg border border-slate-900 bg-slate-900 text-white text-sm font-semibold"
+              : "flex justify-center items-center w-10 h-10 border-[1px] border-solid rounded-lg"
+          }
+          style={
+            theme() === "light"
+              ? ""
+              : "background-color: color-mix( in oklab , #00F0FF 15% , transparent ); box-shadow: 0 0 rgba(0, 0, 0, 0), 0 0 rgba(0, 0, 0, 0), 0 0 rgba(0, 0, 0, 0), 0 0 rgba(0, 0, 0, 0), 0 0 12px rgba(0, 240, 255, 0.2); color: rgba(0, 240, 255, 1); border-color: color-mix( in oklab , #00F0FF 50% , transparent );"
+          }
+        >
+          <span id="13:228" class="text-sm font-semibold">
+            1
+          </span>
         </button>
-        <button id="13:229" class="hover:border-[#00F0FF]/50 hover:bg-[#00F0FF]/10 flex justify-center items-center w-10 h-10 border-[1px] border-solid rounded-lg" style="background-color: color-mix( in oklab , #1A1F3A 80% , transparent ); border-color: color-mix( in oklab , #00F0FF 20% , transparent );">
-          <span id="13:230" style="color: rgba(184, 197, 217, 1);" class="text-sm">2</span>
+        <button
+          id="13:229"
+          class={
+            theme() === "light"
+              ? "flex justify-center items-center w-10 h-10 rounded-lg border border-slate-200 bg-white hover:border-slate-400 hover:bg-slate-50 transition-colors"
+              : "hover:border-[#00F0FF]/50 hover:bg-[#00F0FF]/10 flex justify-center items-center w-10 h-10 border-[1px] border-solid rounded-lg"
+          }
+          style={
+            theme() === "light"
+              ? ""
+              : "background-color: color-mix( in oklab , #1A1F3A 80% , transparent ); border-color: color-mix( in oklab , #00F0FF 20% , transparent );"
+          }
+        >
+          <span
+            id="13:230"
+            style={theme() === "light" ? "color: #64748B;" : "color: rgba(184, 197, 217, 1);"}
+            class="text-sm"
+          >
+            2
+          </span>
         </button>
-        <button id="13:231" class="hover:border-[#00F0FF]/50 hover:bg-[#00F0FF]/10 flex justify-center items-center w-10 h-10 border-[1px] border-solid rounded-lg" style="background-color: color-mix( in oklab , #1A1F3A 80% , transparent ); border-color: color-mix( in oklab , #00F0FF 20% , transparent );">
-          <span id="13:232" style="color: rgba(184, 197, 217, 1);" class="text-sm">3</span>
+        <button
+          id="13:231"
+          class={
+            theme() === "light"
+              ? "flex justify-center items-center w-10 h-10 rounded-lg border border-slate-200 bg-white hover:border-slate-400 hover:bg-slate-50 transition-colors"
+              : "hover:border-[#00F0FF]/50 hover:bg-[#00F0FF]/10 flex justify-center items-center w-10 h-10 border-[1px] border-solid rounded-lg"
+          }
+          style={
+            theme() === "light"
+              ? ""
+              : "background-color: color-mix( in oklab , #1A1F3A 80% , transparent ); border-color: color-mix( in oklab , #00F0FF 20% , transparent );"
+          }
+        >
+          <span
+            id="13:232"
+            style={theme() === "light" ? "color: #64748B;" : "color: rgba(184, 197, 217, 1);"}
+            class="text-sm"
+          >
+            3
+          </span>
         </button>
       </div>
     </main>

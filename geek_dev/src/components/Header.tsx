@@ -7,6 +7,7 @@ interface HeaderProps {
 
 const Header: Component<HeaderProps> = (props) => {
   const [showDropdown, setShowDropdown] = createSignal(false)
+  const [theme, setTheme] = createSignal<"dark" | "light">("dark")
 
   const toggleDropdown = () => {
     setShowDropdown(!showDropdown())
@@ -26,18 +27,46 @@ const Header: Component<HeaderProps> = (props) => {
   }
 
   onMount(() => {
+    try {
+      const stored = localStorage.getItem("workspace_theme")
+      if (stored === "light" || stored === "dark") setTheme(stored)
+    } catch {}
     document.addEventListener("click", handleClickOutside)
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent).detail as "dark" | "light" | undefined
+      if (detail !== "dark" && detail !== "light") return
+      setTheme(detail)
+    }
+    window.addEventListener("workspace_theme_toggle", handler as EventListener)
+    onCleanup(() => window.removeEventListener("workspace_theme_toggle", handler as EventListener))
   })
 
   onCleanup(() => {
     document.removeEventListener("click", handleClickOutside)
   })
 
+  const toggleTheme = () => {
+    const next = theme() === "dark" ? "light" : "dark"
+    setTheme(next)
+    try {
+      localStorage.setItem("workspace_theme", next)
+    } catch {}
+    window.dispatchEvent(new CustomEvent("workspace_theme_toggle", { detail: next }))
+  }
+
   return (
     <header
       id="14:2"
-      style="background: linear-gradient(135deg, rgba(26, 11, 46, 1) 0%, rgba(22, 33, 62, 1) 100%);"
-      class="w-full shrink-0"
+      class={
+        theme() === "light"
+          ? "w-full shrink-0 bg-white border-b border-slate-200"
+          : "w-full shrink-0"
+      }
+      style={
+        theme() === "light"
+          ? ""
+          : "background: linear-gradient(135deg, rgba(26, 11, 46, 1) 0%, rgba(22, 33, 62, 1) 100%);"
+      }
     >
       <nav id="14:3" style="padding: 1rem 1.5rem;" class="flex justify-between items-center w-full">
         <div id="14:4" class="flex items-center gap-x-8">
@@ -46,7 +75,7 @@ const Header: Component<HeaderProps> = (props) => {
               id="14:5-btn"
               onClick={(e) => {
                 e.preventDefault()
-                props.onNavigate?.("home")
+                props.onNavigate?.("workspace")
               }}
               class="bg-transparent p-0 border-0 cursor-pointer flex items-center gap-x-3"
             >
@@ -58,7 +87,11 @@ const Header: Component<HeaderProps> = (props) => {
                   class="text-2xl"
                 ></iconify-icon>
               </div>
-              <span id="14:8" style="color: rgba(232, 240, 255, 1);" class="text-xl font-bold">
+              <span
+                id="14:8"
+                class="text-xl font-bold"
+                style={theme() === "light" ? "color: rgb(15,23,42);" : "color: rgba(232, 240, 255, 1);"}
+              >
                 极客设计工坊
               </span>
             </button>
@@ -67,10 +100,17 @@ const Header: Component<HeaderProps> = (props) => {
             <a
               id="14:12"
               class="hover:text-[#00F0FF] hover:shadow-[0_0_8px_rgba(0,240,255,0.2)] flex items-center gap-x-2 rounded-lg cursor-pointer"
-              style={{
-                color: props.currentView === "project-list" ? "#00F0FF" : "rgba(184, 197, 217, 1)",
-                padding: "0.5rem 0.75rem",
-              }}
+              style={
+                theme() === "light"
+                  ? {
+                      color: props.currentView === "project-list" ? "#0F172A" : "#64748B",
+                      padding: "0.5rem 0.75rem",
+                    }
+                  : {
+                      color: props.currentView === "project-list" ? "#00F0FF" : "rgba(184, 197, 217, 1)",
+                      padding: "0.5rem 0.75rem",
+                    }
+              }
               onClick={(e) => {
                 e.preventDefault()
                 props.onNavigate?.("project-list")
@@ -82,7 +122,17 @@ const Header: Component<HeaderProps> = (props) => {
         </div>
         <div id="14:16" class="flex items-center gap-x-4">
           <div id="14:26" class="flex items-center gap-x-2 relative" ref={dropdownRef}>
-            <button id="14:27-button" onClick={() => window.location.href = '/login'} class="bg-transparent p-0 border-0 cursor-pointer">
+            <button
+              class="bg-transparent p-0 border-0 cursor-pointer flex justify-center items-center w-6 h-6 hover:bg-[#00F0FF]/10 rounded-full transition-colors"
+              onClick={toggleTheme}
+            >
+              <iconify-icon
+                icon={theme() === "light" ? "lucide:moon-star" : "lucide:sun-medium"}
+                class="text-sm"
+                style="color: rgba(0, 240, 255, 1);"
+              ></iconify-icon>
+            </button>
+            <button id="14:27-button" onClick={() => (window.location.href = "/login")} class="bg-transparent p-0 border-0 cursor-pointer">
               <img
                 id="14:27"
                 style="border-color: color-mix( in oklab , #00F0FF 40% , transparent );"

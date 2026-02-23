@@ -1,4 +1,4 @@
-import { createEffect, createSignal, onCleanup, Show } from "solid-js"
+import { createEffect, createSignal, onCleanup, onMount, Show } from "solid-js"
 import "./App.css"
 import Header from "./components/Header"
 import Sidebar from "./components/Sidebar"
@@ -39,6 +39,7 @@ function App() {
   const [transitioning, setTransitioning] = createSignal(false)
   const [transitionTitle, setTransitionTitle] = createSignal("Analyzing Input...")
   const [projectTitle, setProjectTitle] = createSignal(cookieValue("app_name") || "")
+  const [theme, setTheme] = createSignal<"dark" | "light">("dark")
   let isResizing = false
   createEffect(() => {
     if (!transitioning()) return
@@ -96,6 +97,20 @@ function App() {
     document.body.style.userSelect = ""
   }
 
+  onMount(() => {
+    try {
+      const stored = globalThis.localStorage?.getItem?.("workspace_theme") || ""
+      if (stored === "light" || stored === "dark") setTheme(stored)
+    } catch {}
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent).detail as "dark" | "light" | undefined
+      if (detail !== "dark" && detail !== "light") return
+      setTheme(detail)
+    }
+    window.addEventListener("workspace_theme_toggle", handler as EventListener)
+    onCleanup(() => window.removeEventListener("workspace_theme_toggle", handler as EventListener))
+  })
+
   onCleanup(() => {
     document.removeEventListener("mousemove", handleMouseMove)
     document.removeEventListener("mouseup", stopResizing)
@@ -109,7 +124,11 @@ function App() {
       <Header onNavigate={setCurrentView} currentView={currentView()} />
       <div
         id="14:30"
-        style="background: linear-gradient(135deg, rgba(10, 14, 26, 1) 0%, rgba(26, 19, 50, 1) 50%, rgba(13, 27, 42, 1) 100%), radial-gradient(circle at 20% 30%, rgba(0, 240, 255, 0.101961) 0%, transparent 50%), radial-gradient(circle at 80% 70%, rgba(255, 0, 110, 0.101961) 0%, transparent 50%);"
+        style={
+          theme() === "light"
+            ? "background: radial-gradient(circle at 20% 20%, rgba(56, 189, 248, 0.16) 0, transparent 55%), radial-gradient(circle at 80% 80%, rgba(59, 130, 246, 0.12) 0, transparent 55%), #F3FAFF;"
+            : "background: linear-gradient(135deg, rgba(10, 14, 26, 1) 0%, rgba(26, 19, 50, 1) 50%, rgba(13, 27, 42, 1) 100%), radial-gradient(circle at 20% 30%, rgba(0, 240, 255, 0.101961) 0%, transparent 50%), radial-gradient(circle at 80% 70%, rgba(255, 0, 110, 0.101961) 0%, transparent 50%);"
+        }
         class="flex w-full grow overflow-hidden"
       >
         <Show when={currentView() !== "project-list"}>
@@ -122,8 +141,12 @@ function App() {
           />
           <Show when={!isSidebarCollapsed()}>
             <div
-              class="w-1 hover:bg-[#00F0FF] cursor-col-resize transition-colors duration-150 flex-shrink-0"
-              style="background-color: rgba(0, 240, 255, 0.05);"
+              class={
+                theme() === "light"
+                  ? "w-1 cursor-col-resize transition-colors duration-150 flex-shrink-0 bg-slate-200 hover:bg-slate-400"
+                  : "w-1 cursor-col-resize transition-colors duration-150 flex-shrink-0 hover:bg-[#00F0FF]"
+              }
+              style={theme() === "light" ? "" : "background-color: rgba(0, 240, 255, 0.05);"}
               onMouseDown={startResizing}
             />
           </Show>
