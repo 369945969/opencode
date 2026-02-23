@@ -1582,16 +1582,24 @@ const Sidebar: Component<SidebarProps> = (props) => {
                           <div class="mt-2 flex flex-col gap-1">
                             <For each={msg.filePaths}>
                               {(path) => (
-                                <div
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    window.dispatchEvent(
+                                      new CustomEvent("workspace_focus_file", {
+                                        detail: { name: path },
+                                      }),
+                                    )
+                                  }}
                                   class={
                                     theme() === "light"
-                                      ? "text-xs font-mono text-slate-600 bg-slate-100 px-2 py-1 rounded border border-slate-200 flex items-center gap-2"
-                                      : "text-xs font-mono text-[#00F0FF] bg-[#00F0FF]/10 px-2 py-1 rounded border border-[#00F0FF]/20 flex items-center gap-2"
+                                      ? "text-xs font-mono text-slate-600 bg-slate-100 px-2 py-1 rounded border border-slate-200 flex items-center gap-2 hover:bg-slate-200 hover:border-slate-300 transition-colors"
+                                      : "text-xs font-mono text-[#00F0FF] bg-[#00F0FF]/10 px-2 py-1 rounded border border-[#00F0FF]/20 flex items-center gap-2 hover:bg-[#00F0FF]/15 hover:border-[#00F0FF]/40 transition-colors"
                                   }
                                 >
                                   <iconify-icon icon="lucide:file-code" class="text-sm"></iconify-icon>
                                   {path}
-                                </div>
+                                </button>
                               )}
                             </For>
                           </div>

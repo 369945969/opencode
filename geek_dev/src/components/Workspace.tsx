@@ -320,12 +320,23 @@ const Workspace: Component<WorkspaceProps> = (props) => {
   const [toast, setToast] = createSignal<{ message: string } | null>(null)
   const [selectedHtml, setSelectedHtml] = createSignal<string | null>(null)
   const [sessionId, setSessionId] = createSignal("")
+  const [focusName, setFocusName] = createSignal<string | null>(null)
 
   onMount(() => {
     try {
       const stored = localStorage.getItem("workspace_theme")
       if (stored === "light" || stored === "dark") setTheme(stored)
     } catch {}
+  })
+
+  onMount(() => {
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent).detail as { name?: string } | undefined
+      if (!detail?.name) return
+      setFocusName(detail.name)
+    }
+    window.addEventListener("workspace_focus_file", handler as EventListener)
+    onCleanup(() => window.removeEventListener("workspace_focus_file", handler as EventListener))
   })
 
   createEffect(() => {
@@ -860,60 +871,75 @@ const Workspace: Component<WorkspaceProps> = (props) => {
                       >
                         <div class="inline-flex gap-3 flex-wrap min-w-max">
                           <For each={globalDocs()}>
-                            {(doc) => (
-                              <button
-                                type="button"
-                                title={doc.name}
-                                onMouseDown={(e) => e.stopPropagation()}
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  void openDocPreview(doc)
-                                }}
-                                class={
-                                  theme() === "light"
-                                    ? "min-w-[160px] max-w-[200px] text-left rounded-xl border border-slate-200 bg-white hover:border-slate-400 hover:bg-slate-50 transition-all px-3 py-2 flex flex-col gap-2 shadow-sm"
-                                    : "min-w-[160px] max-w-[200px] text-left rounded-xl border border-[#00F0FF]/10 bg-[#141829]/80 hover:border-[#00F0FF]/60 hover:bg-[#141829] transition-all px-3 py-2 flex flex-col gap-2"
+                            {(doc) => {
+                              let el: HTMLButtonElement | undefined
+                              createEffect(() => {
+                                if (focusName() === doc.name && el) {
+                                  el.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "nearest" })
                                 }
-                              >
-                                <div
+                              })
+                              return (
+                                <button
+                                  ref={(node) => {
+                                    el = node
+                                  }}
+                                  type="button"
+                                  title={doc.name}
+                                  onMouseDown={(e) => e.stopPropagation()}
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    void openDocPreview(doc)
+                                  }}
                                   class={
                                     theme() === "light"
-                                      ? "text-xs font-semibold text-slate-900 truncate"
-                                      : "text-xs font-semibold text-[#E8F0FF] truncate"
-                                  }
-                                >
-                                  {doc.name}
-                                </div>
-                                <Show
-                                  when={doc.kind === "html"}
-                                  fallback={
-                                    <div
-                                      class={
-                                        theme() === "light"
-                                          ? "flex-1 text-[10px] text-slate-600 whitespace-pre-wrap leading-relaxed overflow-hidden"
-                                          : "flex-1 text-[10px] text-[#8A97AA] whitespace-pre-wrap leading-relaxed overflow-hidden"
-                                      }
-                                    >
-                                      {doc.preview}
-                                    </div>
+                                      ? focusName() === doc.name
+                                        ? "min-w-[160px] max-w-[200px] text-left rounded-xl border border-[#00B7FF] bg-white ring-1 ring-[#00B7FF]/40 transition-all px-3 py-2 flex flex-col gap-2 shadow-sm"
+                                        : "min-w-[160px] max-w-[200px] text-left rounded-xl border border-slate-200 bg-white hover:border-slate-400 hover:bg-slate-50 transition-all px-3 py-2 flex flex-col gap-2 shadow-sm"
+                                      : focusName() === doc.name
+                                        ? "min-w-[160px] max-w-[200px] text-left rounded-xl border border-[#00F0FF] bg-[#141829] ring-1 ring-[#00F0FF]/40 transition-all px-3 py-2 flex flex-col gap-2"
+                                        : "min-w-[160px] max-w-[200px] text-left rounded-xl border border-[#00F0FF]/10 bg-[#141829]/80 hover:border-[#00F0FF]/60 hover:bg-[#141829] transition-all px-3 py-2 flex flex-col gap-2"
                                   }
                                 >
                                   <div
                                     class={
                                       theme() === "light"
-                                        ? "mt-1 flex-1 rounded-md overflow-hidden border border-slate-200 bg-white"
-                                        : "mt-1 flex-1 rounded-md overflow-hidden border border-[#00F0FF]/20 bg-black"
+                                        ? "text-xs font-semibold text-slate-900 truncate"
+                                        : "text-xs font-semibold text-[#E8F0FF] truncate"
                                     }
                                   >
-                                    <iframe
-                                      srcdoc={doc.preview}
-                                      class="w-[300%] h-[300%] border-none pointer-events-none scale-[0.3333] origin-top-left bg-white"
-                                      tabindex="-1"
-                                    />
+                                    {doc.name}
                                   </div>
-                                </Show>
-                              </button>
-                            )}
+                                  <Show
+                                    when={doc.kind === "html"}
+                                    fallback={
+                                      <div
+                                        class={
+                                          theme() === "light"
+                                            ? "flex-1 text-[10px] text-slate-600 whitespace-pre-wrap leading-relaxed overflow-hidden"
+                                            : "flex-1 text-[10px] text-[#8A97AA] whitespace-pre-wrap leading-relaxed overflow-hidden"
+                                        }
+                                      >
+                                        {doc.preview}
+                                      </div>
+                                    }
+                                  >
+                                    <div
+                                      class={
+                                        theme() === "light"
+                                          ? "mt-1 flex-1 rounded-md overflow-hidden border border-slate-200 bg-white"
+                                          : "mt-1 flex-1 rounded-md overflow-hidden border border-[#00F0FF]/20 bg-black"
+                                      }
+                                    >
+                                      <iframe
+                                        srcdoc={doc.preview}
+                                        class="w-[300%] h-[300%] border-none pointer-events-none scale-[0.3333] origin-top-left bg-white"
+                                        tabindex="-1"
+                                      />
+                                    </div>
+                                  </Show>
+                                </button>
+                              )
+                            }}
                           </For>
                         </div>
                       </Show>
@@ -951,21 +977,35 @@ const Workspace: Component<WorkspaceProps> = (props) => {
                       >
                         <div class="inline-flex gap-3 flex-wrap min-w-max">
                           <For each={featureDocs()}>
-                            {(doc) => (
-                              <button
-                                type="button"
-                                title={doc.name}
-                                onMouseDown={(e) => e.stopPropagation()}
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  void openDocPreview(doc)
-                                }}
-                                class={
-                                  theme() === "light"
-                                    ? "min-w-[160px] max-w-[200px] text-left rounded-xl border border-slate-200 bg-white hover:border-slate-400 hover:bg-slate-50 transition-all px-3 py-2 flex flex-col gap-2 shadow-sm"
-                                    : "min-w-[160px] max-w-[200px] text-left rounded-xl border border-[#00F0FF]/10 bg-[#141829]/80 hover:border-[#00F0FF]/60 hover:bg-[#141829] transition-all px-3 py-2 flex flex-col gap-2"
+                            {(doc) => {
+                              let el: HTMLButtonElement | undefined
+                              createEffect(() => {
+                                if (focusName() === doc.name && el) {
+                                  el.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "nearest" })
                                 }
-                              >
+                              })
+                              return (
+                                <button
+                                  ref={(node) => {
+                                    el = node
+                                  }}
+                                  type="button"
+                                  title={doc.name}
+                                  onMouseDown={(e) => e.stopPropagation()}
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    void openDocPreview(doc)
+                                  }}
+                                  class={
+                                    theme() === "light"
+                                      ? focusName() === doc.name
+                                        ? "min-w-[160px] max-w-[200px] text-left rounded-xl border border-[#00B7FF] bg-white ring-1 ring-[#00B7FF]/40 transition-all px-3 py-2 flex flex-col gap-2 shadow-sm"
+                                        : "min-w-[160px] max-w-[200px] text-left rounded-xl border border-slate-200 bg-white hover:border-slate-400 hover:bg-slate-50 transition-all px-3 py-2 flex flex-col gap-2 shadow-sm"
+                                      : focusName() === doc.name
+                                        ? "min-w-[160px] max-w-[200px] text-left rounded-xl border border-[#00F0FF] bg-[#141829] ring-1 ring-[#00F0FF]/40 transition-all px-3 py-2 flex flex-col gap-2"
+                                        : "min-w-[160px] max-w-[200px] text-left rounded-xl border border-[#00F0FF]/10 bg-[#141829]/80 hover:border-[#00F0FF]/60 hover:bg-[#141829] transition-all px-3 py-2 flex flex-col gap-2"
+                                  }
+                                >
                                 <div
                                   class={
                                     theme() === "light"
