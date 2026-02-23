@@ -852,8 +852,8 @@ const Workspace: Component<WorkspaceProps> = (props) => {
                                 }}
                                 class={
                                   theme() === "light"
-                                    ? "min-w-[220px] max-w-[280px] h-[200px] text-left rounded-xl border border-slate-200 bg-white hover:border-slate-400 hover:bg-slate-50 transition-all px-3 py-2 flex flex-col gap-2 shadow-sm"
-                                    : "min-w-[220px] max-w-[280px] h-[200px] text-left rounded-xl border border-[#00F0FF]/10 bg-[#141829]/80 hover:border-[#00F0FF]/60 hover:bg-[#141829] transition-all px-3 py-2 flex flex-col gap-2"
+                                    ? "min-w-[160px] max-w-[200px] h-[260px] text-left rounded-xl border border-slate-200 bg-white hover:border-slate-400 hover:bg-slate-50 transition-all px-3 py-2 flex flex-col gap-2 shadow-sm"
+                                    : "min-w-[160px] max-w-[200px] h-[260px] text-left rounded-xl border border-[#00F0FF]/10 bg-[#141829]/80 hover:border-[#00F0FF]/60 hover:bg-[#141829] transition-all px-3 py-2 flex flex-col gap-2"
                                 }
                               >
                                 <div
@@ -943,8 +943,8 @@ const Workspace: Component<WorkspaceProps> = (props) => {
                                 }}
                                 class={
                                   theme() === "light"
-                                    ? "min-w-[160px] max-w-[200px] text-left rounded-xl border border-slate-200 bg-white hover:border-slate-400 hover:bg-slate-50 transition-all px-3 py-2 flex flex-col gap-2 shadow-sm"
-                                    : "min-w-[160px] max-w-[200px] text-left rounded-xl border border-[#00F0FF]/10 bg-[#141829]/80 hover:border-[#00F0FF]/60 hover:bg-[#141829] transition-all px-3 py-2 flex flex-col gap-2"
+                                    ? "min-w-[160px] max-w-[200px] h-[260px] text-left rounded-xl border border-slate-200 bg-white hover:border-slate-400 hover:bg-slate-50 transition-all px-3 py-2 flex flex-col gap-2 shadow-sm"
+                                    : "min-w-[160px] max-w-[200px] h-[260px] text-left rounded-xl border border-[#00F0FF]/10 bg-[#141829]/80 hover:border-[#00F0FF]/60 hover:bg-[#141829] transition-all px-3 py-2 flex flex-col gap-2"
                                 }
                               >
                                 <div
@@ -973,8 +973,8 @@ const Workspace: Component<WorkspaceProps> = (props) => {
                                   <div
                                     class={
                                       theme() === "light"
-                                        ? "mt-1 h-[120px] rounded-md overflow-hidden border border-slate-200 bg-white"
-                                        : "mt-1 h-[120px] rounded-md overflow-hidden border border-[#00F0FF]/20 bg-black"
+                                        ? "mt-1 flex-1 rounded-md overflow-hidden border border-slate-200 bg-white"
+                                        : "mt-1 flex-1 rounded-md overflow-hidden border border-[#00F0FF]/20 bg-black"
                                     }
                                   >
                                     <iframe
@@ -1023,64 +1023,101 @@ const Workspace: Component<WorkspaceProps> = (props) => {
                       >
                         <div class="flex gap-3">
                           <For each={styleDocs()}>
-                            {(doc) => (
-                              <button
-                                type="button"
-                                title={doc.name}
-                                onMouseDown={(e) => e.stopPropagation()}
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  void openDocPreview(doc)
-                                }}
-                                class={
-                                  doc.kind === "html"
-                                    ? theme() === "light"
-                                      ? "min-w-[320px] max-w-[420px] h-[220px] text-left rounded-xl border border-slate-200 bg-white hover:border-slate-400 hover:bg-slate-50 transition-all px-3 py-2 flex flex-col gap-2 shadow-sm"
-                                      : "min-w-[320px] max-w-[420px] h-[220px] text-left rounded-xl border border-[#00F0FF]/10 bg-[#141829]/80 hover:border-[#00F0FF]/60 hover:bg-[#141829] transition-all px-3 py-2 flex flex-col gap-2"
-                                    : theme() === "light"
-                                      ? "min-w-[160px] max-w-[200px] h-[220px] text-left rounded-xl border border-slate-200 bg-white hover:border-slate-400 hover:bg-slate-50 transition-all px-3 py-2 flex flex-col gap-2 shadow-sm"
-                                      : "min-w-[160px] max-w-[200px] h-[220px] text-left rounded-xl border border-[#00F0FF]/10 bg-[#141829]/80 hover:border-[#00F0FF]/60 hover:bg-[#141829] transition-all px-3 py-2 flex flex-col gap-2"
-                                }
-                              >
-                                <div
+                            {(doc) =>
+                              doc.kind === "html" ? (
+                                <button
+                                  type="button"
+                                  title={doc.name}
+                                  onMouseDown={(e) => e.stopPropagation()}
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    void openDocPreview(doc)
+                                  }}
                                   class={
                                     theme() === "light"
-                                      ? "text-xs font-semibold text-slate-900 truncate"
-                                      : "text-xs font-semibold text-[#E8F0FF] truncate"
+                                      ? "group relative flex-none w-[260px] aspect-square rounded-xl border border-slate-200 bg-white hover:border-slate-400 hover:bg-slate-50 transition-all overflow-hidden shadow-sm"
+                                      : "group relative flex-none w-[260px] aspect-square rounded-xl border border-[#00F0FF]/20 bg-[#141829]/80 hover:border-[#00F0FF]/60 hover:bg-[#141829] transition-all overflow-hidden"
                                   }
                                 >
-                                  {doc.name}
-                                </div>
-                                <Show
-                                  when={doc.kind === "html"}
-                                  fallback={
+                                  <div class="absolute inset-0">
                                     <div
                                       class={
                                         theme() === "light"
-                                          ? "flex-1 text-[10px] text-slate-600 whitespace-pre-wrap leading-relaxed overflow-hidden"
-                                          : "flex-1 text-[10px] text-[#8A97AA] whitespace-pre-wrap leading-relaxed overflow-hidden"
+                                          ? "w-full h-full bg-white rounded-lg overflow-hidden relative"
+                                          : "w-full h-full bg-black rounded-lg overflow-hidden relative"
                                       }
                                     >
-                                      {doc.preview}
+                                      <iframe
+                                        srcdoc={doc.preview}
+                                        class="w-[300%] h-[300%] border-none pointer-events-none scale-[0.3333] origin-top-left bg-white"
+                                        tabindex="-1"
+                                      />
+                                      <div
+                                        class={
+                                          theme() === "light"
+                                            ? "absolute inset-0 bg-transparent group-hover:bg-slate-900/5 transition-colors"
+                                            : "absolute inset-0 bg-transparent group-hover:bg-white/5 transition-colors"
+                                        }
+                                      ></div>
                                     </div>
+                                  </div>
+                                  <div class="absolute bottom-0 left-0 right-0 px-3 pb-3">
+                                    <div
+                                      class={
+                                        theme() === "light"
+                                          ? "text-xs font-semibold text-slate-900 truncate"
+                                          : "text-xs font-semibold text-[#E8F0FF] truncate"
+                                      }
+                                    >
+                                      {doc.name}
+                                    </div>
+                                    <div
+                                      class={
+                                        theme() === "light"
+                                          ? "text-[10px] text-slate-600 truncate"
+                                          : "text-[10px] text-[#8A97AA] truncate"
+                                      }
+                                    >
+                                      点击放大查看原型
+                                    </div>
+                                  </div>
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  title={doc.name}
+                                  onMouseDown={(e) => e.stopPropagation()}
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    void openDocPreview(doc)
+                                  }}
+                                  class={
+                                    theme() === "light"
+                                      ? "min-w-[160px] max-w-[200px] text-left rounded-xl border border-slate-200 bg-white hover:border-slate-400 hover:bg-slate-50 transition-all px-3 py-2 flex flex-col gap-2 shadow-sm"
+                                      : "min-w-[160px] max-w-[200px] text-left rounded-xl border border-[#00F0FF]/10 bg-[#141829]/80 hover:border-[#00F0FF]/60 hover:bg-[#141829] transition-all px-3 py-2 flex flex-col gap-2"
                                   }
                                 >
                                   <div
                                     class={
                                       theme() === "light"
-                                        ? "mt-1 flex-1 rounded-md overflow-hidden border border-slate-200 bg-white"
-                                        : "mt-1 flex-1 rounded-md overflow-hidden border border-[#00F0FF]/20 bg-black"
+                                        ? "text-xs font-semibold text-slate-900 truncate"
+                                        : "text-xs font-semibold text-[#E8F0FF] truncate"
                                     }
                                   >
-                                    <iframe
-                                      srcdoc={doc.preview}
-                                      class="w-[300%] h-[300%] border-none pointer-events-none scale-[0.3333] origin-top-left bg-white"
-                                      tabindex="-1"
-                                    />
+                                    {doc.name}
                                   </div>
-                                </Show>
-                              </button>
-                            )}
+                                  <div
+                                    class={
+                                      theme() === "light"
+                                        ? "flex-1 text-[10px] text-slate-600 whitespace-pre-wrap leading-relaxed overflow-hidden"
+                                        : "flex-1 text-[10px] text-[#8A97AA] whitespace-pre-wrap leading-relaxed overflow-hidden"
+                                    }
+                                  >
+                                    {doc.preview}
+                                  </div>
+                                </button>
+                              )
+                            }
                           </For>
                         </div>
                       </Show>
