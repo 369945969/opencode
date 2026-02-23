@@ -205,6 +205,7 @@ const Sidebar: Component<SidebarProps> = (props) => {
   const assistantMessageIds = new Set<string>()
   const pendingText = new Map<string, string>()
   const pendingReasoning = new Map<string, string>()
+  let messagesInitialized = false
   let messagesRef: HTMLDivElement | undefined
   let resizerRef: HTMLDivElement | undefined
   let textareaRef: HTMLTextAreaElement | undefined
@@ -1037,6 +1038,27 @@ const Sidebar: Component<SidebarProps> = (props) => {
       window.removeEventListener("home_example", handleExample as EventListener)
       source?.close()
     })
+  })
+
+  createEffect(() => {
+    const sessionId = sid() || cookieValue("app_session")
+    if (!sessionId) return
+    const list = msgs()
+    const key = `chat_msgs_${sessionId}`
+    if (!messagesInitialized) {
+      messagesInitialized = true
+      try {
+        const json = globalThis.localStorage?.getItem?.(key)
+        if (!json) return
+        const parsed = JSON.parse(json)
+        if (!Array.isArray(parsed) || parsed.length === 0) return
+        setMsgs(parsed)
+      } catch {}
+      return
+    }
+    try {
+      globalThis.localStorage?.setItem?.(key, JSON.stringify(list))
+    } catch {}
   })
 
   onCleanup(() => {

@@ -1,6 +1,2 @@
 Warning: OPENCODE_SERVER_PASSWORD is not set; server is unsecured.
 opencode server listening on http://127.0.0.1:2345
-[config-context] getConfigContext() called before initConfigContext(); defaulting to CLI paths.
-bun install v1.3.9 (cf6cdbbb)
-
-Checked 3 installs across 4 packages (no changes) [1.00ms]
