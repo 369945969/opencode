@@ -207,6 +207,7 @@ const Sidebar: Component<SidebarProps> = (props) => {
     answers: {},
   })
   const [questionIndex, setQuestionIndex] = createSignal(0)
+  const [isSubmitting, setIsSubmitting] = createSignal(false)
 
   let busyTimer: number | undefined
   let lastRetryKey = ""
@@ -591,6 +592,7 @@ const Sidebar: Component<SidebarProps> = (props) => {
   const submitQuestions = async () => {
     const q = questionState.activeQuestion
     if (!q) return
+    setIsSubmitting(true)
     const answers = questionState.answers
     const payload = q.questions.map((_, index) => {
       const ans = answers[index]
@@ -604,6 +606,7 @@ const Sidebar: Component<SidebarProps> = (props) => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ answers: payload }),
     }).catch(() => null)
+    setIsSubmitting(false)
     if (!res || !res.ok) {
       setMsgs((list) => [
         ...list,
@@ -1915,25 +1918,40 @@ const Sidebar: Component<SidebarProps> = (props) => {
                           }}
                         </For>
                       </div>
-                        <input
-                          type="text"
-                          placeholder="补充说明（可选）"
-                          class={
-                            theme() === "light"
-                              ? "mt-2 w-full bg-transparent border-b border-slate-300 focus:border-slate-900 outline-none text-xs text-slate-900 py-1 transition-colors placeholder:text-slate-400"
-                              : "mt-2 w-full bg-transparent border-b border-[#5C6876] focus:border-[#00F0FF] outline-none text-xs text-[#E8F0FF] py-1 transition-colors placeholder:text-[#5C6876]/50"
-                          }
-                          value={questionState.answers[questionIndex()]?.customInput || ""}
-                          onInput={(e) => updateCustomInput(questionIndex(), e.currentTarget.value)}
-                        />
+                        <div class="relative mt-2">
+                          <textarea
+                            placeholder="补充说明（可选，建议控制在2000字以内）"
+                            rows={3}
+                            disabled={isSubmitting()}
+                            class={
+                              theme() === "light"
+                                ? "w-full bg-transparent border border-slate-300 rounded p-2 focus:border-slate-900 outline-none text-xs text-slate-900 transition-colors placeholder:text-slate-400 resize-none"
+                                : "w-full bg-transparent border border-[#5C6876] rounded p-2 focus:border-[#00F0FF] outline-none text-xs text-[#E8F0FF] transition-colors placeholder:text-[#5C6876]/50 resize-none"
+                            }
+                            value={questionState.answers[questionIndex()]?.customInput || ""}
+                            onInput={(e) => updateCustomInput(questionIndex(), e.currentTarget.value)}
+                          />
+                          <div
+                            class={`text-[10px] text-right mt-1 ${
+                              (questionState.answers[questionIndex()]?.customInput || "").length > 2000
+                                ? "text-red-500"
+                                : theme() === "light"
+                                ? "text-slate-400"
+                                : "text-[#5C6876]"
+                            }`}
+                          >
+                            {(questionState.answers[questionIndex()]?.customInput || "").length}/2000
+                          </div>
+                        </div>
                       <div class="flex items-center justify-between mt-2">
                         <Show when={questionIndex() > 0}>
                           <button
                             onClick={prevQuestion}
+                            disabled={isSubmitting()}
                             class={
                               theme() === "light"
-                                ? "py-2 px-3 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-100 transition-colors"
-                                : "py-2 px-3 border border-[#00F0FF]/40 text-[#00F0FF] rounded-lg hover:bg-[#00F0FF]/10 transition-colors"
+                                ? "py-2 px-3 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-100 transition-colors disabled:opacity-50"
+                                : "py-2 px-3 border border-[#00F0FF]/40 text-[#00F0FF] rounded-lg hover:bg-[#00F0FF]/10 transition-colors disabled:opacity-50"
                             }
                           >
                             上一个
@@ -1941,17 +1959,23 @@ const Sidebar: Component<SidebarProps> = (props) => {
                         </Show>
                         <button
                           onClick={nextQuestion}
+                          disabled={isSubmitting()}
                           class={
                             theme() === "light"
-                              ? "py-2 px-4 bg-slate-900 hover:bg-black text-white font-semibold rounded-lg transition-colors flex items-center justify-center gap-2"
-                              : "py-2 px-4 bg-[#00F0FF] hover:bg-[#00F0FF]/90 text-[#0F1624] font-semibold rounded-lg transition-colors flex items-center justify-center gap-2"
+                              ? "py-2 px-4 bg-slate-900 hover:bg-black text-white font-semibold rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                              : "py-2 px-4 bg-[#00F0FF] hover:bg-[#00F0FF]/90 text-[#0F1624] font-semibold rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
                           }
                         >
-                          <iconify-icon
-                            icon={isLastQuestion() ? "lucide:send" : "lucide:arrow-right"}
-                            class="text-lg"
-                          ></iconify-icon>
-                          {isLastQuestion() ? "提交回答" : "下一个"}
+                          <Show when={isSubmitting() && isLastQuestion()}>
+                            <iconify-icon icon="eos-icons:loading" class="animate-spin" />
+                          </Show>
+                          <Show when={!isSubmitting() || !isLastQuestion()}>
+                            <iconify-icon
+                              icon={isLastQuestion() ? "lucide:send" : "lucide:arrow-right"}
+                              class="text-lg"
+                            ></iconify-icon>
+                          </Show>
+                          {isLastQuestion() ? (isSubmitting() ? "提交中..." : "提交回答") : "下一个"}
                         </button>
                       </div>
                     </div>

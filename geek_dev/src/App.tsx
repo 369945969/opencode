@@ -18,7 +18,12 @@ declare module "solid-js" {
   }
 }
 
-const cookieValue = (key: string) => {
+const getStorage = (key: string) => {
+  try {
+    const val = globalThis.localStorage?.getItem?.(key)
+    if (val) return val
+  } catch {}
+  
   const source = document.cookie || ""
   const list = source.split(";").map((part) => part.trim())
   for (const item of list) {
@@ -28,8 +33,10 @@ const cookieValue = (key: string) => {
   return ""
 }
 
-const setCookie = (key: string, value: string) => {
-  document.cookie = `${key}=${encodeURIComponent(value)}; path=/`
+const setStorage = (key: string, value: string) => {
+  try {
+    globalThis.localStorage?.setItem?.(key, value)
+  } catch {}
 }
 
 function App() {
@@ -40,11 +47,11 @@ function App() {
 
   const [sidebarWidth, setSidebarWidth] = createSignal(window.innerWidth * 0.36)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = createSignal(false)
-  const [currentView, setCurrentView] = createSignal(cookieValue("app_name") ? "workspace" : "home")
+  const [currentView, setCurrentView] = createSignal(getStorage("app_name") ? "workspace" : "home")
   const [selectedDoc, setSelectedDoc] = createSignal<any>(null)
   const [transitioning, setTransitioning] = createSignal(false)
   const [transitionTitle, setTransitionTitle] = createSignal("Analyzing Input...")
-  const [projectTitle, setProjectTitle] = createSignal(cookieValue("app_name") || "")
+  const [projectTitle, setProjectTitle] = createSignal(getStorage("app_name") || "")
   const [theme, setTheme] = createSignal<"dark" | "light">("dark")
   let isResizing = false
   createEffect(() => {
@@ -69,7 +76,7 @@ function App() {
     
     setTransitionTitle(`Project: ${title}`)
     setProjectTitle(title)
-    setCookie("app_name", title)
+    setStorage("app_name", title)
 
     return new Promise((resolve) => {
       setTimeout(() => {
