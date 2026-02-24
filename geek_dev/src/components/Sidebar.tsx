@@ -1703,7 +1703,8 @@ const Sidebar: Component<SidebarProps> = (props) => {
                                 : "mt-2 text-xs font-mono text-[#00F0FF] opacity-80"
                             }
                           >
-                            状态: {msg.toolStatus}
+                            {isEnglishContext() ? "Status: " : "状态: "}
+                            {msg.toolStatus}
                           </div>
                         </Show>
                         <Show when={msg.filePaths && msg.filePaths.length > 0}>
