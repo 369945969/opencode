@@ -1024,13 +1024,12 @@ const Sidebar: Component<SidebarProps> = (props) => {
             )
           }
 
-          const isEng = isEnglishContext()
           setMsgs((list) => [
             ...list,
             {
               id: makeId(),
               role: "assistant",
-              text: isEng ? `Created/Edited file: ${displayPath}` : `已创建/编辑文件: ${displayPath}`,
+              text: displayPath,
               ts: Date.now(),
               filePaths: [displayPath.split("/").pop() || displayPath],
             },

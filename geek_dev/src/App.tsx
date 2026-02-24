@@ -62,8 +62,10 @@ function App() {
 
     setTransitioning(true)
     
-    // User requested: Use first 12 chars + "..." as title directly, skipping LLM
-    const title = text.length > 12 ? text.slice(0, 12) + "..." : text
+    // User requested: Use language-specific limits for title
+    const isEnglish = /^[A-Za-z0-9\s.,!?'"()-]+$/.test(text)
+    const limit = isEnglish ? 50 : 20
+    const title = text.length > limit ? text.slice(0, limit) + "..." : text
     
     setTransitionTitle(`Project: ${title}`)
     setProjectTitle(title)
