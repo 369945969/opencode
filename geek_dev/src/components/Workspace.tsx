@@ -1,4 +1,5 @@
 import { type Component, createSignal, onMount, onCleanup, Show, For, createEffect } from "solid-js"
+import { WebviewWindow } from "@tauri-apps/api/webviewWindow"
 
 // Mock Data for Product Requirements Document
 const mockDocs = [
@@ -215,11 +216,11 @@ interface WorkspaceProps {
 
 const Workspace: Component<WorkspaceProps> = (props) => {
   const base = import.meta.env.VITE_PROXY_URL ?? "http://localhost:4097"
-  const [scale, setScale] = createSignal(1)
+  const [scale] = createSignal(1)
   const [position, setPosition] = createSignal({ x: 0, y: 0 })
   const [isDragging, setIsDragging] = createSignal(false)
   const [dragStart, setDragStart] = createSignal({ x: 0, y: 0 })
-  const [activeTool, setActiveTool] = createSignal<"select" | "hand">("select")
+  const [activeTool] = createSignal<"select" | "hand">("select")
   const [isFullScreen, setIsFullScreen] = createSignal(false)
   const [theme, setTheme] = createSignal<"dark" | "light">("dark")
 
@@ -481,6 +482,29 @@ const Workspace: Component<WorkspaceProps> = (props) => {
   })
 
   const openDocPreview = async (doc: { path: string; name: string; kind: "md" | "html" }) => {
+    try {
+      // @ts-ignore
+      if (window.__TAURI_INTERNALS__) {
+        const label = `preview-${Date.now()}`
+        const webview = new WebviewWindow(label, {
+          url: `index.html?view=preview&path=${encodeURIComponent(doc.path)}&name=${encodeURIComponent(doc.name)}&kind=${doc.kind}`,
+          title: doc.name,
+          width: 1024,
+          height: 768,
+        })
+        webview.once('tauri://created', function () {
+          // webview window successfully created
+        })
+        webview.once('tauri://error', function (e) {
+          // an error happened creating the webview window
+          console.error("Window create error", e)
+        })
+        return
+      }
+    } catch (e) {
+      console.error("Failed to create window", e)
+    }
+
     const text = await fetchDoc(doc.path)
     if (!text) return
     if (doc.kind === "html") {
@@ -699,9 +723,6 @@ const Workspace: Component<WorkspaceProps> = (props) => {
   const handleMouseUp = () => {
     setIsDragging(false)
   }
-
-  const zoomIn = () => setScale((s) => Math.min(s + 0.1, 3))
-  const zoomOut = () => setScale((s) => Math.max(s - 0.1, 0.1))
 
   const toggleFullScreen = () => {
     if (!document.fullscreenElement) {

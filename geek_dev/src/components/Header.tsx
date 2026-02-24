@@ -7,32 +7,13 @@ interface HeaderProps {
 }
 
 const Header: Component<HeaderProps> = (props) => {
-  const [showDropdown, setShowDropdown] = createSignal(false)
   const [theme, setTheme] = createSignal<"dark" | "light">("dark")
-
-  const toggleDropdown = () => {
-    setShowDropdown(!showDropdown())
-  }
-
-  const handleLogout = () => {
-    localStorage.removeItem("token")
-    window.location.href = "/login"
-  }
-
-  let dropdownRef: HTMLDivElement | undefined
-
-  const handleClickOutside = (event: MouseEvent) => {
-    if (dropdownRef && !dropdownRef.contains(event.target as Node)) {
-      setShowDropdown(false)
-    }
-  }
 
   onMount(() => {
     try {
       const stored = localStorage.getItem("workspace_theme")
       if (stored === "light" || stored === "dark") setTheme(stored)
     } catch {}
-    document.addEventListener("click", handleClickOutside)
     const handler = (event: Event) => {
       const detail = (event as CustomEvent).detail as "dark" | "light" | undefined
       if (detail !== "dark" && detail !== "light") return
@@ -40,10 +21,6 @@ const Header: Component<HeaderProps> = (props) => {
     }
     window.addEventListener("workspace_theme_toggle", handler as EventListener)
     onCleanup(() => window.removeEventListener("workspace_theme_toggle", handler as EventListener))
-  })
-
-  onCleanup(() => {
-    document.removeEventListener("click", handleClickOutside)
   })
 
   const toggleTheme = () => {
@@ -100,7 +77,7 @@ const Header: Component<HeaderProps> = (props) => {
           <div id="14:9" class="hidden"></div>
         </div>
         <div id="14:16" class="flex items-center gap-x-4">
-          <div id="14:26" class="flex items-center gap-x-2 relative" ref={dropdownRef}>
+          <div id="14:26" class="flex items-center gap-x-2 relative">
             <button
               class="bg-transparent p-0 border-0 cursor-pointer flex justify-center items-center w-6 h-6 hover:bg-[#00F0FF]/10 rounded-full transition-colors"
               onClick={toggleTheme}

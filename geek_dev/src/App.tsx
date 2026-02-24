@@ -7,6 +7,7 @@ import ProjectList from "./components/ProjectList"
 import Workspace from "./components/Workspace"
 import DocDetail from "./components/DocDetail"
 import StyleComparison from "./components/StyleComparison"
+import PreviewWindow from "./components/PreviewWindow"
 
 // @ts-ignore
 declare module "solid-js" {
@@ -32,6 +33,11 @@ const setCookie = (key: string, value: string) => {
 }
 
 function App() {
+  const params = new URLSearchParams(window.location.search)
+  if (params.get("view") === "preview") {
+    return <PreviewWindow />
+  }
+
   const [sidebarWidth, setSidebarWidth] = createSignal(window.innerWidth * 0.36)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = createSignal(false)
   const [currentView, setCurrentView] = createSignal(cookieValue("app_name") ? "workspace" : "home")

@@ -9,7 +9,7 @@ const Home: Component<HomeProps> = () => {
   const base = import.meta.env.VITE_PROXY_URL ?? "http://localhost:4097"
   const [creating, setCreating] = createSignal(false)
   const [theme, setTheme] = createSignal<"dark" | "light">("dark")
-  const examples = [
+  const examplesCN = [
     {
       title: "制造运营大屏",
       desc: "产能、良率、工单与异常告警统一监控",
@@ -24,6 +24,23 @@ const Home: Component<HomeProps> = () => {
       title: "物流调度大屏",
       desc: "车辆轨迹、时效与载重分布一览",
       prompt: "设计物流调度大屏，展示车辆轨迹、时效、载重分布与异常路段",
+    },
+  ]
+  const examplesEN = [
+    {
+      title: "SaaS Dashboard",
+      desc: "Revenue, Churn, and User Growth Analysis",
+      prompt: "Design a SaaS dashboard visualizing MRR, Churn Rate, and Daily Active Users trends.",
+    },
+    {
+      title: "E-commerce Admin",
+      desc: "Orders, Inventory, and Sales Performance",
+      prompt: "Create an e-commerce admin panel showing recent orders, low stock alerts, and sales performance.",
+    },
+    {
+      title: "CRM System",
+      desc: "Leads, Pipeline, and Customer Activities",
+      prompt: "Build a CRM system interface tracking sales pipeline, lead status, and recent customer interactions.",
     },
   ]
   const handleExampleClick = (text: string) => {
@@ -145,29 +162,42 @@ const Home: Component<HomeProps> = () => {
             >
               {creating() ? "正在初始化默认会话..." : "在这里开始你的创意之旅，轻松快速构建产品原型和设计稿"}
             </p>
-            <div class="flex flex-nowrap justify-center gap-4 max-w-[1100px] overflow-x-auto geek-scroll px-2">
-              <For each={examples}>
-                {(item: { title: string; desc: string; prompt: string }) => (
-                  <button
-                    onClick={() => handleExampleClick(item.prompt)}
-                    class={
-                      theme() === "light"
-                        ? "text-left w-64 shrink-0 px-4 py-3 rounded-xl border border-slate-200 bg-white hover:border-slate-400 hover:bg-slate-50 transition-colors"
-                        : "text-left w-64 shrink-0 px-4 py-3 rounded-xl border border-[#00F0FF]/15 bg-[#0F1624]/70 hover:bg-[#00F0FF]/10 hover:border-[#00F0FF]/50 transition-colors"
-                    }
-                  >
-                    <div
-                      class={theme() === "light" ? "text-sm text-slate-900 font-semibold" : "text-sm text-[#E8F0FF] font-semibold"}
-                    >
-                      {item.title}
-                    </div>
-                    <div
-                      class={theme() === "light" ? "text-xs text-slate-600 mt-1" : "text-xs text-[#8A97AA] mt-1"}
-                      style="-webkit-line-clamp: 2; display: -webkit-box; -webkit-box-orient: vertical; overflow: hidden;"
-                    >
-                      {item.desc}
-                    </div>
-                  </button>
+            <div class="flex flex-col gap-4 max-w-[1100px] w-full items-center">
+              <For each={[examplesCN, examplesEN]}>
+                {(group) => (
+                  <div class="flex flex-nowrap justify-center gap-4 w-full px-2">
+                    <For each={group}>
+                      {(item) => (
+                        <button
+                          onClick={() => handleExampleClick(item.prompt)}
+                          class={
+                            theme() === "light"
+                              ? "text-left flex-1 min-w-0 px-4 py-3 rounded-xl border border-slate-200 bg-white hover:border-slate-400 hover:bg-slate-50 transition-colors"
+                              : "text-left flex-1 min-w-0 px-4 py-3 rounded-xl border border-[#00F0FF]/15 bg-[#0F1624]/70 hover:bg-[#00F0FF]/10 hover:border-[#00F0FF]/50 transition-colors"
+                          }
+                        >
+                          <div
+                            class={
+                              theme() === "light"
+                                ? "text-sm text-slate-900 font-semibold truncate"
+                                : "text-sm text-[#E8F0FF] font-semibold truncate"
+                            }
+                          >
+                            {item.title}
+                          </div>
+                          <div
+                            class={
+                              theme() === "light"
+                                ? "text-xs text-slate-600 mt-1 truncate"
+                                : "text-xs text-[#8A97AA] mt-1 truncate"
+                            }
+                          >
+                            {item.desc}
+                          </div>
+                        </button>
+                      )}
+                    </For>
+                  </div>
                 )}
               </For>
             </div>

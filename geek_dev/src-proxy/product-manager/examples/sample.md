@@ -21,8 +21,8 @@ zen_tasks/
 ## Sample Document Snippet (PRD.md)
 > # PRD: Zen Tasks
 >
-> ### 1. 项目概况
+> ### 1. Project Overview
 > A productivity tool focused on focus and calm...
 >
-> ### 4. 数据字典概览 (Data Model)
+> ### 4. Data Model Overview (Data Model)
 > - **Task**: [ID, Title, Status, DueDate]

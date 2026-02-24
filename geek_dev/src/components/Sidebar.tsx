@@ -464,7 +464,9 @@ const Sidebar: Component<SidebarProps> = (props) => {
     }
     setCookie("app_session", finalSessionId)
     if (isFirstMessage && !cookieValue("app_name")) {
-      const title = value.length > 12 ? value.slice(0, 12) + "..." : value
+      const isEnglish = /^[A-Za-z0-9\s.,!?'"()-]+$/.test(value)
+      const limit = isEnglish ? 50 : 20
+      const title = value.length > limit ? value.slice(0, limit) + "..." : value
       setCookie("app_name", title)
     }
     let promptText = value
@@ -774,7 +776,53 @@ const Sidebar: Component<SidebarProps> = (props) => {
           const props = payload.properties ?? payload
           const info = props.info
           if (!info?.id || !info?.sessionID) return
-          if (info.sessionID !== (sid() || cookieValue("app_session"))) return
+          if (info.sessionID !== (sid() || cookieValue("app_session"))) {
+            // If session mismatch, save to local storage history but don't update UI
+            try {
+              const key = `chat_msgs_${info.sessionID}`
+              const json = globalThis.localStorage?.getItem?.(key)
+              if (json) {
+                const historyList = JSON.parse(json)
+                const messageId = info.id
+                const messageText = (info as any).text
+                const toolStatus =
+                  (info as any).status === "pending" || (info as any).status === "running"
+                    ? "running"
+                    : (info as any).status === "success" || (info as any).status === "done"
+                    ? "done"
+                    : (info as any).status === "failed" || (info as any).status === "error"
+                    ? "error"
+                    : undefined
+
+                const index = historyList.findIndex((item: any) => item.id === messageId)
+                if (index >= 0) {
+                  const prev = historyList[index]
+                  const base =
+                    messageText === "" ? prev.text ?? "" : messageText ?? prev.text ?? ""
+                  
+                  const nextMsg = {
+                    ...prev,
+                    toolStatus,
+                    text: formatAssistantText(base),
+                    ts: Date.now(),
+                  }
+                  historyList[index] = nextMsg
+                  globalThis.localStorage?.setItem?.(key, JSON.stringify(historyList))
+                } else if (messageText || toolStatus) {
+                  const newMsg = {
+                    id: messageId,
+                    role: info.role,
+                    text: formatAssistantText(messageText || ""),
+                    ts: Date.now(),
+                    toolStatus,
+                  }
+                  historyList.push(newMsg)
+                  globalThis.localStorage?.setItem?.(key, JSON.stringify(historyList))
+                }
+              }
+            } catch {}
+            return
+          }
 
           if (info.role === "user") {
             userMessageIds.add(info.id)
@@ -1549,11 +1597,11 @@ const Sidebar: Component<SidebarProps> = (props) => {
                               <span
                                 class={
                                   theme() === "light"
-                                    ? "text-xs font-mono text-slate-400 uppercase tracking-wider"
-                                    : "text-xs font-mono text-[#5C6876] uppercase tracking-wider"
+                                    ? "text-xs font-mono text-slate-400 tracking-wider"
+                                    : "text-xs font-mono text-[#5C6876] tracking-wider"
                                 }
                               >
-                                {msg.thinkDone ? "已思考" : "思考中..."}
+                                {msg.thinkDone ? "Thought" : "Thinking..."}
                               </span>
                               <Show when={msg.thinkDone && msg.thinkDuration}>
                                 <span
