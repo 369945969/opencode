@@ -1007,6 +1007,24 @@ const Sidebar: Component<SidebarProps> = (props) => {
               }
             }
           }
+          if (sessionId && sessionId !== (sid() || cookieValue("app_session"))) {
+            try {
+              const key = `chat_msgs_${sessionId}`
+              const json = globalThis.localStorage?.getItem?.(key)
+              if (json) {
+                const historyList = JSON.parse(json)
+                historyList.push({
+                  id: makeId(),
+                  role: "assistant",
+                  text: relativePath,
+                  ts: Date.now(),
+                  filePaths: [relativePath.split("/").pop() || relativePath],
+                })
+                globalThis.localStorage?.setItem?.(key, JSON.stringify(historyList))
+              }
+            } catch {}
+            return
+          }
           
           const displayPath = relativePath
 
@@ -1325,6 +1343,13 @@ const Sidebar: Component<SidebarProps> = (props) => {
     return false
   }
 
+  const truncateTitle = (title: string) => {
+    if (!title) return ""
+    const isEnglish = /^[A-Za-z0-9\s.,!?'"()-]+$/.test(title)
+    const limit = isEnglish ? 50 : 20
+    return title.length > limit ? title.slice(0, limit) + "..." : title
+  }
+
   return (
     <aside
       id="12:88"
@@ -1353,7 +1378,7 @@ const Sidebar: Component<SidebarProps> = (props) => {
                 style={theme() === "light" ? "color: #0F172A;" : "color: rgba(232, 240, 255, 1);"}
                 title={props.title || "极客开发区"}
               >
-                {props.title || "极客开发区"}
+                {truncateTitle(props.title || "极客开发区")}
               </h2>
             </Show>
           </div>
@@ -1448,7 +1473,7 @@ const Sidebar: Component<SidebarProps> = (props) => {
                             : "text-[#E8F0FF] text-sm truncate font-medium"
                         }
                       >
-                        {item.title}
+                        {truncateTitle(item.title)}
                       </div>
                       <div
                         class={
