@@ -1481,6 +1481,8 @@ const Sidebar: Component<SidebarProps> = (props) => {
                             ? theme() === "light"
                               ? "p-3 rounded-lg border border-[#C7E2FF] bg-white text-slate-900 text-sm leading-relaxed break-words"
                               : "p-3 rounded-lg border-[1px] border-solid text-[#E8F0FF] text-sm leading-relaxed break-words"
+                            : isWelcome
+                            ? "text-sm leading-relaxed break-words"
                             : theme() === "light"
                             ? "p-3 rounded-lg border border-slate-200 bg-white/80 text-slate-700 text-sm leading-relaxed break-words"
                             : "p-3 rounded-lg border-[1px] border-solid text-[#94A3B8] text-sm leading-relaxed break-words"
