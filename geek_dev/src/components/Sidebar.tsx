@@ -368,9 +368,20 @@ const Sidebar: Component<SidebarProps> = (props) => {
   }
   const sanitizeBoxMarkers = (textValue: string) =>
     textValue.replace(/<\|begin_of_box\|>|<\|end_of_box\|>/g, "")
+
+  const isEnglishContext = () => {
+    const list = msgs()
+    for (let i = list.length - 1; i >= 0; i--) {
+      if (list[i].role === "user") {
+        return !/[\u4e00-\u9fa5]/.test(list[i].text)
+      }
+    }
+    return false
+  }
+
   const formatAssistantText = (textValue: string) => {
     if (!textValue) return textValue
-    if (!textValue.includes("已创建/编辑文件:") && !textValue.includes("workspace/ses_")) return textValue
+    if (!textValue.includes("已创建/编辑文件:") && !textValue.includes("Created/Edited file:") && !textValue.includes("workspace/ses_")) return textValue
     return textValue.replace(/workspace\/ses_[^/\s]+\/([^\s]+)/g, "$1")
   }
   const formatToolOutput = (toolName: string, textValue: string) => {
@@ -926,8 +937,8 @@ const Sidebar: Component<SidebarProps> = (props) => {
                 },
               ]
             })
-            if (messageText && messageText.includes("已创建/编辑文件:")) {
-              const marker = "已创建/编辑文件:"
+            const marker = messageText && (messageText.includes("已创建/编辑文件:") ? "已创建/编辑文件:" : (messageText.includes("Created/Edited file:") ? "Created/Edited file:" : null))
+            if (marker) {
               const index = messageText.indexOf(marker)
               const tail = messageText.slice(index + marker.length).trim()
               // Try to find a path that looks like workspace/...
@@ -1013,12 +1024,13 @@ const Sidebar: Component<SidebarProps> = (props) => {
             )
           }
 
+          const isEng = isEnglishContext()
           setMsgs((list) => [
             ...list,
             {
               id: makeId(),
               role: "assistant",
-              text: `已创建/编辑文件: ${displayPath}`,
+              text: isEng ? `Created/Edited file: ${displayPath}` : `已创建/编辑文件: ${displayPath}`,
               ts: Date.now(),
               filePaths: [displayPath.split("/").pop() || displayPath],
             },
@@ -1040,6 +1052,7 @@ const Sidebar: Component<SidebarProps> = (props) => {
             const index = list.findIndex((item) => item.id === toolId)
             const toolStatus = part.state?.status || "pending"
             const toolName = part.tool || "unknown tool"
+            const isEng = isEnglishContext()
             const detailLines: string[] = []
             const inputLines: string[] = []
             
@@ -1059,11 +1072,11 @@ const Sidebar: Component<SidebarProps> = (props) => {
                 }
               } else if (toolName === "execute" || toolName === "run_command" || toolName === "command") {
                 const c = input.command || input.cmd
-                if (c) detailLines.push(`💻 执行命令: ${c}`)
-                if (input.cwd) detailLines.push(`工作目录: ${input.cwd}`)
+                if (c) detailLines.push(isEng ? `💻 Executing command: ${c}` : `💻 执行命令: ${c}`)
+                if (input.cwd) detailLines.push(isEng ? `Working directory: ${input.cwd}` : `工作目录: ${input.cwd}`)
               } else if (toolName === "search_codebase" || toolName === "glob" || toolName === "grep") {
                  const p = input.query || input.pattern
-                 if (p) detailLines.push(`🔍 搜索: ${p}`)
+                 if (p) detailLines.push(isEng ? `🔍 Searching: ${p}` : `🔍 搜索: ${p}`)
               }
             }
 
@@ -1073,12 +1086,13 @@ const Sidebar: Component<SidebarProps> = (props) => {
                 const outStr = typeof output === "string" ? output : JSON.stringify(output, null, 2)
                 const formattedOut = formatToolOutput(toolName, outStr)
                 const truncated = formattedOut.length > 1200 ? formattedOut.slice(0, 1200) + "..." : formattedOut
-                resultText = `\n结果:\n${truncated}`
+                resultText = isEng ? `\nResult:\n${truncated}` : `\n结果:\n${truncated}`
             }
             const detailText = detailLines.length ? `\n${detailLines.join("\n")}` : ""
             const inputTextBlock = inputLines.length ? `\n${inputLines.join("\n")}` : ""
+            const prefix = isEng ? `Running ${toolName} tool: ` : `正在执行 ${toolName} 工具: `
             const messageText = formatAssistantText(
-              `正在执行 ${toolName} 工具: ${toolStatus}${detailText}${inputTextBlock}${resultText}`,
+              `${prefix}${toolStatus}${detailText}${inputTextBlock}${resultText}`,
             )
             if (index >= 0) {
               const prev = list[index]
