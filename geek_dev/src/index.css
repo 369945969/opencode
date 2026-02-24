@@ -8,26 +8,56 @@ body {
   overflow: hidden;
 }
 
-.geek-scroll {
+/* Dark Theme Scrollbar */
+.dark .geek-scroll, .geek-scroll {
   scrollbar-width: thin;
-  scrollbar-color: rgba(0, 240, 255, 0.35) rgba(12, 18, 30, 0.6);
+  scrollbar-color: rgba(0, 240, 255, 0.15) rgba(12, 18, 30, 0.4);
 }
 
-.geek-scroll::-webkit-scrollbar {
-  width: 8px;
+.dark .geek-scroll::-webkit-scrollbar, .geek-scroll::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
 }
 
-.geek-scroll::-webkit-scrollbar-track {
-  background: rgba(12, 18, 30, 0.6);
+.dark .geek-scroll::-webkit-scrollbar-track, .geek-scroll::-webkit-scrollbar-track {
+  background: rgba(12, 18, 30, 0.4);
   border-radius: 999px;
 }
 
-.geek-scroll::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, rgba(0, 240, 255, 0.5), rgba(0, 240, 255, 0.2));
+.dark .geek-scroll::-webkit-scrollbar-thumb, .geek-scroll::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(0, 240, 255, 0.2), rgba(0, 240, 255, 0.1));
   border-radius: 999px;
-  border: 1px solid rgba(0, 240, 255, 0.25);
+  border: 1px solid rgba(0, 240, 255, 0.1);
 }
 
-.geek-scroll::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(180deg, rgba(0, 240, 255, 0.7), rgba(0, 240, 255, 0.35));
+.dark .geek-scroll::-webkit-scrollbar-thumb:hover, .geek-scroll::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, rgba(0, 240, 255, 0.4), rgba(0, 240, 255, 0.2));
+  border-color: rgba(0, 240, 255, 0.3);
+}
+
+/* Light Theme Scrollbar */
+.light .geek-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.4) rgba(241, 245, 249, 0.6);
+}
+
+.light .geek-scroll::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.light .geek-scroll::-webkit-scrollbar-track {
+  background: rgba(241, 245, 249, 0.6);
+  border-radius: 999px;
+}
+
+.light .geek-scroll::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.4);
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.light .geek-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 116, 139, 0.6);
+  border-color: rgba(100, 116, 139, 0.4);
 }

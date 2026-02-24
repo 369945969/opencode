@@ -1,4 +1,5 @@
 import { type Component, createSignal, onMount, onCleanup } from "solid-js"
+import userAvatar from "../assets/img.jpeg"
 
 interface HeaderProps {
   onNavigate?: (page: string) => void
@@ -115,7 +116,7 @@ const Header: Component<HeaderProps> = (props) => {
                 id="14:27"
                 style="border-color: color-mix( in oklab , #00F0FF 40% , transparent );"
                 alt="User avatar with professional appearance"
-                src="https://static.paraflowcontent.com/public/resource/image/c0613487-2f97-4453-8e91-a50f025afcec.jpeg"
+                src={userAvatar}
                 class="w-9 h-9 object-cover border-[2px] border-solid rounded-full"
               />
             </div>

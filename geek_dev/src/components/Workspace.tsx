@@ -367,10 +367,13 @@ const Workspace: Component<WorkspaceProps> = (props) => {
 
   onMount(() => {
     const handler = (event: Event) => {
-      const detail = (event as CustomEvent).detail as { path?: string; area?: string } | undefined
+      const detail = (event as CustomEvent).detail as { path?: string; area?: string; sessionId?: string } | undefined
       if (!detail?.path || !detail.area) return
-      const sid = sessionId() || cookieValue("app_session")
+      const sid = detail.sessionId || sessionId() || cookieValue("app_session")
       if (!sid) return
+      if (detail.sessionId && detail.sessionId !== sessionId()) {
+         setSessionId(detail.sessionId)
+      }
       void loadWorkspaceDocs(sid)
     }
     window.addEventListener("workspace_file_created", handler as EventListener)
@@ -378,7 +381,8 @@ const Workspace: Component<WorkspaceProps> = (props) => {
   })
 
   const fetchDoc = async (pathValue: string) => {
-    const url = `${base}/workspace/file?path=${encodeURIComponent(pathValue)}`
+    const sid = sessionId() || cookieValue("app_session")
+    const url = `${base}/workspace/file?path=${encodeURIComponent(pathValue)}&session=${encodeURIComponent(sid)}`
     const res = await fetch(url).catch(() => null)
     if (!res || !res.ok) return ""
     const data = await res.json().catch(() => null)

@@ -882,18 +882,33 @@ const Sidebar: Component<SidebarProps> = (props) => {
               const marker = "已创建/编辑文件:"
               const index = messageText.indexOf(marker)
               const tail = messageText.slice(index + marker.length).trim()
-              const pathMatch = tail.match(/workspace\/\S+/)
-              const filePath = pathMatch ? pathMatch[0] : tail.split(/\s/)[0]
-              if (filePath) {
+              // Try to find a path that looks like workspace/...
+              // Handle both / and \ 
+              const pathMatch = tail.match(/workspace[\\/]\S+/)
+              const rawFilePath = pathMatch ? pathMatch[0] : tail.split(/\s/)[0]
+              
+              if (rawFilePath) {
+                // Normalize path separators
+                const filePath = rawFilePath.replace(/\\/g, "/")
+                let relativePath = filePath
+                let sessionId = ""
+                
+                const sessionMatch = filePath.match(/workspace\/(ses_[^/]+)\/(.+)$/)
+                if (sessionMatch) {
+                  sessionId = sessionMatch[1]
+                  relativePath = sessionMatch[2]
+                }
+
                 let area = ""
-                if (filePath.includes("Global&Context")) area = "global"
-                else if (filePath.includes("Feature&Plan")) area = "feature"
-                else if (filePath.includes("Style&Guide")) area = "style"
-                else if (filePath.includes("Screen&Prototype")) area = "screen"
+                if (relativePath.includes("Global&Context")) area = "global"
+                else if (relativePath.includes("Feature&Plan")) area = "feature"
+                else if (relativePath.includes("Style&Guide")) area = "style"
+                else if (relativePath.includes("Screen&Prototype")) area = "screen"
+                
                 if (area) {
                   window.dispatchEvent(
                     new CustomEvent("workspace_file_created", {
-                      detail: { path: filePath, area },
+                      detail: { path: relativePath, area, sessionId },
                     }),
                   )
                 }
@@ -904,28 +919,50 @@ const Sidebar: Component<SidebarProps> = (props) => {
         }
         if (type === "file.edited") {
           const props = payload.properties ?? payload
-          const filePath = props.file || ""
-          // Simple relative path logic
-          const parts = filePath.split("/")
-          const workspaceIndex = parts.indexOf("geek_dev")
-          const relativePath = workspaceIndex !== -1 ? parts.slice(workspaceIndex + 1).join("/") : filePath
-          const displayPath = relativePath.startsWith("workspace/ses_")
-            ? relativePath.split("/").slice(2).join("/")
-            : relativePath
+          const rawFilePath = props.file || ""
+          // Normalize Windows paths
+          const filePath = rawFilePath.replace(/\\/g, "/")
           
-          if (relativePath.startsWith("workspace/")) {
-            let area = ""
-            if (relativePath.includes("Global&Context")) area = "global"
-            else if (relativePath.includes("Feature&Plan")) area = "feature"
-            else if (relativePath.includes("Style&Guide")) area = "style"
-            else if (relativePath.includes("Screen&Prototype")) area = "screen"
-            if (area) {
-              window.dispatchEvent(
-                new CustomEvent("workspace_file_created", {
-                  detail: { path: relativePath, area },
-                }),
-              )
+          let relativePath = filePath
+          let sessionId = ""
+
+          // Try to extract session ID and relative path
+          // Look for pattern: workspace/ses_.../...
+          const sessionMatch = filePath.match(/workspace\/(ses_[^/]+)\/(.+)$/)
+          if (sessionMatch) {
+            sessionId = sessionMatch[1]
+            relativePath = sessionMatch[2]
+          } else {
+            // Fallback: look for geek_dev if present
+            const parts = filePath.split("/")
+            const workspaceIndex = parts.indexOf("geek_dev")
+            if (workspaceIndex !== -1) {
+              const afterGeekDev = parts.slice(workspaceIndex + 1).join("/")
+              // check if it starts with workspace/ses_
+              const subMatch = afterGeekDev.match(/^workspace\/(ses_[^/]+)\/(.+)$/)
+              if (subMatch) {
+                sessionId = subMatch[1]
+                relativePath = subMatch[2]
+              } else {
+                 relativePath = afterGeekDev
+              }
             }
+          }
+          
+          const displayPath = relativePath
+
+          let area = ""
+          if (relativePath.includes("Global&Context")) area = "global"
+          else if (relativePath.includes("Feature&Plan")) area = "feature"
+          else if (relativePath.includes("Style&Guide")) area = "style"
+          else if (relativePath.includes("Screen&Prototype")) area = "screen"
+          
+          if (area) {
+            window.dispatchEvent(
+              new CustomEvent("workspace_file_created", {
+                detail: { path: relativePath, area, sessionId },
+              }),
+            )
           }
 
           setMsgs((list) => [

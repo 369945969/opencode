@@ -77,12 +77,13 @@ db.exec(
   "create table if not exists session_skills (session_id text primary key, skill text, injected_at integer)",
 )
 
-const readTree = async (root: string, depth: number, maxDepth: number, maxBytes: number) => {
+const readTree = async (root: string, depth: number, maxDepth: number, maxBytes: number, relativeTo?: string) => {
   const entries = await fs.readdir(root, { withFileTypes: true }).catch(() => [])
+  const base = relativeTo ?? process.cwd()
   const list = await Promise.all(
     entries.map(async (entry: Dirent) => {
       const full = path.join(root, entry.name)
-      const rel = path.relative(process.cwd(), full)
+      const rel = path.relative(base, full)
       const stat = await fs.stat(full).catch(() => null)
       if (!stat) return null
       if (entry.isDirectory()) {
@@ -90,7 +91,7 @@ const readTree = async (root: string, depth: number, maxDepth: number, maxBytes:
           const item: TreeDir = { path: rel, name: entry.name, type: "dir", children: [] }
           return item
         }
-        const children = await readTree(full, depth + 1, maxDepth, maxBytes)
+        const children = await readTree(full, depth + 1, maxDepth, maxBytes, base)
         const item: TreeDir = { path: rel, name: entry.name, type: "dir", children }
         return item
       }
@@ -498,23 +499,35 @@ export const createProxy = (input: ProxyConfig = {}) => {
   const readWorkspaceFile = async (req: Request) => {
     const url = new URL(req.url)
     const rawPath = url.searchParams.get("path") ?? ""
+    const sessionId = url.searchParams.get("session") ?? ""
+    
     if (!rawPath) {
       return Response.json({ error: "path required" }, { status: 400, headers: baseHeaders })
     }
+
     const trimmed = rawPath.startsWith("/") ? rawPath.slice(1) : rawPath
     const workspaceRoot = path.resolve(config.workspace)
-    const workspacePrefix = "workspace/"
-    const relative =
-      trimmed.startsWith(workspacePrefix) ? trimmed.slice(workspacePrefix.length) : trimmed
-    const full = path.join(workspaceRoot, relative)
+    
+    let full: string
+    if (sessionId) {
+      // If session is provided, path is relative to session folder
+      full = path.join(workspaceRoot, sessionId, trimmed)
+    } else {
+      // Legacy behavior or absolute-ish path
+      const workspacePrefix = "workspace/"
+      const relative =
+        trimmed.startsWith(workspacePrefix) ? trimmed.slice(workspacePrefix.length) : trimmed
+      full = path.join(workspaceRoot, relative)
+    }
+
     const resolvedFull = path.resolve(full)
     if (!resolvedFull.startsWith(workspaceRoot)) {
       return Response.json({ error: "forbidden" }, { status: 403, headers: baseHeaders })
     }
     try {
-      const file = Bun.file(full)
+      const file = Bun.file(resolvedFull)
       const size = file.size
-      const ext = path.extname(full).toLowerCase()
+      const ext = path.extname(resolvedFull).toLowerCase()
       const isText =
         [".md", ".txt", ".json", ".yaml", ".yml", ".js", ".ts", ".tsx", ".css", ".html"].includes(
           ext,
@@ -564,7 +577,7 @@ export const createProxy = (input: ProxyConfig = {}) => {
     if (!exists) {
       return Response.json({ root, items: [] as TreeItem[] }, { headers: baseHeaders })
     }
-    const items = await readTree(root, 0, config.pmDepth, config.pmMaxBytes)
+    const items = await readTree(root, 0, config.pmDepth, config.pmMaxBytes, root)
     return Response.json({ root, items }, { headers: baseHeaders })
   }
 

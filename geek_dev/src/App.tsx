@@ -118,7 +118,7 @@ function App() {
 
   return (
     <div
-      class="font-[-apple-system,BlinkMacSystemFont,'Segoe UI'] pf-BODY-main w-full h-screen flex flex-col"
+      class={`font-[-apple-system,BlinkMacSystemFont,'Segoe UI'] pf-BODY-main w-full h-screen flex flex-col ${theme()}`}
       style="line-height: 1.5;"
     >
       <Header onNavigate={setCurrentView} currentView={currentView()} />
