@@ -49,6 +49,20 @@
           "name": "glm-4.7 (openapi)"
         }
       }
+    },
+    "geek_code3": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "deepseek",
+      "options": {
+        "baseURL": "https://api.deepseek.com/v1",
+        "apiKey": "sk-6696ebd5e41f4fd9a1a218b57a85ad6b"
+      },
+      "models": {
+        "agent": {
+          "id": "deepseek-reasoner",
+          "name": "deepseek-reasoner"
+        }
+      }
     }
   }
 }
