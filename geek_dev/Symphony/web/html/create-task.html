@@ -1,0 +1,224 @@
+<!DOCTYPE html><html><head>
+    <style>@layer theme, base, paraflow, components, utilities;</style><meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    
+    
+    
+    <style id="moxt-styled">@layer paraflow{@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@100;300;400;500;700;900&family=Open+Sans:wght@300;400;500;600;700;800&family=Montserrat:wght@100;200;300;400;500;600;700;800;900&family=Inter:wght@100;200;300;400;500;600;700;800;900&family=Poppins:wght@100;200;300;400;500;600;700;800;900&family=Roboto+Condensed:wght@100;200;300;400;500;600;700;800;900&family=Roboto+Mono:wght@100;200;300;400;500;600;700&family=PT+Serif:wght@400;700&family=Arimo:wght@400;500;600;700&family=Raleway:wght@100;200;300;400;500;600;700;800;900&family=Nunito:wght@200;300;400;500;600;700&;800;900&family=Rubik:wght@300;400;500;600;700;800;900&family=Playfair+Display:wght@400;500;600;700;800;900&family=Ubuntu:wght@300;400;500;700&family=Merriweather:wght@300;400;500;600;700;800;900&family=Roboto+Slab:wght@100;200;300;400;500;600;700&family=Libre+Baskerville:wght@400;700&family=Inconsolata:wght@200;300;400;500;600;700;800;900&family=Dancing+Script:wght@400;500;600;700&family=Kanit:wght@100;200;300;400;500;600;700;800;900&display=swap')
+}</style>
+<!--FontAwesome version: 6.7.2--><link rel="stylesheet" href="https://static.paraflowcontent.com/public/css/font-awesome/font-awesome.672.css"><!--Tailwind version: 4.0.17--><script src="https://static.paraflowcontent.com/public/js/tailwind/tailwind.js"></script><!--iconify-icon version: 3.0.0--><script src="https://static.paraflowcontent.com/public/js/iconify/iconify-icon-3.0.0.js"></script></head>
+<body id="21:1" title="create-task.html" orderindex="80" relativetransform="8980, 125" class="font-[-apple-system,BlinkMacSystemFont,'Segoe UI'] w-[1440px] min-h-[900px]" style="line-height: 1.5; background: rgba(10, 25, 41, 1);">
+
+<header id="21:2" orderindex="80" style="background: rgba(10, 25, 41, 1);" class="w-full">
+<nav id="21:3" orderindex="80" style="padding: 1rem 1.5rem;" class="flex justify-between items-center w-full">
+
+<div id="21:4" orderindex="80" class="flex items-center gap-y-8 gap-x-8">
+
+<div id="21:5" orderindex="80" class="flex items-center gap-y-3 gap-x-3">
+<div id="21:6" orderindex="80" style="background-color: color-mix( in oklab , #00D9FF 15% , transparent ); border-color: color-mix( in oklab , #00D9FF 30% , transparent );" class="flex justify-center items-center w-8 h-8 border-[1px] border-solid rounded-lg">
+<iconify-icon id="21:7" orderindex="80" style="color: rgba(0, 217, 255, 1);" icon="lucide:workflow" class="text-lg"></iconify-icon>
+</div>
+<span id="21:8" orderindex="81" style="color: color-mix( in oklab , #fff 95% , transparent );" class="text-lg font-semibold">WorkflowAI</span>
+</div>
+
+<div id="21:9" orderindex="81" style="background-color: color-mix( in oklab , #fff 8% , transparent ); backdrop-filter: blur(24px); box-shadow: 0 0 rgba(0, 0, 0, 0), 0 0 rgba(0, 0, 0, 0), 0 0 rgba(0, 0, 0, 0), 0 0 rgba(0, 0, 0, 0), 0 4px 16px rgba(0, 0, 0, 0.25); padding: 0.5rem 1rem; border-color: color-mix( in oklab , #fff 10% , transparent );" class="flex items-center min-w-[320px] border-[1px] border-solid rounded-full">
+<div id="21:10" orderindex="80" class="bg-transparent flex justify-center items-center w-5 h-5 mr-3">
+<iconify-icon id="21:11" orderindex="80" style="color: color-mix( in oklab , #fff 50% , transparent );" icon="lucide:search" class="text-base"></iconify-icon>
+</div>
+<input id="21:12" orderindex="81" style="flex-basis: 0%; color: color-mix( in oklab , #fff 95% , transparent );" type="text" placeholder="搜索任务..." class="text-sm bg-transparent grow shrink outline-none border-none">
+</div>
+</div>
+
+<div id="21:13" orderindex="81" class="flex items-center gap-y-4 gap-x-4">
+
+<button id="21:14" orderindex="80" class="hover:bg-white/[0.08] hover:border-[#00D9FF]/30 flex items-center border-[1px] border-solid rounded-lg" style="background-color: color-mix( in oklab , #fff 5% , transparent ); backdrop-filter: blur(24px); padding: 0.5rem 1rem; border-color: color-mix( in oklab , #fff 10% , transparent );">
+<div id="21:15" orderindex="80" class="bg-transparent flex justify-center items-center w-5 h-5 mr-2">
+<iconify-icon id="21:16" orderindex="80" style="color: color-mix( in oklab , #fff 70% , transparent );" icon="lucide:arrow-left" class="text-base"></iconify-icon>
+</div>
+<span id="21:17" orderindex="81" style="color: color-mix( in oklab , #fff 70% , transparent );" class="whitespace-nowrap font-medium">返回任务列表</span>
+</button>
+
+<div id="21:18" orderindex="81" class="hover:bg-white/[0.08] hover:border-[#00D9FF]/30 flex relative justify-center items-center w-10 h-10 border-[1px] border-solid rounded-full" style="background-color: color-mix( in oklab , #fff 5% , transparent ); backdrop-filter: blur(24px); border-color: color-mix( in oklab , #fff 10% , transparent );">
+<iconify-icon id="21:19" orderindex="80" style="color: color-mix( in oklab , #fff 70% , transparent );" icon="lucide:bell" class="text-base"></iconify-icon>
+<div id="21:20" orderindex="81" style="background-color: rgba(255, 107, 107, 1); box-shadow: 0 0 rgba(0, 0, 0, 0), 0 0 rgba(0, 0, 0, 0), 0 0 rgba(0, 0, 0, 0), 0 0 rgba(0, 0, 0, 0), 0 2px 8px rgba(255, 107, 107, 0.4); border-color: rgba(10, 25, 41, 1);" class="flex absolute -top-1 -right-1 justify-center items-center w-5 h-5 border-[2px] border-solid rounded-full">
+<span id="21:21" orderindex="80" style="color: rgba(255, 255, 255, 1);" class="text-[10px] font-semibold">3</span>
+</div>
+</div>
+
+<div id="21:22" orderindex="82" class="flex items-center gap-y-2 gap-x-2">
+<img id="21:23" orderindex="80" style="border-color: color-mix( in oklab , #fff 10% , transparent );" alt="Professional headshot of a middle-aged person with a friendly expression" src="https://static.paraflowcontent.com/public/resource/image/654bc3a7-6d46-4317-a6be-80ceeac2474f.jpeg" class="w-9 h-9 object-cover border-[2px] border-solid rounded-full">
+<div id="21:24" orderindex="81" class="bg-transparent flex justify-center items-center w-4 h-4">
+<iconify-icon id="21:25" orderindex="80" style="color: color-mix( in oklab , #fff 70% , transparent );" icon="lucide:chevron-down" class="text-sm"></iconify-icon>
+</div>
+</div>
+</div>
+</nav>
+</header>
+
+<div id="21:26" orderindex="81" class="flex w-full min-h-[836px]">
+
+<main id="21:27" orderindex="80" class="overflow-x-hidden flex flex-col grow shrink pr-8 pl-8">
+
+<div id="21:28" orderindex="80" class="pt-8 pb-6">
+<h1 id="21:29" orderindex="80" style="color: color-mix( in oklab , #fff 95% , transparent );" class="text-3xl mb-6 font-semibold">创建新任务</h1>
+
+<div id="21:30" orderindex="81" class="flex items-center gap-y-4 gap-x-4 mb-8">
+<div id="21:31" orderindex="80" class="flex items-center">
+<div id="21:32" orderindex="80" style="background-color: rgba(0, 217, 255, 1); border-color: rgba(0, 217, 255, 1);" class="flex justify-center items-center w-8 h-8 border-[2px] border-solid rounded-full">
+<span id="21:33" orderindex="80" style="color: color-mix( in oklab , #0A1929 90% , transparent );" class="text-sm font-semibold">1</span>
+</div>
+<span id="21:34" orderindex="81" style="color: rgba(0, 217, 255, 1);" class="text-sm ml-3 font-medium">输入描述</span>
+</div>
+<div id="21:35" orderindex="81" style="background-color: color-mix( in oklab , #fff 20% , transparent ); flex-basis: 0%;" class="grow shrink h-px"></div>
+<div id="21:36" orderindex="82" class="flex items-center">
+<div id="21:37" orderindex="80" style="background-color: color-mix( in oklab , #fff 5% , transparent ); border-color: color-mix( in oklab , #fff 20% , transparent );" class="flex justify-center items-center w-8 h-8 border-[2px] border-solid rounded-full">
+<span id="21:38" orderindex="80" style="color: color-mix( in oklab , #fff 50% , transparent );" class="text-sm font-semibold">2</span>
+</div>
+<span id="21:39" orderindex="81" style="color: color-mix( in oklab , #fff 50% , transparent );" class="text-sm ml-3 font-medium">预览计划</span>
+</div>
+<div id="21:40" orderindex="83" style="background-color: color-mix( in oklab , #fff 20% , transparent ); flex-basis: 0%;" class="grow shrink h-px"></div>
+<div id="21:41" orderindex="84" class="flex items-center">
+<div id="21:42" orderindex="80" style="background-color: color-mix( in oklab , #fff 5% , transparent ); border-color: color-mix( in oklab , #fff 20% , transparent );" class="flex justify-center items-center w-8 h-8 border-[2px] border-solid rounded-full">
+<span id="21:43" orderindex="80" style="color: color-mix( in oklab , #fff 50% , transparent );" class="text-sm font-semibold">3</span>
+</div>
+<span id="21:44" orderindex="81" style="color: color-mix( in oklab , #fff 50% , transparent );" class="text-sm ml-3 font-medium">启动执行</span>
+</div>
+</div>
+</div>
+
+<div id="21:45" orderindex="81" class="mb-8">
+<div id="21:46" orderindex="80" style="background-color: color-mix( in oklab , #fff 8% , transparent ); backdrop-filter: blur(24px); box-shadow: 0 0 rgba(0, 0, 0, 0), 0 0 rgba(0, 0, 0, 0), 0 0 rgba(0, 0, 0, 0), 0 0 rgba(0, 0, 0, 0), 0 4px 16px rgba(0, 0, 0, 0.25); border-color: color-mix( in oklab , #fff 10% , transparent );" class="p-8 border-[1px] border-solid rounded-2xl">
+
+<div id="21:47" orderindex="80" class="mb-6">
+<label id="21:48" orderindex="80" style="color: color-mix( in oklab , #fff 95% , transparent );" class="text-sm block mb-3 font-medium">任务名称</label>
+<input id="21:49" orderindex="81" class="focus:border-[#00D9FF]/50 focus:shadow-[0_0_12px_rgba(0,217,255,0.3)] text-base bg-transparent w-full outline-none p-4 border-[1px] border-solid rounded-xl" style="backdrop-filter: blur(24px); color: color-mix( in oklab , #fff 95% , transparent ); border-color: color-mix( in oklab , #fff 20% , transparent );" type="text" placeholder="请输入任务名称">
+</div>
+
+<div id="21:50" orderindex="81" class="mb-8">
+<label id="21:51" orderindex="80" style="color: color-mix( in oklab , #fff 95% , transparent );" class="text-sm block mb-3 font-medium">任务描述</label>
+<textarea id="21:52" orderindex="81" class="focus:border-[#00D9FF]/50 focus:shadow-[0_0_12px_rgba(0,217,255,0.3)] text-base bg-transparent w-full outline-none p-4 border-[1px] border-solid rounded-xl" style="backdrop-filter: blur(24px); color: color-mix( in oklab , #fff 95% , transparent ); border-color: color-mix( in oklab , #fff 20% , transparent );" placeholder="请用自然语言详细描述您要执行的任务，例如：分析这个代码仓库的架构，生成文档，然后基于文档回答 5 个技术问题" rows="6"></textarea>
+<p id="21:53" orderindex="82" style="color: color-mix( in oklab , #fff 50% , transparent );" class="text-sm mt-2">系统将根据您的描述自动分析并生成执行计划</p>
+</div>
+
+<div id="21:54" orderindex="82" class="flex justify-end">
+<button id="21:55" orderindex="80" class="hover:bg-[#00B8DB] flex items-center rounded-xl" style="background-color: rgba(0, 217, 255, 1); padding: 0.75rem 2rem;">
+<div id="21:56" orderindex="80" class="bg-transparent flex justify-center items-center w-5 h-5 mr-2">
+<iconify-icon id="21:57" orderindex="80" style="color: color-mix( in oklab , #0A1929 90% , transparent );" icon="lucide:zap" class="text-base"></iconify-icon>
+</div>
+<span id="21:58" orderindex="81" style="color: color-mix( in oklab , #0A1929 90% , transparent );" class="whitespace-nowrap font-semibold">生成计划</span>
+</button>
+</div>
+</div>
+</div>
+
+<div id="21:59" orderindex="82" class="hidden mb-8">
+<div id="21:60" orderindex="80" class="grid grid-cols-3 gap-y-6 gap-x-6">
+
+<div id="21:61" orderindex="80" style="grid-column-start: span 2; grid-column-end: span 2;">
+<div id="21:62" orderindex="80" style="background-color: color-mix( in oklab , #fff 8% , transparent ); backdrop-filter: blur(24px); box-shadow: 0 0 rgba(0, 0, 0, 0), 0 0 rgba(0, 0, 0, 0), 0 0 rgba(0, 0, 0, 0), 0 0 rgba(0, 0, 0, 0), 0 4px 16px rgba(0, 0, 0, 0.25); border-color: color-mix( in oklab , #fff 10% , transparent );" class="h-[500px] p-6 border-[1px] border-solid rounded-2xl">
+<h3 id="21:63" orderindex="80" style="color: color-mix( in oklab , #fff 95% , transparent );" class="text-lg mb-4 font-semibold">执行图谱</h3>
+
+<div id="21:64" orderindex="81" class="flex flex-col gap-y-4 gap-x-4 h-full">
+
+<div id="21:65" orderindex="80" class="flex items-center gap-y-4 gap-x-4">
+<div id="21:66" orderindex="80" style="background-color: color-mix( in oklab , #00D9FF 15% , transparent ); border-color: color-mix( in oklab , #00D9FF 30% , transparent );" class="flex justify-center items-center w-12 h-12 border-[1px] border-solid rounded-lg">
+<iconify-icon id="21:67" orderindex="80" style="color: rgba(0, 217, 255, 1);" icon="lucide:file-search" class="text-lg"></iconify-icon>
+</div>
+<div id="21:68" orderindex="81" style="flex-basis: 0%;" class="grow shrink">
+<div id="21:69" orderindex="80" style="color: color-mix( in oklab , #fff 95% , transparent );" class="text-sm font-medium">代码分析</div>
+<div id="21:70" orderindex="81" style="color: color-mix( in oklab , #fff 70% , transparent );" class="text-xs">预估: 5-8分钟</div>
+</div>
+</div>
+
+<div id="21:71" orderindex="81" style="background-color: color-mix( in oklab , #fff 20% , transparent );" class="w-px h-8 ml-6"></div>
+
+<div id="21:72" orderindex="82" class="flex gap-y-6 gap-x-6 ml-6">
+<div id="21:73" orderindex="80" style="flex-basis: 0%;" class="flex grow shrink items-center gap-y-3 gap-x-3">
+<div id="21:74" orderindex="80" style="background-color: color-mix( in oklab , #10B981 15% , transparent ); border-color: color-mix( in oklab , #10B981 30% , transparent );" class="flex justify-center items-center w-10 h-10 border-[1px] border-solid rounded-lg">
+<iconify-icon id="21:75" orderindex="80" style="color: rgba(16, 185, 129, 1);" icon="lucide:file-text" class="text-base"></iconify-icon>
+</div>
+<div id="21:76" orderindex="81">
+<div id="21:77" orderindex="80" style="color: color-mix( in oklab , #fff 95% , transparent );" class="text-sm font-medium">文档生成</div>
+<div id="21:78" orderindex="81" style="color: color-mix( in oklab , #fff 70% , transparent );" class="text-xs">预估: 3-5分钟</div>
+</div>
+</div>
+<div id="21:79" orderindex="81" style="flex-basis: 0%;" class="flex grow shrink items-center gap-y-3 gap-x-3">
+<div id="21:80" orderindex="80" style="background-color: color-mix( in oklab , #A78BFA 15% , transparent ); border-color: color-mix( in oklab , #A78BFA 30% , transparent );" class="flex justify-center items-center w-10 h-10 border-[1px] border-solid rounded-lg">
+<iconify-icon id="21:81" orderindex="80" style="color: rgba(167, 139, 250, 1);" icon="lucide:brain" class="text-base"></iconify-icon>
+</div>
+<div id="21:82" orderindex="81">
+<div id="21:83" orderindex="80" style="color: color-mix( in oklab , #fff 95% , transparent );" class="text-sm font-medium">问题生成</div>
+<div id="21:84" orderindex="81" style="color: color-mix( in oklab , #fff 70% , transparent );" class="text-xs">预估: 2-3分钟</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+<div id="21:85" orderindex="81" style="grid-column-start: span 1; grid-column-end: span 1;">
+<div id="21:86" orderindex="80" style="background-color: color-mix( in oklab , #fff 8% , transparent ); backdrop-filter: blur(24px); box-shadow: 0 0 rgba(0, 0, 0, 0), 0 0 rgba(0, 0, 0, 0), 0 0 rgba(0, 0, 0, 0), 0 0 rgba(0, 0, 0, 0), 0 4px 16px rgba(0, 0, 0, 0.25); border-color: color-mix( in oklab , #fff 10% , transparent );" class="p-6 border-[1px] border-solid rounded-2xl">
+<h3 id="21:87" orderindex="80" style="color: color-mix( in oklab , #fff 95% , transparent );" class="text-lg mb-4 font-semibold">计划详情</h3>
+
+<div id="21:88" orderindex="81" class="flex flex-col gap-y-4 gap-x-4 mb-6">
+<div id="21:89" orderindex="80" class="flex justify-between items-center">
+<span id="21:90" orderindex="80" style="color: color-mix( in oklab , #fff 70% , transparent );" class="text-sm">步骤总数</span>
+<span id="21:91" orderindex="81" style="color: color-mix( in oklab , #fff 95% , transparent );" class="text-lg font-semibold">5</span>
+</div>
+<div id="21:92" orderindex="81" class="flex justify-between items-center">
+<span id="21:93" orderindex="80" style="color: color-mix( in oklab , #fff 70% , transparent );" class="text-sm">并行组数</span>
+<span id="21:94" orderindex="81" style="color: color-mix( in oklab , #fff 95% , transparent );" class="text-lg font-semibold">2</span>
+</div>
+<div id="21:95" orderindex="82" class="flex justify-between items-center">
+<span id="21:96" orderindex="80" style="color: color-mix( in oklab , #fff 70% , transparent );" class="text-sm">预估时长</span>
+<span id="21:97" orderindex="81" style="color: color-mix( in oklab , #fff 95% , transparent );" class="text-lg font-semibold">8-12分钟</span>
+</div>
+</div>
+
+<div id="21:98" orderindex="82" class="mb-6">
+<h4 id="21:99" orderindex="80" style="color: color-mix( in oklab , #fff 95% , transparent );" class="text-sm mb-3 font-medium">关联技能与工具</h4>
+<div id="21:100" orderindex="81" class="flex flex-col gap-y-2 gap-x-2">
+<div id="21:101" orderindex="80" style="background-color: color-mix( in oklab , #fff 5% , transparent );" class="flex items-center gap-y-2 gap-x-2 p-2 rounded-lg">
+<iconify-icon id="21:102" orderindex="80" style="color: rgba(0, 217, 255, 1);" icon="lucide:code" class="text-sm"></iconify-icon>
+<span id="21:103" orderindex="81" style="color: color-mix( in oklab , #fff 70% , transparent );" class="text-sm">代码分析工具</span>
+</div>
+<div id="21:104" orderindex="81" style="background-color: color-mix( in oklab , #fff 5% , transparent );" class="flex items-center gap-y-2 gap-x-2 p-2 rounded-lg">
+<iconify-icon id="21:105" orderindex="80" style="color: rgba(16, 185, 129, 1);" icon="lucide:file-text" class="text-sm"></iconify-icon>
+<span id="21:106" orderindex="81" style="color: color-mix( in oklab , #fff 70% , transparent );" class="text-sm">文档生成器</span>
+</div>
+<div id="21:107" orderindex="82" style="background-color: color-mix( in oklab , #fff 5% , transparent );" class="flex items-center gap-y-2 gap-x-2 p-2 rounded-lg">
+<iconify-icon id="21:108" orderindex="80" style="color: rgba(167, 139, 250, 1);" icon="lucide:brain" class="text-sm"></iconify-icon>
+<span id="21:109" orderindex="81" style="color: color-mix( in oklab , #fff 70% , transparent );" class="text-sm">智能问答</span>
+</div>
+</div>
+</div>
+
+<div id="21:110" orderindex="83" class="flex flex-col gap-y-3 gap-x-3">
+<button id="21:111" orderindex="80" class="hover:bg-[#00B8DB] flex justify-center items-center rounded-xl" style="background-color: rgba(0, 217, 255, 1); padding: 0.75rem 1.5rem;">
+<div id="21:112" orderindex="80" class="bg-transparent flex justify-center items-center w-5 h-5 mr-2">
+<iconify-icon id="21:113" orderindex="80" style="color: color-mix( in oklab , #0A1929 90% , transparent );" icon="lucide:play" class="text-base"></iconify-icon>
+</div>
+<span id="21:114" orderindex="81" style="color: color-mix( in oklab , #0A1929 90% , transparent );" class="whitespace-nowrap font-semibold">开始执行</span>
+</button>
+<button id="21:115" orderindex="81" class="hover:bg-white/[0.12] hover:border-[#00D9FF]/30 flex justify-center items-center border-[1px] border-solid rounded-xl" style="background-color: color-mix( in oklab , #fff 8% , transparent ); backdrop-filter: blur(24px); padding: 0.75rem 1.5rem; border-color: color-mix( in oklab , #fff 10% , transparent );">
+<div id="21:116" orderindex="80" class="bg-transparent flex justify-center items-center w-5 h-5 mr-2">
+<iconify-icon id="21:117" orderindex="80" style="color: color-mix( in oklab , #fff 70% , transparent );" icon="lucide:edit" class="text-base"></iconify-icon>
+</div>
+<span id="21:118" orderindex="81" style="color: color-mix( in oklab , #fff 70% , transparent );" class="whitespace-nowrap font-medium">调整计划</span>
+</button>
+<button id="21:119" orderindex="82" class="hover:bg-[#FF6B6B]/[0.15] hover:border-[#FF6B6B]/30 flex justify-center items-center border-[1px] border-solid rounded-xl" style="background-color: color-mix( in oklab , #fff 5% , transparent ); backdrop-filter: blur(24px); padding: 0.75rem 1.5rem; border-color: color-mix( in oklab , #fff 10% , transparent );">
+<div id="21:120" orderindex="80" class="bg-transparent flex justify-center items-center w-5 h-5 mr-2">
+<iconify-icon id="21:121" orderindex="80" style="color: color-mix( in oklab , #fff 50% , transparent );" icon="lucide:x" class="text-base"></iconify-icon>
+</div>
+<span id="21:122" orderindex="81" style="color: color-mix( in oklab , #fff 50% , transparent );" class="whitespace-nowrap font-medium">取消</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+
+
+</body></html>
