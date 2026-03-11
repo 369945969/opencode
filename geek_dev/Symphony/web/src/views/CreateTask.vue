@@ -293,11 +293,13 @@ const generatePlan = () => {
 const startExecution = async () => {
   if (!taskDescription.value) return
 
-  // 立即跳转到 monitor 页面，传递描述，由 monitor 页面负责获取标题和 sessionId
+  // 使用 sessionStorage 存储描述，模拟 POST 行为，避免 URL 编码和长度限制问题
+  sessionStorage.setItem('pending_task_description', taskDescription.value)
+
+  // 立即跳转到 monitor 页面，仅通过 query 传递标识
   router.push({
     path: '/monitor',
     query: { 
-      description: taskDescription.value,
       isNew: 'true' 
     }
   })

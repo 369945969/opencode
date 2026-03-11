@@ -1,7 +1,9 @@
 export interface SessionMessage {
+  id?: string; // 消息唯一 ID（通常来自后端）
   role: "user" | "assistant" | "system";
   content: string;
   thinking?: string;
+  isInternal?: boolean; // 标记是否为系统内部指令
   ts: number;
 }
 

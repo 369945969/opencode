@@ -7,18 +7,123 @@ const route = useRoute()
 
 const sessionId = ref(route.query.sessionId as string || '')
 const taskTitle = ref('任务分析中...')
-const taskDescription = ref(route.query.description as string || '')
+const taskDescription = ref('')
 const overallStatus = ref('running')
 const startTime = ref('')
 const isFetchingTitle = ref(false)
+
+// 对话框消息逻辑
+const chatMessages = ref<any[]>([])
+const isAutoScroll = ref(true)
+const chatScrollContainer = ref<HTMLElement | null>(null)
+const expandedThoughts = ref<Record<number, boolean>>({})
+
+const toggleThought = (idx: number) => {
+  expandedThoughts.value[idx] = !expandedThoughts.value[idx]
+}
 
 const navigateToTaskList = () => {
   router.push('/')
 }
 
-// 获取标题和 sessionId
+// SSE 流式连接逻辑
+let eventSource: EventSource | null = null
+
+const startSseConnection = () => {
+  if (!sessionId.value) return
+  if (eventSource) eventSource.close()
+
+  eventSource = new EventSource(`http://localhost:4098/sessions/${sessionId.value}/events`)
+
+  eventSource.onmessage = (event) => {
+    try {
+      const data = JSON.parse(event.data)
+      
+      if (data.type === 'history') {
+        // 加载全量历史消息
+        chatMessages.value = data.messages
+        overallStatus.value = data.status
+      } else if (data.type === 'message') {
+        // 处理单条消息更新或追加
+        const updatedMsg = data.message
+        const existingIdx = chatMessages.value.findIndex(m => m.id === updatedMsg.id)
+        
+        if (existingIdx > -1) {
+          // 如果消息已存在且是助手消息，对比思考过程决定是否自动展开
+          const oldMsg = chatMessages.value[existingIdx]
+          if (updatedMsg.thinking && updatedMsg.thinking !== oldMsg.thinking && !expandedThoughts.value[existingIdx]) {
+            expandedThoughts.value[existingIdx] = true
+          }
+          chatMessages.value[existingIdx] = { ...updatedMsg }
+        } else if (!updatedMsg.isInternal) {
+          // 如果是新消息且非内部，追加
+          chatMessages.value.push(updatedMsg)
+        }
+      } else if (data.type === 'status') {
+        // 更新全局状态
+        overallStatus.value = data.status
+        
+        // 同步到本地存储
+        const savedTasks = JSON.parse(localStorage.getItem('symphony_tasks') || '[]')
+        const taskIndex = savedTasks.findIndex((t: any) => t.sessionId === sessionId.value)
+        if (taskIndex > -1) {
+          savedTasks[taskIndex].status = data.status === 'idle' ? 'completed' : 'running'
+          localStorage.setItem('symphony_tasks', JSON.stringify(savedTasks))
+        }
+      }
+
+      // 自动滚动
+      if (isAutoScroll.value) {
+        setTimeout(() => {
+          if (chatScrollContainer.value) {
+            chatScrollContainer.value.scrollTop = chatScrollContainer.value.scrollHeight
+          }
+        }, 100)
+      }
+    } catch (e) {
+      console.error('Failed to parse SSE data:', e)
+    }
+  }
+
+  eventSource.onerror = (err) => {
+    console.error('SSE connection error:', err)
+    eventSource?.close()
+    // 5秒后尝试重连
+    setTimeout(startSseConnection, 5000)
+  }
+}
+
+onMounted(() => {
+  const isNew = route.query.isNew === 'true'
+  
+  if (isNew) {
+    const description = sessionStorage.getItem('pending_task_description')
+    if (description) {
+      initializeNewTask(description)
+    } else {
+      router.push('/')
+    }
+  } else if (sessionId.value) {
+    const savedTasks = JSON.parse(localStorage.getItem('symphony_tasks') || '[]')
+    const task = savedTasks.find((t: any) => t.sessionId === sessionId.value)
+    if (task) {
+      taskTitle.value = task.title
+      taskDescription.value = task.description
+      overallStatus.value = task.status
+      startTime.value = task.created_at
+    }
+    startSseConnection()
+  }
+})
+
+onUnmounted(() => {
+  if (eventSource) eventSource.close()
+})
+
+// 获取标题并初始化（完成后启动 SSE）
 const initializeNewTask = async (description: string) => {
   isFetchingTitle.value = true
+  taskDescription.value = description
   try {
     const response = await fetch('http://localhost:4098/get-title', {
       method: 'POST',
@@ -29,12 +134,10 @@ const initializeNewTask = async (description: string) => {
     if (!response.ok) throw new Error('Failed to get title')
     const { title, sessionId: newSessionId } = await response.json()
 
-    // 更新状态
     taskTitle.value = title
     sessionId.value = newSessionId
     startTime.value = new Date().toLocaleString()
 
-    // 保存到 localStorage
     const newTask = {
       id: newSessionId,
       title: title,
@@ -47,8 +150,10 @@ const initializeNewTask = async (description: string) => {
     savedTasks.unshift(newTask)
     localStorage.setItem('symphony_tasks', JSON.stringify(savedTasks))
 
-    // 开始轮询状态
-    startPolling()
+    sessionStorage.removeItem('pending_task_description')
+
+    // 初始化完成后，启动 SSE 连接
+    startSseConnection()
   } catch (error) {
     console.error('Initialization failed:', error)
     taskTitle.value = '未命名任务'
@@ -57,92 +162,54 @@ const initializeNewTask = async (description: string) => {
   }
 }
 
-// 轮询获取状态逻辑
-let statusInterval: any = null
-
-const startPolling = () => {
-  if (statusInterval) clearInterval(statusInterval)
-  fetchStatus()
-  statusInterval = setInterval(fetchStatus, 3000)
-}
-
-const fetchStatus = async () => {
-  if (!sessionId.value) return
-
-  try {
-    const response = await fetch(`http://localhost:4098/sessions/${sessionId.value}`)
-    if (response.ok) {
-      const data = await response.json()
-      
-      const savedTasks = JSON.parse(localStorage.getItem('symphony_tasks') || '[]')
-      const taskIndex = savedTasks.findIndex((t: any) => t.sessionId === sessionId.value)
-      
-      if (taskIndex > -1) {
-        const isIdle = data.status === 'idle'
-        const newStatus = isIdle ? 'completed' : 'running'
-        
-        if (savedTasks[taskIndex].status !== newStatus) {
-          savedTasks[taskIndex].status = newStatus
-          localStorage.setItem('symphony_tasks', JSON.stringify(savedTasks))
-          overallStatus.value = newStatus
-        }
-      }
-    }
-  } catch (e) {
-    console.error('Fetch status failed:', e)
-  }
-}
-
-onMounted(() => {
-  const isNew = route.query.isNew === 'true'
-  const description = route.query.description as string
-
-  if (isNew && description) {
-    // 如果是新任务，先初始化获取标题
-    initializeNewTask(description)
-  } else if (sessionId.value) {
-    // 如果是已有任务，从 localStorage 加载
-    const savedTasks = JSON.parse(localStorage.getItem('symphony_tasks') || '[]')
-    const task = savedTasks.find((t: any) => t.sessionId === sessionId.value)
-    if (task) {
-      taskTitle.value = task.title
-      taskDescription.value = task.description
-      overallStatus.value = task.status
-      startTime.value = task.created_at
-    }
-    startPolling()
-  }
-})
-
-onUnmounted(() => {
-  if (statusInterval) clearInterval(statusInterval)
-})
-
 // Initial coordinates for a tree layout
 const initialX = 650 // Center X
 const layerGap = 140
 const initialY = 120
 
-const steps = ref([
-  { id: 'step_001', name: 'TRIZ难题定义', status: 'completed', duration: '1m 20s', icon: 'lucide:target', layer: 1, x: initialX, y: initialY, parents: [] },
-  { id: 'step_002', name: '根因分析', status: 'completed', duration: '5m 45s', icon: 'lucide:search', layer: 2, x: initialX, y: initialY + layerGap, parents: ['step_001'] },
+const steps = ref<any[]>([
+  { id: 'step_001', name: 'TRIZ难题定义', status: 'running', duration: '等待中...', icon: 'lucide:target', layer: 1, x: initialX, y: initialY, parents: [], displayId: '' },
+  { id: 'step_002', name: '根因分析', status: 'waiting', duration: '', icon: 'lucide:search', layer: 2, x: initialX, y: initialY + layerGap, parents: ['step_001'], displayId: 'step_002' },
   
-  { id: 'step_003_1', name: '创新方向1', status: 'completed', duration: '3m 12s', icon: 'lucide:compass', layer: 3, x: initialX - 250, y: initialY + layerGap * 2, parents: ['step_002'] },
-  { id: 'step_003_2', name: '创新方向2', status: 'completed', duration: '3m 12s', icon: 'lucide:compass', layer: 3, x: initialX + 250, y: initialY + layerGap * 2, parents: ['step_002'] },
+  { id: 'step_003_1', name: '创新方向1', status: 'waiting', duration: '', icon: 'lucide:compass', layer: 3, x: initialX - 250, y: initialY + layerGap * 2, parents: ['step_002'], displayId: 'step_003_1' },
+  { id: 'step_003_2', name: '创新方向2', status: 'waiting', duration: '', icon: 'lucide:compass', layer: 3, x: initialX + 250, y: initialY + layerGap * 2, parents: ['step_002'], displayId: 'step_003_2' },
   
-  { id: 'step_004_1', name: '工具推荐1', status: 'running', duration: '1m 05s', icon: 'lucide:wrench', layer: 4, x: initialX - 250, y: initialY + layerGap * 3, parents: ['step_003_1'] },
-  { id: 'step_004_2', name: '工具推荐2', status: 'running', duration: '1m 05s', icon: 'lucide:wrench', layer: 4, x: initialX + 250, y: initialY + layerGap * 3, parents: ['step_003_2'] },
+  { id: 'step_004_1', name: '工具推荐1', status: 'waiting', duration: '', icon: 'lucide:wrench', layer: 4, x: initialX - 250, y: initialY + layerGap * 3, parents: ['step_003_1'], displayId: 'step_004_1' },
+  { id: 'step_004_2', name: '工具推荐2', status: 'waiting', duration: '', icon: 'lucide:wrench', layer: 4, x: initialX + 250, y: initialY + layerGap * 3, parents: ['step_003_2'], displayId: 'step_004_2' },
   
-  { id: 'step_005_1', name: '39×39硬件矩阵', status: 'waiting', duration: '', icon: 'lucide:cpu', layer: 5, x: initialX - 375, y: initialY + layerGap * 4, parents: ['step_004_1'] },
-  { id: 'step_005_2', name: '24×24软件矩阵', status: 'waiting', duration: '', icon: 'lucide:code', layer: 5, x: initialX - 125, y: initialY + layerGap * 4, parents: ['step_004_1'] },
-  { id: 'step_005_3', name: '39×39硬件矩阵', status: 'waiting', duration: '', icon: 'lucide:cpu', layer: 5, x: initialX + 125, y: initialY + layerGap * 4, parents: ['step_004_2'] },
-  { id: 'step_005_4', name: '24×24软件矩阵', status: 'waiting', duration: '', icon: 'lucide:code', layer: 5, x: initialX + 375, y: initialY + layerGap * 4, parents: ['step_004_2'] },
+  { id: 'step_005_1', name: '39×39硬件矩阵', status: 'waiting', duration: '', icon: 'lucide:cpu', layer: 5, x: initialX - 375, y: initialY + layerGap * 4, parents: ['step_004_1'], displayId: 'step_005_1' },
+  { id: 'step_005_2', name: '24×24软件矩阵', status: 'waiting', duration: '', icon: 'lucide:code', layer: 5, x: initialX - 125, y: initialY + layerGap * 4, parents: ['step_004_1'], displayId: 'step_005_2' },
+  { id: 'step_005_3', name: '39×39硬件矩阵', status: 'waiting', duration: '', icon: 'lucide:cpu', layer: 5, x: initialX + 125, y: initialY + layerGap * 4, parents: ['step_004_2'], displayId: 'step_005_3' },
+  { id: 'step_005_4', name: '24×24软件矩阵', status: 'waiting', duration: '', icon: 'lucide:code', layer: 5, x: initialX + 375, y: initialY + layerGap * 4, parents: ['step_004_2'], displayId: 'step_005_4' },
   
-  { id: 'step_006_1', name: '点子1', status: 'waiting', duration: '', icon: 'lucide:lightbulb', layer: 6, x: initialX - 375, y: initialY + layerGap * 5, parents: ['step_005_1'] },
-  { id: 'step_006_2', name: '点子2', status: 'waiting', duration: '', icon: 'lucide:lightbulb', layer: 6, x: initialX - 125, y: initialY + layerGap * 5, parents: ['step_005_2'] },
-  { id: 'step_006_3', name: '点子3', status: 'waiting', duration: '', icon: 'lucide:lightbulb', layer: 6, x: initialX + 125, y: initialY + layerGap * 5, parents: ['step_005_3'] },
-  { id: 'step_006_4', name: '点子4', status: 'waiting', duration: '', icon: 'lucide:lightbulb', layer: 6, x: initialX + 375, y: initialY + layerGap * 5, parents: ['step_005_4'] },
+  { id: 'step_006_1', name: '点子1', status: 'waiting', duration: '', icon: 'lucide:lightbulb', layer: 6, x: initialX - 375, y: initialY + layerGap * 5, parents: ['step_005_1'], displayId: 'step_006_1' },
+  { id: 'step_006_2', name: '点子2', status: 'waiting', duration: '', icon: 'lucide:lightbulb', layer: 6, x: initialX - 125, y: initialY + layerGap * 5, parents: ['step_005_2'], displayId: 'step_006_2' },
+  { id: 'step_006_3', name: '点子3', status: 'waiting', duration: '', icon: 'lucide:lightbulb', layer: 6, x: initialX + 125, y: initialY + layerGap * 5, parents: ['step_005_3'], displayId: 'step_006_3' },
+  { id: 'step_006_4', name: '点子4', status: 'waiting', duration: '', icon: 'lucide:lightbulb', layer: 6, x: initialX + 375, y: initialY + layerGap * 5, parents: ['step_005_4'], displayId: 'step_006_4' },
 ])
+
+// 动态更新第一个节点的状态
+const updateFirstNode = () => {
+  const firstNode = steps.value.find(s => s.id === 'step_001')
+  if (firstNode) {
+    if (isFetchingTitle.value) {
+      firstNode.name = '正在定义难题...'
+      firstNode.status = 'running'
+      firstNode.duration = '处理中...'
+      // 正在获取标题时，如果已经有了 sessionId 也可以显示，否则显示等待中
+      firstNode.displayId = sessionId.value || '初始化中...'
+    } else {
+      firstNode.name = taskTitle.value || 'TRIZ难题定义'
+      firstNode.status = 'completed'
+      firstNode.duration = '已完成'
+      firstNode.displayId = sessionId.value
+    }
+  }
+}
+
+// 监听标题和加载状态的变化
+import { watch } from 'vue'
+watch([taskTitle, isFetchingTitle], updateFirstNode, { immediate: true })
 
 // Dragging Logic
 const draggingNodeId = ref<string | null>(null)
@@ -175,59 +242,50 @@ const onMouseUp = () => {
   window.removeEventListener('mouseup', onMouseUp)
 }
 
+// 追踪节点实际尺寸
+const nodeElements = ref<Record<string, HTMLElement>>({})
+const nodeDimensions = ref<Record<string, { width: number, height: number }>>({})
+
+const setNodeRef = (el: any, id: string) => {
+  if (el) {
+    nodeElements.value[id] = el
+    updateNodeDimensions(id)
+  }
+}
+
+const updateNodeDimensions = (id: string) => {
+  const el = nodeElements.value[id]
+  if (el) {
+    nodeDimensions.value[id] = {
+      width: el.offsetWidth,
+      height: el.offsetHeight
+    }
+  }
+}
+
 // SVG Line Calculation
 const getBezierPath = (parentId: string, childId: string) => {
   const parent = steps.value.find(s => s.id === parentId)
   const child = steps.value.find(s => s.id === childId)
   if (!parent || !child) return ''
 
-  const startX = parent.x + 80 // Half of min-w-[160px]
-  const startY = parent.y + 48 // Node height roughly
-  const endX = child.x + 80
-  const endY = child.y
+  // 获取实际尺寸，如果没有则使用默认值
+  const pDim = nodeDimensions.value[parentId] || { width: 160, height: 80 }
+  const cDim = nodeDimensions.value[childId] || { width: 160, height: 80 }
 
-  const cp1y = startY + (endY - startY) / 2
-  const cp2y = startY + (endY - startY) / 2
+  const startX = parent.x + pDim.width / 2 // 父节点水平中心
+  const startY = parent.y + pDim.height     // 父节点底部
+  const endX = child.x + cDim.width / 2    // 子节点水平中心
+  const endY = child.y                     // 子节点顶部
+
+  const verticalDistance = endY - startY
+  const cp1y = startY + verticalDistance * 0.5
+  const cp2y = startY + verticalDistance * 0.5
 
   return `M ${startX} ${startY} C ${startX} ${cp1y}, ${endX} ${cp2y}, ${endX} ${endY}`
 }
 
-const logs = [
-  {
-    time: '10:05:12',
-    type: 'thought',
-    label: 'AI 思考',
-    content: '正在进行根因分析。PPG 测量误差主要源于皮肤-传感器界面的微动、环境光干扰以及血流灌注不足。',
-    details: '根本原因识别：\n1. 运动伪影 (Motion Artifacts)\n2. 传感器接触压力不均\n3. 皮肤透射率差异',
-    status: 'success'
-  },
-  {
-    time: '10:08:30',
-    type: 'thought',
-    label: 'AI 思考',
-    content: '识别到硬件结构和软件算法均有优化空间。正在并行启动多维创新方向分析：1. 硬件结构改进 2. 信号处理算法优化。',
-    details: '创新方向：\n- 硬件：多波长光源阵列、压力自适应结构\n- 软件：深度学习降噪、动态运动补偿',
-    status: 'success'
-  },
-  {
-    time: '10:09:15',
-    type: 'mcp',
-    label: 'MCP 调用',
-    icon: 'lucide:database',
-    name: 'matrix_recommender',
-    params: '{\n  "problem_type": "hybrid",\n  "matrices": ["matrix39", "matrix24"]\n}',
-    duration: '1.2s',
-    status: 'success'
-  },
-  {
-    time: '10:09:17',
-    type: 'return',
-    label: '工具返回',
-    data: '{\n  "tool_recommendation_1": [\n    {"id": "matrix39", "name": "39×39 硬件矩阵", "relevance": 0.95},\n    {"id": "effects_db", "name": "物理效应库", "relevance": 0.82}\n  ],\n  "tool_recommendation_2": [\n    {"id": "matrix24", "name": "24×24 软件矩阵", "relevance": 0.88},\n    {"id": "standard_solutions", "name": "76标准解系统", "relevance": 0.75}\n  ]\n}',
-    meta: '推荐引擎: TRIZ Advisor v2',
-    status: 'success'
-  }
-]
+const logs = ref<any[]>([])
 </script>
 
 <template>
@@ -284,7 +342,12 @@ const logs = [
         <div style="background-color: color-mix( in oklab , #fff 8% , transparent ); backdrop-filter: blur(24px); box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25); border-color: color-mix( in oklab , #fff 10% , transparent );" class="mt-6 mb-6 p-6 border-[1px] border-solid rounded-xl">
           <div class="flex justify-between items-start mb-6">
             <div class="grow shrink">
-              <h1 style="color: color-mix( in oklab , #fff 95% , transparent );" class="text-xl mb-2 font-semibold">{{ taskTitle }}</h1>
+              <div class="flex items-center gap-x-3 mb-2">
+                <iconify-icon v-if="isFetchingTitle" icon="lucide:loader-2" class="text-xl text-[#00D9FF] animate-spin"></iconify-icon>
+                <h1 style="color: color-mix( in oklab , #fff 95% , transparent );" class="text-xl font-semibold">
+                  {{ isFetchingTitle ? '正在生成任务标题...' : taskTitle }}
+                </h1>
+              </div>
               <div class="flex items-center gap-y-4 gap-x-4 mb-4">
                 <div :style="{ 
                   backgroundColor: overallStatus === 'running' ? 'color-mix(in oklab, #10B981 15%, transparent)' : 'color-mix(in oklab, #00D9FF 15%, transparent)',
@@ -323,8 +386,7 @@ const logs = [
         <div class="flex grow shrink gap-y-6 gap-x-6 pb-6">
           <!-- Graph Area -->
           <div style="background-color: color-mix( in oklab , #fff 5% , transparent ); backdrop-filter: blur(24px); box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25); border-color: color-mix( in oklab , #fff 10% , transparent );" class="grow shrink p-6 border-[1px] border-solid rounded-xl relative overflow-hidden">
-            <div class="flex justify-between items-center mb-6">
-              <h2 style="color: color-mix( in oklab , #fff 95% , transparent );" class="text-lg font-semibold">执行图谱</h2>
+            <div class="flex justify-end items-center mb-6">
               <div class="flex items-center gap-y-2 gap-x-2">
                 <button class="hover:bg-white/[0.08] flex justify-center items-center w-8 h-8 border-[1px] border-solid rounded-lg" style="background-color: color-mix( in oklab , #fff 5% , transparent ); backdrop-filter: blur(24px); border-color: color-mix( in oklab , #fff 10% , transparent );">
                   <iconify-icon style="color: color-mix( in oklab , #fff 70% , transparent );" icon="lucide:zoom-in" class="text-sm"></iconify-icon>
@@ -350,6 +412,7 @@ const logs = [
 
               <!-- Draggable Nodes -->
               <div v-for="step in steps" :key="step.id" 
+                :ref="(el) => setNodeRef(el, step.id)"
                 @mousedown="onMouseDown($event, step.id)"
                 :class="[
                   'p-2 border-[1px] rounded-lg min-w-[160px] transition-shadow duration-200 absolute z-20 cursor-move select-none',
@@ -382,122 +445,100 @@ const logs = [
                   </div>
                   <span style="color: color-mix( in oklab , #fff 95% , transparent );" class="text-[13px] font-medium leading-tight truncate">{{ step.name }}</span>
                 </div>
-                <div style="color: color-mix( in oklab , #fff 70% , transparent );" class="text-xs">ID: {{ step.id }}</div>
+                <div style="color: color-mix( in oklab , #fff 70% , transparent );" class="text-xs">ID: {{ step.displayId || step.id }}</div>
                 <div :style="{ color: step.status === 'completed' ? '#10B981' : step.status === 'running' ? '#00D9FF' : '#fff5' }" class="text-xs">
-                  {{ step.status === 'completed' ? '✓ 已完成 (' + step.duration + ')' : 
+                  {{ step.status === 'completed' ? '✓ 已完成' : 
                      step.status === 'running' ? '⏳ 运行中 (' + step.duration + ')' : '⏸ 等待中' }}
                 </div>
               </div>
             </div>
           </div>
 
-          <!-- Sidebar Monitor -->
-          <div style="background-color: color-mix( in oklab , #fff 8% , transparent ); backdrop-filter: blur(24px); box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25); border-color: color-mix( in oklab , #fff 10% , transparent );" class="flex flex-col w-[400px] border-[1px] border-solid rounded-xl">
-            <div style="border-bottom-style: solid; border-color: color-mix( in oklab , #fff 10% , transparent );" class="border-b-[1px] p-4">
-              <div class="flex justify-between items-center mb-2">
-                <h3 style="color: color-mix( in oklab , #fff 95% , transparent );" class="text-lg font-semibold">TRIZ 创新分析</h3>
-                <button class="hover:bg-white/[0.08] flex justify-center items-center w-6 h-6 rounded-sm">
-                  <iconify-icon style="color: color-mix( in oklab , #fff 70% , transparent );" icon="lucide:x" class="text-sm"></iconify-icon>
-                </button>
-              </div>
-              <div class="flex items-center gap-y-2 gap-x-2 mb-2">
-                <div style="background-color: color-mix( in oklab , #00D9FF 15% , transparent ); backdrop-filter: blur(24px); padding: 0.25rem 0.5rem; border-color: color-mix( in oklab , #00D9FF 30% , transparent );" class="flex items-center gap-y-1 gap-x-1 border-[1px] border-solid rounded-full">
-                  <div style="background-color: rgba(0, 217, 255, 1);" class="w-2 h-2 rounded-full"></div>
-                  <span style="color: rgba(0, 217, 255, 1);" class="text-xs font-medium">运行中</span>
+          <!-- Chat Sidebar -->
+          <div style="background-color: color-mix( in oklab , #fff 8% , transparent ); backdrop-filter: blur(24px); box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25); border-color: color-mix( in oklab , #fff 10% , transparent );" class="flex flex-col w-[540px] border-[1px] border-solid rounded-xl">
+            <div style="border-bottom-style: solid; border-color: color-mix( in oklab , #fff 10% , transparent );" class="border-b-[1px] p-4 flex justify-between items-center">
+              <div class="flex items-center gap-x-3">
+                <div style="background-color: color-mix( in oklab , #00D9FF 15% , transparent );" class="w-8 h-8 rounded-lg flex justify-center items-center border border-[#00D9FF]/30">
+                  <iconify-icon icon="lucide:bot" class="text-[#00D9FF] text-lg"></iconify-icon>
                 </div>
-              </div>
-              <div style="color: color-mix( in oklab , #fff 50% , transparent );" class="text-xs">
-                <span>Session ID: {{ sessionId }}</span>
-                <iconify-icon class="hover:text-white/70 text-xs ml-1 cursor-pointer" style="color: color-mix( in oklab , #fff 50% , transparent );" icon="lucide:copy"></iconify-icon>
-              </div>
-            </div>
-
-            <div style="border-bottom-style: solid; border-color: color-mix( in oklab , #fff 10% , transparent );" class="border-b-[1px] p-4">
-              <div class="flex justify-between items-center mb-3">
-                <div class="flex items-center gap-x-2">
-                  <button style="background-color: color-mix( in oklab , #00D9FF 15% , transparent ); backdrop-filter: blur(24px); color: rgba(0, 217, 255, 1); padding: 0.25rem 0.5rem; border-color: color-mix( in oklab , #00D9FF 30% , transparent );" class="text-xs border-[1px] border-solid rounded-sm">全部</button>
-                  <button class="hover:bg-white/[0.08] text-xs border-[1px] border-solid rounded-sm" style="background-color: color-mix( in oklab , #fff 5% , transparent ); backdrop-filter: blur(24px); color: color-mix( in oklab , #fff 70% , transparent ); padding: 0.25rem 0.5rem; border-color: color-mix( in oklab , #fff 10% , transparent );">思考</button>
-                  <button class="hover:bg-white/[0.08] text-xs border-[1px] border-solid rounded-sm" style="background-color: color-mix( in oklab , #fff 5% , transparent ); backdrop-filter: blur(24px); color: color-mix( in oklab , #fff 70% , transparent ); padding: 0.25rem 0.5rem; border-color: color-mix( in oklab , #fff 10% , transparent );">工具调用</button>
+                <div>
+                  <h3 style="color: color-mix( in oklab , #fff 95% , transparent );" class="text-sm font-semibold">AI 助手分析</h3>
+                  <div class="flex items-center gap-x-1.5">
+                    <div :style="{ backgroundColor: overallStatus === 'running' ? '#10B981' : '#00D9FF' }" class="w-1.5 h-1.5 rounded-full" :class="{ 'animate-pulse': overallStatus === 'running' }"></div>
+                    <span style="color: color-mix( in oklab , #fff 50% , transparent );" class="text-[10px]">{{ overallStatus === 'running' ? '正在处理任务...' : '分析已完成' }}</span>
+                  </div>
                 </div>
-                <button class="hover:bg-white/[0.08] flex justify-center items-center w-6 h-6 rounded-sm">
-                  <iconify-icon style="color: color-mix( in oklab , #fff 70% , transparent );" icon="lucide:download" class="text-sm"></iconify-icon>
-                </button>
               </div>
               <div class="flex items-center gap-x-2">
-                <div style="background-color: color-mix( in oklab , #fff 5% , transparent ); backdrop-filter: blur(24px); flex-basis: 0%; padding: 0.25rem 0.5rem; border-color: color-mix( in oklab , #fff 10% , transparent );" class="flex grow shrink items-center border-[1px] border-solid rounded-lg">
-                  <iconify-icon style="color: color-mix( in oklab , #fff 50% , transparent );" icon="lucide:search" class="text-xs mr-2"></iconify-icon>
-                  <input style="flex-basis: 0%; color: color-mix( in oklab , #fff 95% , transparent );" type="text" placeholder="搜索消息..." class="text-xs bg-transparent grow shrink outline-none border-none">
-                </div>
-                <label class="flex items-center gap-x-1 cursor-pointer">
-                  <input class="hidden" type="checkbox" checked>
-                  <div style="background-color: color-mix( in oklab , #fff 5% , transparent ); backdrop-filter: blur(24px); border-color: color-mix( in oklab , #fff 10% , transparent );" class="flex justify-center items-center w-4 h-4 text-[#00D9FF] border-[1px] border-solid rounded-sm">
-                    <iconify-icon icon="lucide:check" class="text-[10px]"></iconify-icon>
+                <button class="hover:bg-white/[0.08] flex justify-center items-center w-8 h-8 rounded-lg border border-white/10">
+                  <iconify-icon style="color: color-mix( in oklab , #fff 70% , transparent );" icon="lucide:download" class="text-sm"></iconify-icon>
+                </button>
+                <label class="flex items-center gap-x-1.5 cursor-pointer">
+                  <input v-model="isAutoScroll" type="checkbox" class="hidden">
+                  <div :class="['w-4 h-4 border border-white/20 rounded flex justify-center items-center transition-colors', isAutoScroll ? 'bg-[#00D9FF] border-[#00D9FF]' : 'bg-white/5']">
+                    <iconify-icon v-if="isAutoScroll" icon="lucide:check" class="text-[10px] text-white"></iconify-icon>
                   </div>
-                  <span style="color: color-mix( in oklab , #fff 70% , transparent );" class="text-xs">自动滚动</span>
+                  <span style="color: color-mix( in oklab , #fff 50% , transparent );" class="text-[10px] whitespace-nowrap">自动滚动</span>
                 </label>
               </div>
             </div>
 
-            <div class="overflow-y-auto grow shrink p-4 space-y-4">
-              <div v-for="(log, idx) in logs" :key="idx" style="background-color: color-mix( in oklab , #fff 3% , transparent ); backdrop-filter: blur(24px); border-color: color-mix( in oklab , #fff 5% , transparent );" class="p-3 border-[1px] border-solid rounded-lg">
-                <div class="flex items-center gap-x-2 mb-2">
-                  <div style="color: color-mix( in oklab , #fff 50% , transparent );" class="text-xs">{{ log.time }}</div>
-                  <div :style="{
-                    backgroundColor: log.type === 'thought' ? 'color-mix(in oklab, #A78BFA 15%, transparent)' : 'color-mix(in oklab, #00D9FF 15%, transparent)',
-                    color: log.type === 'thought' ? '#A78BFA' : '#00D9FF',
-                    borderColor: log.type === 'thought' ? 'color-mix(in oklab, #A78BFA 30%, transparent)' : 'color-mix(in oklab, #00D9FF 30%, transparent)'
-                  }" class="text-xs border-[1px] border-solid rounded-sm px-2 py-0.5">{{ log.label }}</div>
-                </div>
-                
-                <div v-if="log.type === 'thought'">
-                  <div style="color: color-mix( in oklab , #fff 70% , transparent );" class="text-sm mb-2">{{ log.content }}</div>
-                  <div style="color: color-mix( in oklab , #fff 50% , transparent );" class="text-xs whitespace-pre-line">{{ log.details }}</div>
-                </div>
-
-                <div v-if="log.type === 'mcp'">
-                  <div class="flex items-center gap-x-2 mb-2">
-                    <iconify-icon style="color: rgba(0, 217, 255, 1);" :icon="log.icon" class="text-sm"></iconify-icon>
-                    <span style="color: color-mix( in oklab , #fff 95% , transparent );" class="text-sm font-medium">{{ log.name }}</span>
-                    <div style="background-color: color-mix( in oklab , #10B981 15% , transparent ); color: #10B981;" class="text-xs px-2 py-0.5 rounded-sm">成功</div>
+            <!-- Messages Area -->
+            <div ref="chatScrollContainer" class="overflow-y-auto grow shrink p-4 space-y-6 scrollbar-thin scrollbar-thumb-white/10">
+              <div v-for="(msg, idx) in chatMessages" :key="idx" class="flex flex-col gap-y-2">
+                <!-- User Message -->
+                <div v-if="msg.role === 'user'" class="flex justify-end pl-12">
+                  <div style="background-color: color-mix( in oklab , #00D9FF 15% , transparent ); border-color: color-mix( in oklab , #00D9FF 30% , transparent );" class="p-3 border-[1px] border-solid rounded-2xl rounded-tr-sm">
+                    <p style="color: color-mix( in oklab , #fff 90% , transparent );" class="text-sm leading-relaxed">{{ msg.content }}</p>
                   </div>
-                  <details class="text-xs">
-                    <summary style="color: color-mix( in oklab , #fff 70% , transparent );" class="mb-2 cursor-pointer">调用参数</summary>
-                    <pre style="background-color: color-mix( in oklab , #000 20% , transparent ); color: color-mix( in oklab , #fff 60% , transparent );" class="text-[10px] p-2 rounded-sm">{{ log.params }}</pre>
-                  </details>
-                  <div style="color: color-mix( in oklab , #fff 50% , transparent );" class="text-xs mt-2">执行耗时: {{ log.duration }}</div>
                 </div>
 
-                <div v-if="log.type === 'return'">
-                  <details class="text-xs">
-                    <summary style="color: color-mix( in oklab , #fff 70% , transparent );" class="mb-2 cursor-pointer">返回数据</summary>
-                    <pre style="background-color: color-mix( in oklab , #000 20% , transparent ); color: color-mix( in oklab , #fff 60% , transparent );" class="overflow-y-auto max-h-20 text-[10px] p-2 rounded-sm">{{ log.data }}</pre>
-                  </details>
-                  <div style="color: color-mix( in oklab , #fff 50% , transparent );" class="text-xs mt-2">{{ log.meta }}</div>
+                <!-- Assistant Message -->
+                <div v-else class="flex flex-col gap-y-3 pr-12">
+                  <!-- Thinking Process (Collapsible) -->
+                  <div v-if="msg.thinking" class="flex flex-col">
+                    <button 
+                      @click="toggleThought(idx)"
+                      class="flex items-center gap-x-2 p-2 hover:bg-white/5 rounded-lg transition-colors w-fit group"
+                    >
+                      <div class="flex items-center gap-x-2">
+                        <iconify-icon icon="lucide:brain" class="text-[#A78BFA] text-sm group-hover:scale-110 transition-transform"></iconify-icon>
+                        <span style="color: #A78BFA;" class="text-[11px] font-medium uppercase tracking-wider">思考过程</span>
+                      </div>
+                      <iconify-icon 
+                        :icon="expandedThoughts[idx] ? 'lucide:chevron-up' : 'lucide:chevron-down'" 
+                        class="text-[#A78BFA] text-xs"
+                      ></iconify-icon>
+                    </button>
+                    
+                    <div v-if="expandedThoughts[idx]" 
+                      style="background-color: color-mix( in oklab , #A78BFA 5% , transparent ); border-left: 2px solid #A78BFA4D;" 
+                      class="mt-1 p-3 rounded-r-lg animate-fade-in"
+                    >
+                      <p style="color: color-mix( in oklab , #fff 50% , transparent );" class="text-xs leading-relaxed italic whitespace-pre-wrap">{{ msg.thinking }}</p>
+                    </div>
+                  </div>
+
+                  <!-- Content -->
+                  <div v-if="msg.content" style="background-color: color-mix( in oklab , #fff 5% , transparent ); border-color: color-mix( in oklab , #fff 10% , transparent );" class="p-3 border-[1px] border-solid rounded-2xl rounded-tl-sm shadow-[0_2px_8px_rgba(0,0,0,0.1)]">
+                    <p style="color: color-mix( in oklab , #fff 90% , transparent );" class="text-sm leading-relaxed whitespace-pre-wrap">{{ msg.content }}</p>
+                  </div>
                 </div>
               </div>
 
-              <!-- Running Item -->
-              <div style="background-color: color-mix( in oklab , #00D9FF 8% , transparent ); backdrop-filter: blur(24px); border-color: color-mix( in oklab , #00D9FF 30% , transparent );" class="p-3 border-[1px] border-solid rounded-lg">
-                <div class="flex items-center gap-x-2 mb-2">
-                  <div style="color: color-mix( in oklab , #fff 50% , transparent );" class="text-xs">14:35:42</div>
-                  <div style="background-color: color-mix( in oklab , #00D9FF 15% , transparent ); color: #00D9FF;" class="text-xs border-[1px] border-solid rounded-sm px-2 py-0.5">MCP 调用</div>
-                </div>
-                <div class="flex items-center gap-x-2">
-                  <iconify-icon style="color: rgba(0, 217, 255, 1);" icon="lucide:chart-bar" class="text-sm"></iconify-icon>
-                  <span style="color: color-mix( in oklab , #fff 95% , transparent );" class="text-sm font-medium">statistical_engine</span>
-                  <div class="flex items-center gap-x-1">
-                    <div style="background-color: rgba(0, 217, 255, 1);" class="w-2 h-2 rounded-full animate-pulse"></div>
-                    <span style="color: rgba(0, 217, 255, 1);" class="text-xs">执行中</span>
-                  </div>
+              <!-- Loading Indicator -->
+              <div v-if="overallStatus === 'running'" class="flex gap-x-2 items-center">
+                <div class="flex gap-x-1">
+                  <div class="w-1.5 h-1.5 bg-[#00D9FF] rounded-full animate-bounce" style="animation-delay: 0s"></div>
+                  <div class="w-1.5 h-1.5 bg-[#00D9FF] rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
+                  <div class="w-1.5 h-1.5 bg-[#00D9FF] rounded-full animate-bounce" style="animation-delay: 0.4s"></div>
                 </div>
               </div>
             </div>
 
-            <div style="border-top-style: solid; border-color: color-mix( in oklab , #fff 10% , transparent );" class="border-t-[1px] p-4">
-              <div style="color: rgba(0, 217, 255, 1);" class="text-sm flex items-center gap-x-2">
-                <div style="background-color: rgba(0, 217, 255, 1);" class="w-2 h-2 rounded-full animate-pulse"></div>
-                <span>正在根据推荐的多个工具识别创新原理并生成点子...</span>
-              </div>
+            <!-- Footer Info -->
+            <div style="border-top-style: solid; border-color: color-mix( in oklab , #fff 10% , transparent );" class="border-t-[1px] p-3 text-center">
+              <span style="color: color-mix( in oklab , #fff 30% , transparent );" class="text-[10px]">Session ID: {{ sessionId }}</span>
             </div>
           </div>
         </div>
