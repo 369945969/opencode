@@ -26,9 +26,9 @@ fi
 # 3. 设置生产环境后端地址
 echo "VITE_API_BASE_URL=$PRO_API_URL" > .env
 
-# 4. 后台启动开发服务器，并支持外部 IP 访问 (--host)
+# 4. 后台启动开发服务器，并显式监听 0.0.0.0 支持公网访问
 echo "📂 日志将输出到: $LOG_FILE"
-nohup npm run dev -- --host > "$LOG_FILE" 2>&1 &
+nohup npm run dev -- --host 0.0.0.0 --port 5173 > "$LOG_FILE" 2>&1 &
 
 echo "✅ Symphony Web 已在后台启动。"
-echo "🔗 访问地址: http://$(hostname -I | awk '{print $1}'):5173 或 http://localhost:5173"
+echo "🔗 访问地址: http://76.13.11.164:5173"

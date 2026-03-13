@@ -23,5 +23,6 @@ fi
 # 3. 设置默认后端地址（开发环境）
 echo "VITE_API_BASE_URL=http://localhost:4098" > .env
 
-# 4. 启动开发服务器
-npm run dev
+# 4. 启动开发服务器，支持外部 IP 访问 (--host)
+echo "🔗 访问地址: http://$(hostname -I | awk '{print $1}'):5173 或 http://localhost:5173"
+npm run dev -- --host
