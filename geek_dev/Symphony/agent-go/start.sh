@@ -33,10 +33,19 @@ go build -o symphony-agent .
 
 if [ $? -eq 0 ]; then
     echo "✅ 编译成功。"
-    echo "🚀 正在以 $MODE 模式启动..."
-    # 运行程序并传递模式参数，透传后续所有参数
-    shift # 移除模式参数
-    ./symphony-agent -mode="$MODE" "$@"
+    
+    # 如果是后台模式
+    if [ "$MODE" == "server-bg" ]; then
+        echo "🚀 正在后台启动 Symphony Agent (Server 模式)..."
+        echo "📂 日志将输出到: symphony-agent.log"
+        nohup ./symphony-agent -mode="server" "$@" > symphony-agent.log 2>&1 &
+        echo "✅ 后台进程已启动 (PID: $!)。"
+    else
+        echo "🚀 正在以 $MODE 模式启动..."
+        # 运行程序并传递模式参数，透传后续所有参数
+        shift # 移除模式参数
+        ./symphony-agent -mode="$MODE" "$@"
+    fi
 else
     echo "❌ 编译失败，请检查代码错误。"
     exit 1
