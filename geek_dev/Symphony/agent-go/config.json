@@ -1,0 +1,24 @@
+{
+  "server": {
+    "port": ":4098"
+  },
+  "engine": "llm",
+  "engines": {
+    "opencode": {
+      "base_url": "http://127.0.0.1:2345",
+      "username": "opencode",
+      "password": "123",
+      "has_memory": true
+    },
+    "llm": {
+      "provider": "deepseek",
+      "base_url": "https://api.deepseek.com/v1",
+      "api_key": "sk-6696ebd5e41f4fd9a1a218b57a85ad6b",
+      "model": "deepseek-chat",
+      "has_memory": false
+    }
+  },
+  "database": {
+    "file": "symphony.db"
+  }
+}

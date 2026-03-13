@@ -77,7 +77,7 @@
         <div class="grid grid-cols-3 gap-6">
           <div class="col-span-2">
             <div style="background-color: color-mix( in oklab , #fff 8% , transparent ); backdrop-filter: blur(24px); box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25); border-color: color-mix( in oklab , #fff 10% , transparent );" class="min-h-[1000px] p-6 border-[1px] border-solid rounded-2xl relative overflow-hidden">
-              <h3 style="color: color-mix( in oklab , #fff 95% , transparent );" class="text-lg mb-4 font-semibold">执行图谱</h3>
+              <h3 style="color: color-mix( in oklab , #fff 95% , transparent );" class="text-lg mb-4 font-semibold">计划图谱</h3>
               
               <!-- Stage Sidebar -->
               <div class="absolute left-16 top-0 bottom-0 w-32 pointer-events-none z-10 pt-4">
@@ -140,11 +140,11 @@
                 </div>
               </div>
               <div class="flex flex-col gap-y-3">
-                <button @click="startExecution" class="hover:bg-[#00B8DB] flex justify-center items-center rounded-xl bg-[#00D9FF] px-6 py-3 cursor-pointer transition-all">
+                <button @click="confirmAndGo" class="hover:bg-[#00B8DB] flex justify-center items-center rounded-xl bg-[#00D9FF] px-6 py-3 cursor-pointer transition-all">
                   <div class="bg-transparent flex justify-center items-center w-5 h-5 mr-2">
-                    <iconify-icon style="color: #0A1929;" icon="lucide:play" class="text-base"></iconify-icon>
+                    <iconify-icon style="color: #0A1929;" icon="lucide:check-circle" class="text-base"></iconify-icon>
                   </div>
-                  <span style="color: #0A1929;" class="whitespace-nowrap font-semibold">开始执行</span>
+                  <span style="color: #0A1929;" class="whitespace-nowrap font-semibold">确认并创建</span>
                 </button>
                 <button @click="currentStep = 1" class="hover:bg-white/10 hover:border-[#00D9FF]/30 flex justify-center items-center border-[1px] border-solid border-white/10 rounded-xl bg-white/8 px-6 py-3 cursor-pointer transition-all">
                   <iconify-icon style="color: rgba(255, 255, 255, 0.7);" icon="lucide:edit" class="text-base mr-2"></iconify-icon>
@@ -290,7 +290,7 @@ const generatePlan = () => {
   currentStep.value = 2
 }
 
-const startExecution = async () => {
+const confirmAndGo = async () => {
   if (!taskDescription.value) return
 
   // 使用 sessionStorage 存储描述，模拟 POST 行为，避免 URL 编码和长度限制问题
