@@ -169,10 +169,12 @@ const getEmoji = (name: string) => {
   return '🤖'
 }
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4098'
+
 const selectAgent = async (agentId: string) => {
   selectedAgentId.value = agentId
   try {
-    const response = await fetch(`http://localhost:4098/agents/${agentId}/history?include_ancestors=true`)
+    const response = await fetch(`${API_BASE_URL}/agents/${agentId}/history?include_ancestors=true`)
     if (response.ok) {
       const data = await response.json()
       chatMessages.value = data.messages
@@ -235,7 +237,7 @@ let globalEs: EventSource | null = null
 const startGlobalSse = () => {
   if (globalEs) return
   
-  globalEs = new EventSource(`http://localhost:4098/agents/all/events`)
+  globalEs = new EventSource(`${API_BASE_URL}/agents/all/events`)
   globalEs.onmessage = (event) => {
     try {
       const data = JSON.parse(event.data)
@@ -300,7 +302,7 @@ const startExecution = async () => {
   
   overallStatus.value = 'running'
   try {
-    const response = await fetch('http://localhost:4098/agents', {
+    const response = await fetch(`${API_BASE_URL}/agents`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ initial_prompt: taskDescription.value })
