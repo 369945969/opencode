@@ -3,7 +3,7 @@ import { Duration, Effect, Layer, Option, Schema } from "effect"
 import { HttpClient, HttpClientResponse } from "effect/unstable/http"
 
 import { AccountRepo } from "../../src/account/repo"
-import { AccountEffect } from "../../src/account/effect"
+import { Account } from "../../src/account"
 import { AccessToken, AccountID, DeviceCode, Login, Org, OrgID, RefreshToken, UserCode } from "../../src/account/schema"
 import { Database } from "../../src/storage/db"
 import { testEffect } from "../lib/effect"
@@ -19,7 +19,7 @@ const truncate = Layer.effectDiscard(
 const it = testEffect(Layer.merge(AccountRepo.layer, truncate))
 
 const live = (client: HttpClient.HttpClient) =>
-  AccountEffect.layer.pipe(Layer.provide(Layer.succeed(HttpClient.HttpClient, client)))
+  Account.layer.pipe(Layer.provide(Layer.succeed(HttpClient.HttpClient, client)))
 
 const json = (req: Parameters<typeof HttpClientResponse.fromWeb>[0], body: unknown, status = 200) =>
   HttpClientResponse.fromWeb(
@@ -52,9 +52,9 @@ const deviceTokenClient = (body: unknown, status = 400) =>
   )
 
 const poll = (body: unknown, status = 400) =>
-  AccountEffect.Service.use((s) => s.poll(login())).pipe(Effect.provide(live(deviceTokenClient(body, status))))
+  Account.Service.use((s) => s.poll(login())).pipe(Effect.provide(live(deviceTokenClient(body, status))))
 
-it.effect("orgsByAccount groups orgs per account", () =>
+it.live("orgsByAccount groups orgs per account", () =>
   Effect.gen(function* () {
     yield* AccountRepo.use((r) =>
       r.persistAccount({
@@ -97,7 +97,7 @@ it.effect("orgsByAccount groups orgs per account", () =>
       }),
     )
 
-    const rows = yield* AccountEffect.Service.use((s) => s.orgsByAccount()).pipe(Effect.provide(live(client)))
+    const rows = yield* Account.Service.use((s) => s.orgsByAccount()).pipe(Effect.provide(live(client)))
 
     expect(rows.map((row) => [row.account.id, row.orgs.map((org) => org.id)]).map(([id, orgs]) => [id, orgs])).toEqual([
       [AccountID.make("user-1"), [OrgID.make("org-1")]],
@@ -107,7 +107,7 @@ it.effect("orgsByAccount groups orgs per account", () =>
   }),
 )
 
-it.effect("token refresh persists the new token", () =>
+it.live("token refresh persists the new token", () =>
   Effect.gen(function* () {
     const id = AccountID.make("user-1")
 
@@ -135,7 +135,7 @@ it.effect("token refresh persists the new token", () =>
       ),
     )
 
-    const token = yield* AccountEffect.Service.use((s) => s.token(id)).pipe(Effect.provide(live(client)))
+    const token = yield* Account.Service.use((s) => s.token(id)).pipe(Effect.provide(live(client)))
 
     expect(Option.getOrThrow(token)).toBeDefined()
     expect(String(Option.getOrThrow(token))).toBe("at_new")
@@ -148,7 +148,7 @@ it.effect("token refresh persists the new token", () =>
   }),
 )
 
-it.effect("config sends the selected org header", () =>
+it.live("config sends the selected org header", () =>
   Effect.gen(function* () {
     const id = AccountID.make("user-1")
 
@@ -178,9 +178,7 @@ it.effect("config sends the selected org header", () =>
       }),
     )
 
-    const cfg = yield* AccountEffect.Service.use((s) => s.config(id, OrgID.make("org-9"))).pipe(
-      Effect.provide(live(client)),
-    )
+    const cfg = yield* Account.Service.use((s) => s.config(id, OrgID.make("org-9"))).pipe(Effect.provide(live(client)))
 
     expect(Option.getOrThrow(cfg)).toEqual({ theme: "light", seats: 5 })
     expect(seen).toEqual({
@@ -190,7 +188,7 @@ it.effect("config sends the selected org header", () =>
   }),
 )
 
-it.effect("poll stores the account and first org on success", () =>
+it.live("poll stores the account and first org on success", () =>
   Effect.gen(function* () {
     const client = HttpClient.make((req) =>
       Effect.succeed(
@@ -209,7 +207,7 @@ it.effect("poll stores the account and first org on success", () =>
       ),
     )
 
-    const res = yield* AccountEffect.Service.use((s) => s.poll(login())).pipe(Effect.provide(live(client)))
+    const res = yield* Account.Service.use((s) => s.poll(login())).pipe(Effect.provide(live(client)))
 
     expect(res._tag).toBe("PollSuccess")
     if (res._tag === "PollSuccess") {
@@ -261,7 +259,7 @@ for (const [name, body, expectedTag] of [
     "PollExpired",
   ],
 ] as const) {
-  it.effect(`poll returns ${name} for ${body.error}`, () =>
+  it.live(`poll returns ${name} for ${body.error}`, () =>
     Effect.gen(function* () {
       const result = yield* poll(body)
       expect(result._tag).toBe(expectedTag)
@@ -269,7 +267,7 @@ for (const [name, body, expectedTag] of [
   )
 }
 
-it.effect("poll returns poll error for other OAuth errors", () =>
+it.live("poll returns poll error for other OAuth errors", () =>
   Effect.gen(function* () {
     const result = yield* poll({
       error: "server_error",
