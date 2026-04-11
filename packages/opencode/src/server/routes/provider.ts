@@ -9,6 +9,9 @@ import { ProviderID } from "../../provider/schema"
 import { mapValues } from "remeda"
 import { errors } from "../error"
 import { lazy } from "../../util/lazy"
+import { Log } from "../../util/log"
+
+const log = Log.create({ service: "server" })
 
 export const ProviderRoutes = lazy(() =>
   new Hono()
@@ -25,7 +28,7 @@ export const ProviderRoutes = lazy(() =>
               "application/json": {
                 schema: resolver(
                   z.object({
-                    all: ModelsDev.Provider.array(),
+                    all: Provider.Info.array(),
                     default: z.record(z.string(), z.string()),
                     connected: z.array(z.string()),
                   }),
