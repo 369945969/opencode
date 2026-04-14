@@ -1,9 +1,10 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from "bun:test"
 import path from "path"
 import { tool, type ModelMessage } from "ai"
+import { Cause, Effect, Exit, Stream } from "effect"
 import z from "zod"
+import { makeRuntime } from "../../src/effect/run-service"
 import { LLM } from "../../src/session/llm"
-import { Global } from "../../src/global"
 import { Instance } from "../../src/project/instance"
 import { Provider } from "../../src/provider/provider"
 import { ProviderTransform } from "../../src/provider/transform"
@@ -14,6 +15,22 @@ import { tmpdir } from "../fixture/fixture"
 import type { Agent } from "../../src/agent/agent"
 import type { MessageV2 } from "../../src/session/message-v2"
 import { SessionID, MessageID } from "../../src/session/schema"
+import { AppRuntime } from "../../src/effect/app-runtime"
+
+async function getModel(providerID: ProviderID, modelID: ModelID) {
+  return AppRuntime.runPromise(
+    Effect.gen(function* () {
+      const provider = yield* Provider.Service
+      return yield* provider.getModel(providerID, modelID)
+    }),
+  )
+}
+
+const llm = makeRuntime(LLM.Service, LLM.defaultLayer)
+
+async function drain(input: LLM.StreamInput) {
+  return llm.runPromise((svc) => svc.stream(input).pipe(Stream.runDrain))
+}
 
 describe("session.llm.hasToolCalls", () => {
   test("returns false for empty messages array", () => {
@@ -110,7 +127,11 @@ type Capture = {
 
 const state = {
   server: null as ReturnType<typeof Bun.serve> | null,
-  queue: [] as Array<{ path: string; response: Response; resolve: (value: Capture) => void }>,
+  queue: [] as Array<{
+    path: string
+    response: Response | ((req: Request, capture: Capture) => Response)
+    resolve: (value: Capture) => void
+  }>,
 }
 
 function deferred<T>() {
@@ -125,6 +146,58 @@ function waitRequest(pathname: string, response: Response) {
   const pending = deferred<Capture>()
   state.queue.push({ path: pathname, response, resolve: pending.resolve })
   return pending.promise
+}
+
+function timeout(ms: number) {
+  return new Promise<never>((_, reject) => {
+    setTimeout(() => reject(new Error(`timed out after ${ms}ms`)), ms)
+  })
+}
+
+function waitStreamingRequest(pathname: string) {
+  const request = deferred<Capture>()
+  const requestAborted = deferred<void>()
+  const responseCanceled = deferred<void>()
+  const encoder = new TextEncoder()
+
+  state.queue.push({
+    path: pathname,
+    resolve: request.resolve,
+    response(req: Request) {
+      req.signal.addEventListener("abort", () => requestAborted.resolve(), { once: true })
+
+      return new Response(
+        new ReadableStream<Uint8Array>({
+          start(controller) {
+            controller.enqueue(
+              encoder.encode(
+                [
+                  `data: ${JSON.stringify({
+                    id: "chatcmpl-abort",
+                    object: "chat.completion.chunk",
+                    choices: [{ delta: { role: "assistant" } }],
+                  })}`,
+                ].join("\n\n") + "\n\n",
+              ),
+            )
+          },
+          cancel() {
+            responseCanceled.resolve()
+          },
+        }),
+        {
+          status: 200,
+          headers: { "Content-Type": "text/event-stream" },
+        },
+      )
+    },
+  })
+
+  return {
+    request: request.promise,
+    requestAborted: requestAborted.promise,
+    responseCanceled: responseCanceled.promise,
+  }
 }
 
 beforeAll(() => {
@@ -144,7 +217,9 @@ beforeAll(() => {
         return new Response("not found", { status: 404 })
       }
 
-      return next.response
+      return typeof next.response === "function"
+        ? next.response(req, { url, headers: req.headers, body })
+        : next.response
     },
   })
 })
@@ -230,10 +305,9 @@ describe("session.llm.stream", () => {
       throw new Error("Server not initialized")
     }
 
-    const providerID = "alibaba"
-    const modelID = "qwen-plus"
+    const providerID = "vivgrid"
+    const modelID = "gemini-3.1-pro-preview"
     const fixture = await loadFixture(providerID, modelID)
-    const provider = fixture.provider
     const model = fixture.model
 
     const request = waitRequest(
@@ -267,7 +341,7 @@ describe("session.llm.stream", () => {
     await Instance.provide({
       directory: tmp.path,
       fn: async () => {
-        const resolved = await Provider.getModel(ProviderID.make(providerID), ModelID.make(model.id))
+        const resolved = await getModel(ProviderID.make(providerID), ModelID.make(model.id))
         const sessionID = SessionID.make("session-test-1")
         const agent = {
           name: "test",
@@ -284,23 +358,18 @@ describe("session.llm.stream", () => {
           role: "user",
           time: { created: Date.now() },
           agent: agent.name,
-          model: { providerID: ProviderID.make(providerID), modelID: resolved.id },
-          variant: "high",
+          model: { providerID: ProviderID.make(providerID), modelID: resolved.id, variant: "high" },
         } satisfies MessageV2.User
 
-        const stream = await LLM.stream({
+        await drain({
           user,
           sessionID,
           model: resolved,
           agent,
           system: ["You are a helpful assistant."],
-          abort: new AbortController().signal,
           messages: [{ role: "user", content: "Hello" }],
           tools: {},
         })
-
-        for await (const _ of stream.fullStream) {
-        }
 
         const capture = await request
         const body = capture.body
@@ -322,6 +391,87 @@ describe("session.llm.stream", () => {
 
         const reasoning = (body.reasoningEffort as string | undefined) ?? (body.reasoning_effort as string | undefined)
         expect(reasoning).toBe("high")
+      },
+    })
+  })
+
+  test("service stream cancellation cancels provider response body promptly", async () => {
+    const server = state.server
+    if (!server) throw new Error("Server not initialized")
+
+    const providerID = "alibaba"
+    const modelID = "qwen-plus"
+    const fixture = await loadFixture(providerID, modelID)
+    const model = fixture.model
+    const pending = waitStreamingRequest("/chat/completions")
+
+    await using tmp = await tmpdir({
+      init: async (dir) => {
+        await Bun.write(
+          path.join(dir, "opencode.json"),
+          JSON.stringify({
+            $schema: "https://opencode.ai/config.json",
+            enabled_providers: [providerID],
+            provider: {
+              [providerID]: {
+                options: {
+                  apiKey: "test-key",
+                  baseURL: `${server.url.origin}/v1`,
+                },
+              },
+            },
+          }),
+        )
+      },
+    })
+
+    await Instance.provide({
+      directory: tmp.path,
+      fn: async () => {
+        const resolved = await getModel(ProviderID.make(providerID), ModelID.make(model.id))
+        const sessionID = SessionID.make("session-test-service-abort")
+        const agent = {
+          name: "test",
+          mode: "primary",
+          options: {},
+          permission: [{ permission: "*", pattern: "*", action: "allow" }],
+        } satisfies Agent.Info
+        const user = {
+          id: MessageID.make("user-service-abort"),
+          sessionID,
+          role: "user",
+          time: { created: Date.now() },
+          agent: agent.name,
+          model: { providerID: ProviderID.make(providerID), modelID: resolved.id },
+        } satisfies MessageV2.User
+
+        const ctrl = new AbortController()
+        const run = llm.runPromiseExit(
+          (svc) =>
+            svc
+              .stream({
+                user,
+                sessionID,
+                model: resolved,
+                agent,
+                system: ["You are a helpful assistant."],
+                messages: [{ role: "user", content: "Hello" }],
+                tools: {},
+              })
+              .pipe(Stream.runDrain),
+          { signal: ctrl.signal },
+        )
+
+        await pending.request
+        ctrl.abort()
+
+        await Promise.race([pending.responseCanceled, timeout(500)])
+        const exit = await run
+        expect(Exit.isFailure(exit)).toBe(true)
+        if (Exit.isFailure(exit)) {
+          expect(Cause.hasInterrupts(exit.cause)).toBe(true)
+        }
+        await Promise.race([pending.requestAborted, timeout(500)]).catch(() => undefined)
       },
     })
   })
@@ -368,7 +518,7 @@ describe("session.llm.stream", () => {
     await Instance.provide({
       directory: tmp.path,
       fn: async () => {
-        const resolved = await Provider.getModel(ProviderID.make(providerID), ModelID.make(model.id))
+        const resolved = await getModel(ProviderID.make(providerID), ModelID.make(model.id))
         const sessionID = SessionID.make("session-test-tools")
         const agent = {
           name: "test",
@@ -387,14 +537,13 @@ describe("session.llm.stream", () => {
           tools: { question: true },
         } satisfies MessageV2.User
 
-        const stream = await LLM.stream({
+        await drain({
           user,
           sessionID,
           model: resolved,
           agent,
           permission: [{ permission: "question", pattern: "*", action: "allow" }],
           system: ["You are a helpful assistant."],
-          abort: new AbortController().signal,
           messages: [{ role: "user", content: "Hello" }],
           tools: {
             question: tool({
@@ -404,9 +553,6 @@ describe("session.llm.stream", () => {
             }),
           },
         })
-
-        for await (const _ of stream.fullStream) {
-        }
 
         const capture = await request
         const tools = capture.body.tools as Array<{ function?: { name?: string } }> | undefined
@@ -486,7 +632,7 @@ describe("session.llm.stream", () => {
     await Instance.provide({
       directory: tmp.path,
       fn: async () => {
-        const resolved = await Provider.getModel(ProviderID.openai, ModelID.make(model.id))
+        const resolved = await getModel(ProviderID.openai, ModelID.make(model.id))
         const sessionID = SessionID.make("session-test-2")
         const agent = {
           name: "test",
@@ -502,23 +648,18 @@ describe("session.llm.stream", () => {
           role: "user",
           time: { created: Date.now() },
           agent: agent.name,
-          model: { providerID: ProviderID.make("openai"), modelID: resolved.id },
-          variant: "high",
+          model: { providerID: ProviderID.make("openai"), modelID: resolved.id, variant: "high" },
         } satisfies MessageV2.User
 
-        const stream = await LLM.stream({
+        await drain({
           user,
           sessionID,
           model: resolved,
           agent,
           system: ["You are a helpful assistant."],
-          abort: new AbortController().signal,
           messages: [{ role: "user", content: "Hello" }],
           tools: {},
         })
-
-        for await (const _ of stream.fullStream) {
-        }
 
         const capture = await request
         const body = capture.body
@@ -529,22 +670,140 @@ describe("session.llm.stream", () => {
         expect((body.reasoning as { effort?: string } | undefined)?.effort).toBe("high")
 
         const maxTokens = body.max_output_tokens as number | undefined
-        const expectedMaxTokens = ProviderTransform.maxOutputTokens(resolved)
-        expect(maxTokens).toBe(expectedMaxTokens)
+        expect(maxTokens).toBe(undefined) // match codex cli behavior
       },
     })
   })
 
-  test("sends messages API payload for Anthropic models", async () => {
+  test("accepts user image attachments as data URLs for OpenAI models", async () => {
     const server = state.server
     if (!server) {
       throw new Error("Server not initialized")
     }
 
-    const providerID = "anthropic"
-    const modelID = "claude-3-5-sonnet-20241022"
+    const source = await loadFixture("openai", "gpt-5.2")
+    const model = source.model
+    const chunks = [
+      {
+        type: "response.created",
+        response: {
+          id: "resp-data-url",
+          created_at: Math.floor(Date.now() / 1000),
+          model: model.id,
+          service_tier: null,
+        },
+      },
+      {
+        type: "response.output_text.delta",
+        item_id: "item-data-url",
+        delta: "Looks good",
+        logprobs: null,
+      },
+      {
+        type: "response.completed",
+        response: {
+          incomplete_details: null,
+          usage: {
+            input_tokens: 1,
+            input_tokens_details: null,
+            output_tokens: 1,
+            output_tokens_details: null,
+          },
+          service_tier: null,
+        },
+      },
+    ]
+    const request = waitRequest("/responses", createEventResponse(chunks, true))
+    const image = `data:image/png;base64,${Buffer.from(
+      await Bun.file(path.join(import.meta.dir, "../tool/fixtures/large-image.png")).arrayBuffer(),
+    ).toString("base64")}`
+
+    await using tmp = await tmpdir({
+      init: async (dir) => {
+        await Bun.write(
+          path.join(dir, "opencode.json"),
+          JSON.stringify({
+            $schema: "https://opencode.ai/config.json",
+            enabled_providers: ["openai"],
+            provider: {
+              openai: {
+                name: "OpenAI",
+                env: ["OPENAI_API_KEY"],
+                npm: "@ai-sdk/openai",
+                api: "https://api.openai.com/v1",
+                models: {
+                  [model.id]: model,
+                },
+                options: {
+                  apiKey: "test-openai-key",
+                  baseURL: `${server.url.origin}/v1`,
+                },
+              },
+            },
+          }),
+        )
+      },
+    })
+
+    await Instance.provide({
+      directory: tmp.path,
+      fn: async () => {
+        const resolved = await getModel(ProviderID.openai, ModelID.make(model.id))
+        const sessionID = SessionID.make("session-test-data-url")
+        const agent = {
+          name: "test",
+          mode: "primary",
+          options: {},
+          permission: [{ permission: "*", pattern: "*", action: "allow" }],
+        } satisfies Agent.Info
+
+        const user = {
+          id: MessageID.make("user-data-url"),
+          sessionID,
+          role: "user",
+          time: { created: Date.now() },
+          agent: agent.name,
+          model: { providerID: ProviderID.make("openai"), modelID: resolved.id },
+        } satisfies MessageV2.User
+
+        await drain({
+          user,
+          sessionID,
+          model: resolved,
+          agent,
+          system: ["You are a helpful assistant."],
+          messages: [
+            {
+              role: "user",
+              content: [
+                { type: "text", text: "Describe this image" },
+                {
+                  type: "file",
+                  mediaType: "image/png",
+                  filename: "large-image.png",
+                  data: image,
+                },
+              ],
+            },
+          ] as ModelMessage[],
+          tools: {},
+        })
+
+        const capture = await request
+        expect(capture.url.pathname.endsWith("/responses")).toBe(true)
+      },
+    })
+  })
+
+  test("sends messages API payload for Anthropic Compatible models", async () => {
+    const server = state.server
+    if (!server) {
+      throw new Error("Server not initialized")
+    }
+
+    const providerID = "minimax"
+    const modelID = "MiniMax-M2.5"
     const fixture = await loadFixture(providerID, modelID)
-    const provider = fixture.provider
     const model = fixture.model
 
     const chunks = [
@@ -608,7 +867,7 @@ describe("session.llm.stream", () => {
     await Instance.provide({
       directory: tmp.path,
       fn: async () => {
-        const resolved = await Provider.getModel(ProviderID.make(providerID), ModelID.make(model.id))
+        const resolved = await getModel(ProviderID.make(providerID), ModelID.make(model.id))
         const sessionID = SessionID.make("session-test-3")
         const agent = {
           name: "test",
@@ -625,22 +884,18 @@ describe("session.llm.stream", () => {
           role: "user",
           time: { created: Date.now() },
           agent: agent.name,
-          model: { providerID: ProviderID.make(providerID), modelID: resolved.id },
+          model: { providerID: ProviderID.make("minimax"), modelID: ModelID.make("MiniMax-M2.5") },
         } satisfies MessageV2.User
 
-        const stream = await LLM.stream({
+        await drain({
           user,
           sessionID,
           model: resolved,
           agent,
           system: ["You are a helpful assistant."],
-          abort: new AbortController().signal,
           messages: [{ role: "user", content: "Hello" }],
           tools: {},
         })
-
-        for await (const _ of stream.fullStream) {
-        }
 
         const capture = await request
         const body = capture.body
@@ -709,7 +964,7 @@ describe("session.llm.stream", () => {
     await Instance.provide({
       directory: tmp.path,
       fn: async () => {
-        const resolved = await Provider.getModel(ProviderID.make(providerID), ModelID.make(model.id))
+        const resolved = await getModel(ProviderID.make(providerID), ModelID.make(model.id))
         const sessionID = SessionID.make("session-test-4")
         const agent = {
           name: "test",
@@ -729,19 +984,15 @@ describe("session.llm.stream", () => {
           model: { providerID: ProviderID.make(providerID), modelID: resolved.id },
         } satisfies MessageV2.User
 
-        const stream = await LLM.stream({
+        await drain({
           user,
           sessionID,
           model: resolved,
           agent,
           system: ["You are a helpful assistant."],
-          abort: new AbortController().signal,
           messages: [{ role: "user", content: "Hello" }],
           tools: {},
         })
-
-        for await (const _ of stream.fullStream) {
-        }
 
         const capture = await request
         const body = capture.body

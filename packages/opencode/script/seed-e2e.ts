@@ -1,3 +1,5 @@
+import { AppRuntime } from "@/effect/app-runtime"
+
 const dir = process.env.OPENCODE_E2E_PROJECT_DIR ?? process.cwd()
 const title = process.env.OPENCODE_E2E_SESSION_TITLE ?? "E2E Session"
 const text = process.env.OPENCODE_E2E_MESSAGE ?? "Seeded for UI e2e"
@@ -11,20 +13,25 @@ const seed = async () => {
   const { Instance } = await import("../src/project/instance")
   const { InstanceBootstrap } = await import("../src/project/bootstrap")
   const { Config } = await import("../src/config/config")
-  const { disposeRuntime } = await import("../src/effect/runtime")
   const { Session } = await import("../src/session")
   const { MessageID, PartID } = await import("../src/session/schema")
   const { Project } = await import("../src/project/project")
   const { ModelID, ProviderID } = await import("../src/provider/schema")
   const { ToolRegistry } = await import("../src/tool/registry")
+  const { Effect } = await import("effect")
 
   try {
     await Instance.provide({
       directory: dir,
-      init: InstanceBootstrap,
+      init: () => AppRuntime.runPromise(InstanceBootstrap),
       fn: async () => {
-        await Config.waitForDependencies()
-        await ToolRegistry.ids()
+        await AppRuntime.runPromise(Config.Service.use((cfg) => cfg.waitForDependencies()))
+        await AppRuntime.runPromise(
+          Effect.gen(function* () {
+            const registry = yield* ToolRegistry.Service
+            yield* registry.ids()
+          }),
+        )
 
         const session = await Session.create({ title })
         const messageID = MessageID.ascending()
@@ -55,7 +62,7 @@ const seed = async () => {
     })
   } finally {
     await Instance.disposeAll().catch(() => {})
-    await disposeRuntime().catch(() => {})
+    await AppRuntime.dispose().catch(() => {})
   }
 }
 

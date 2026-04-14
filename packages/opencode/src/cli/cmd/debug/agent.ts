@@ -1,5 +1,6 @@
 import { EOL } from "os"
 import { basename } from "path"
+import { Effect } from "effect"
 import { Agent } from "../../../agent/agent"
 import { Provider } from "../../../provider/provider"
 import { Session } from "../../../session"
@@ -7,10 +8,11 @@ import type { MessageV2 } from "../../../session/message-v2"
 import { MessageID, PartID } from "../../../session/schema"
 import { ToolRegistry } from "../../../tool/registry"
 import { Instance } from "../../../project/instance"
-import { PermissionNext } from "../../../permission"
+import { Permission } from "../../../permission"
 import { iife } from "../../../util/iife"
 import { bootstrap } from "../../bootstrap"
 import { cmd } from "../cmd"
+import { AppRuntime } from "@/effect/app-runtime"
 
 export const AgentCommand = cmd({
   command: "agent <name>",
@@ -33,7 +35,7 @@ export const AgentCommand = cmd({
   async handler(args) {
     await bootstrap(process.cwd(), async () => {
       const agentName = args.name as string
-      const agent = await Agent.get(agentName)
+      const agent = await AppRuntime.runPromise(Agent.Service.use((svc) => svc.get(agentName)))
       if (!agent) {
         process.stderr.write(
           `Agent ${agentName} not found, run '${basename(process.execPath)} agent list' to get an agent list` + EOL,
@@ -70,12 +72,21 @@ export const AgentCommand = cmd({
 })
 
 async function getAvailableTools(agent: Agent.Info) {
-  const model = agent.model ?? (await Provider.defaultModel())
-  return ToolRegistry.tools(model, agent)
+  return AppRuntime.runPromise(
+    Effect.gen(function* () {
+      const provider = yield* Provider.Service
+      const registry = yield* ToolRegistry.Service
+      const model = agent.model ?? (yield* provider.defaultModel())
+      return yield* registry.tools({
+        ...model,
+        agent,
+      })
+    }),
+  )
 }
 
 async function resolveTools(agent: Agent.Info, availableTools: Awaited<ReturnType<typeof getAvailableTools>>) {
-  const disabled = PermissionNext.disabled(
+  const disabled = Permission.disabled(
     availableTools.map((tool) => tool.id),
     agent.permission,
   )
@@ -114,7 +125,14 @@ function parseToolParams(input?: string) {
 async function createToolContext(agent: Agent.Info) {
   const session = await Session.create({ title: `Debug tool run (${agent.name})` })
   const messageID = MessageID.ascending()
-  const model = agent.model ?? (await Provider.defaultModel())
+  const model =
+    agent.model ??
+    (await AppRuntime.runPromise(
+      Effect.gen(function* () {
+        const provider = yield* Provider.Service
+        return yield* provider.defaultModel()
+      }),
+    ))
   const now = Date.now()
   const message: MessageV2.Assistant = {
     id: messageID,
@@ -145,7 +163,7 @@ async function createToolContext(agent: Agent.Info) {
   }
   await Session.updateMessage(message)
 
-  const ruleset = PermissionNext.merge(agent.permission, session.permission ?? [])
+  const ruleset = Permission.merge(agent.permission, session.permission ?? [])
 
   return {
     sessionID: session.id,
@@ -154,14 +172,16 @@ async function createToolContext(agent: Agent.Info) {
     agent: agent.name,
     abort: new AbortController().signal,
     messages: [],
-    metadata: () => {},
-    async ask(req: Omit<PermissionNext.Request, "id" | "sessionID" | "tool">) {
-      for (const pattern of req.patterns) {
-        const rule = PermissionNext.evaluate(req.permission, pattern, ruleset)
-        if (rule.action === "deny") {
-          throw new PermissionNext.DeniedError({ ruleset })
+    metadata: () => Effect.void,
+    ask(req: Omit<Permission.Request, "id" | "sessionID" | "tool">) {
+      return Effect.sync(() => {
+        for (const pattern of req.patterns) {
+          const rule = Permission.evaluate(req.permission, pattern, ruleset)
+          if (rule.action === "deny") {
+            throw new Permission.DeniedError({ ruleset })
+          }
         }
-      }
+      })
     },
   }
 }
