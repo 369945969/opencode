@@ -21,15 +21,23 @@ import {
   MonthlyLimitError,
   UserLimitError,
   ModelError,
+  RateLimitError,
   FreeUsageLimitError,
   SubscriptionUsageLimitError,
 } from "./error"
-import { createBodyConverter, createStreamPartConverter, createResponseConverter, UsageInfo } from "./provider/provider"
+import {
+  buildCostChunk,
+  createBodyConverter,
+  createStreamPartConverter,
+  createResponseConverter,
+  UsageInfo,
+} from "./provider/provider"
 import { anthropicHelper } from "./provider/anthropic"
 import { googleHelper } from "./provider/google"
 import { openaiHelper } from "./provider/openai"
 import { oaCompatHelper } from "./provider/openai-compatible"
-import { createRateLimiter } from "./rateLimiter"
+import { createRateLimiter as createIpRateLimiter } from "./ipRateLimiter"
+import { createRateLimiter as createKeyRateLimiter } from "./keyRateLimiter"
 import { createDataDumper } from "./dataDumper"
 import { createTrialLimiter } from "./trialLimiter"
 import { createStickyTracker } from "./stickyProviderTracker"
@@ -84,33 +92,33 @@ export async function handler(
     const body = await input.request.json()
     const model = opts.parseModel(url, body)
     const isStream = opts.parseIsStream(url, body)
-    const ip = input.request.headers.get("x-real-ip") ?? ""
+    const rawIp = input.request.headers.get("x-real-ip") ?? ""
+    const ip = rawIp.includes(":") ? rawIp.split(":").slice(0, 4).join(":") : rawIp
+    const rawZenApiKey = opts.parseApiKey(input.request.headers)
+    const zenApiKey = rawZenApiKey === "public" ? undefined : rawZenApiKey
     const sessionId = input.request.headers.get("x-opencode-session") ?? ""
     const requestId = input.request.headers.get("x-opencode-request") ?? ""
     const projectId = input.request.headers.get("x-opencode-project") ?? ""
     const ocClient = input.request.headers.get("x-opencode-client") ?? ""
     logger.metric({
-      is_tream: isStream,
+      is_stream: isStream,
       session: sessionId,
       request: requestId,
       client: ocClient,
+      ...(model === "mimo-v2-pro-free" && JSON.stringify(body).length < 1000 ? { payload: JSON.stringify(body) } : {}),
     })
     const zenData = ZenData.list(opts.modelList)
     const modelInfo = validateModel(zenData, model)
     const dataDumper = createDataDumper(sessionId, requestId, projectId)
-    const trialLimiter = createTrialLimiter(modelInfo.trialProviders, ip)
+    const trialLimiter = createTrialLimiter(modelInfo.trialProvider, ip)
     const trialProviders = await trialLimiter?.check()
-    const rateLimiter = createRateLimiter(
-      modelInfo.id,
-      modelInfo.allowAnonymous,
-      modelInfo.rateLimit,
-      ip,
-      input.request,
-    )
+    const rateLimiter = modelInfo.allowAnonymous
+      ? createIpRateLimiter(modelInfo.id, modelInfo.rateLimit, ip, input.request)
+      : createKeyRateLimiter(modelInfo.id, zenApiKey, input.request)
     await rateLimiter?.check()
     const stickyTracker = createStickyTracker(modelInfo.stickyProvider, sessionId)
     const stickyProvider = await stickyTracker?.get()
-    const authInfo = await authenticate(modelInfo)
+    const authInfo = await authenticate(modelInfo, zenApiKey)
     const billingSource = validateBilling(authInfo, modelInfo)
     logger.metric({ source: billingSource })
 
@@ -126,26 +134,23 @@ export async function handler(
         retry,
         stickyProvider,
       )
-      validateModelSettings(authInfo)
+      validateModelSettings(billingSource, authInfo)
       updateProviderKey(authInfo, providerInfo)
       logger.metric({ provider: providerInfo.id })
 
       const startTimestamp = Date.now()
       const reqUrl = providerInfo.modifyUrl(providerInfo.api, isStream)
       const reqBody = JSON.stringify(
-        providerInfo.modifyBody(
-          {
-            ...createBodyConverter(opts.format, providerInfo.format)(body),
-            model: providerInfo.model,
-            ...(providerInfo.payloadModifier ?? {}),
-            ...Object.fromEntries(
-              Object.entries(providerInfo.payloadMappings ?? {})
-                .map(([k, v]) => [k, input.request.headers.get(v)])
-                .filter(([_k, v]) => !!v),
-            ),
-          },
-          authInfo?.workspaceID,
-        ),
+        providerInfo.modifyBody({
+          ...createBodyConverter(opts.format, providerInfo.format)(body),
+          model: providerInfo.model,
+          ...(providerInfo.payloadModifier ?? {}),
+          ...Object.fromEntries(
+            Object.entries(providerInfo.payloadMappings ?? {})
+              .map(([k, v]) => [k, input.request.headers.get(v)])
+              .filter(([_k, v]) => !!v),
+          ),
+        }),
       )
       logger.debug("REQUEST URL: " + reqUrl)
       logger.debug("REQUEST: " + reqBody.substring(0, 300) + "...")
@@ -230,7 +235,7 @@ export async function handler(
       const body = JSON.stringify(
         responseConverter({
           ...json,
-          cost: calculateOccuredCost(billingSource, costInfo),
+          cost: calculateOccurredCost(billingSource, costInfo),
         }),
       )
       logger.metric({ response_length: body.length })
@@ -274,8 +279,8 @@ export async function handler(
                   await trialLimiter?.track(usageInfo)
                   await trackUsage(sessionId, billingSource, authInfo, modelInfo, providerInfo, usageInfo, costInfo)
                   await reload(billingSource, authInfo, costInfo)
-                  const cost = calculateOccuredCost(billingSource, costInfo)
-                  c.enqueue(encoder.encode(usageParser.buidlCostChunk(cost)))
+                  const cost = calculateOccurredCost(billingSource, costInfo)
+                  c.enqueue(encoder.encode(buildCostChunk(opts.format, cost)))
                 }
                 c.close()
                 return
@@ -334,6 +339,13 @@ export async function handler(
       "error.message": error.message,
       "error.cause": error.cause?.toString(),
     })
+    if (error.message.startsWith("Failed query")) {
+      try {
+        logger.metric({
+          "error.cause2": JSON.stringify(error.cause),
+        })
+      } catch (e) {}
+    }
 
     // Note: both top level "type" and "error.type" fields are used by the @ai-sdk/anthropic client to render the error message.
     if (
@@ -351,7 +363,11 @@ export async function handler(
         { status: 401 },
       )
 
-    if (error instanceof FreeUsageLimitError || error instanceof SubscriptionUsageLimitError) {
+    if (
+      error instanceof RateLimitError ||
+      error instanceof FreeUsageLimitError ||
+      error instanceof SubscriptionUsageLimitError
+    ) {
       const headers = new Headers()
       if (error.retryAfter) {
         headers.set("retry-after", String(error.retryAfter))
@@ -380,7 +396,7 @@ export async function handler(
   function validateModel(zenData: ZenData, reqModel: string) {
     if (!(reqModel in zenData.models)) throw new ModelError(t("zen.api.error.modelNotSupported", { model: reqModel }))
 
-    const modelId = reqModel as keyof typeof zenData.models
+    const modelId = reqModel
     const modelData = Array.isArray(zenData.models[modelId])
       ? zenData.models[modelId].find((model) => opts.format === model.formatFilter)
       : zenData.models[modelId]
@@ -391,6 +407,14 @@ export async function handler(
           model: reqModel,
           format: opts.format,
         }),
+      )
+
+    if (modelData.trialEnded)
+      throw new ModelError(
+        `${t("zen.api.error.trialEnded", {
+          model: modelData.name,
+          link: "https://opencode.ai/go",
+        })}`,
       )
 
     logger.metric({ model: modelId })
@@ -455,19 +479,25 @@ export async function handler(
       ...modelProvider,
       ...zenData.providers[modelProvider.id],
       ...(() => {
-        const format = zenData.providers[modelProvider.id].format
-        const providerModel = modelProvider.model
-        if (format === "anthropic") return anthropicHelper({ reqModel, providerModel })
-        if (format === "google") return googleHelper({ reqModel, providerModel })
-        if (format === "openai") return openaiHelper({ reqModel, providerModel })
-        return oaCompatHelper({ reqModel, providerModel })
+        const providerProps = zenData.providers[modelProvider.id]
+        const format = providerProps.format
+        const opts = {
+          reqModel,
+          providerModel: modelProvider.model,
+          adjustCacheUsage: providerProps.adjustCacheUsage,
+          safetyIdentifier: modelProvider.safetyIdentifier ? ip : undefined,
+          workspaceID: authInfo?.workspaceID,
+        }
+        if (format === "anthropic") return anthropicHelper(opts)
+        if (format === "google") return googleHelper(opts)
+        if (format === "openai") return openaiHelper(opts)
+        return oaCompatHelper(opts)
       })(),
     }
   }
 
-  async function authenticate(modelInfo: ModelInfo) {
-    const apiKey = opts.parseApiKey(input.request.headers)
-    if (!apiKey || apiKey === "public") {
+  async function authenticate(modelInfo: ModelInfo, zenApiKey?: string) {
+    if (!zenApiKey) {
       if (modelInfo.allowAnonymous) return
       throw new AuthError(t("zen.api.error.missingApiKey"))
     }
@@ -546,7 +576,7 @@ export async function handler(
             isNull(LiteTable.timeDeleted),
           ),
         )
-        .where(and(eq(KeyTable.key, apiKey), isNull(KeyTable.timeDeleted)))
+        .where(and(eq(KeyTable.key, zenApiKey), isNull(KeyTable.timeDeleted)))
         .then((rows) => rows[0]),
     )
 
@@ -750,9 +780,10 @@ export async function handler(
     return "balance"
   }
 
-  function validateModelSettings(authInfo: AuthInfo) {
-    if (!authInfo) return
-    if (authInfo.isDisabled) throw new ModelError(t("zen.api.error.modelDisabled"))
+  function validateModelSettings(billingSource: BillingSource, authInfo: AuthInfo) {
+    if (billingSource === "lite") return
+    if (billingSource === "anonymous") return
+    if (authInfo!.isDisabled) throw new ModelError(t("zen.api.error.modelDisabled"))
   }
 
   function updateProviderKey(authInfo: AuthInfo, providerInfo: ProviderInfo) {
@@ -818,7 +849,7 @@ export async function handler(
     }
   }
 
-  function calculateOccuredCost(billingSource: BillingSource, costInfo: CostInfo) {
+  function calculateOccurredCost(billingSource: BillingSource, costInfo: CostInfo) {
     return billingSource === "balance" ? (costInfo.totalCostInCent / 100).toFixed(8) : "0"
   }
 
