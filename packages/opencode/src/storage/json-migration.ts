@@ -1,14 +1,14 @@
-import { Database } from "bun:sqlite"
-import { drizzle } from "drizzle-orm/bun-sqlite"
+import type { SQLiteBunDatabase } from "drizzle-orm/bun-sqlite"
+import type { NodeSQLiteDatabase } from "drizzle-orm/node-sqlite"
 import { Global } from "../global"
-import { Log } from "../util/log"
+import { Log } from "../util"
 import { ProjectTable } from "../project/project.sql"
 import { SessionTable, MessageTable, PartTable, TodoTable, PermissionTable } from "../session/session.sql"
 import { SessionShareTable } from "../share/share.sql"
 import path from "path"
 import { existsSync } from "fs"
-import { Filesystem } from "../util/filesystem"
-import { Glob } from "../util/glob"
+import { Filesystem } from "../util"
+import { Glob } from "@opencode-ai/shared/util/glob"
 
 export namespace JsonMigration {
   const log = Log.create({ service: "json-migration" })
@@ -23,7 +23,7 @@ export namespace JsonMigration {
     progress?: (event: Progress) => void
   }
 
-  export async function run(sqlite: Database, options?: Options) {
+  export async function run(db: SQLiteBunDatabase<any, any> | NodeSQLiteDatabase<any, any>, options?: Options) {
     const storageDir = path.join(Global.Path.data, "storage")
 
     if (!existsSync(storageDir)) {
@@ -43,13 +43,13 @@ export namespace JsonMigration {
     log.info("starting json to sqlite migration", { storageDir })
     const start = performance.now()
 
-    const db = drizzle({ client: sqlite })
+    // const db = drizzle({ client: sqlite })
 
     // Optimize SQLite for bulk inserts
-    sqlite.exec("PRAGMA journal_mode = WAL")
-    sqlite.exec("PRAGMA synchronous = OFF")
-    sqlite.exec("PRAGMA cache_size = 10000")
-    sqlite.exec("PRAGMA temp_store = MEMORY")
+    db.run("PRAGMA journal_mode = WAL")
+    db.run("PRAGMA synchronous = OFF")
+    db.run("PRAGMA cache_size = 10000")
+    db.run("PRAGMA temp_store = MEMORY")
     const stats = {
       projects: 0,
       sessions: 0,
@@ -77,11 +77,13 @@ export namespace JsonMigration {
 
     async function read(files: string[], start: number, end: number) {
       const count = end - start
+      // oxlint-disable-next-line unicorn/no-new-array -- pre-allocated for index-based batch fill
       const tasks = new Array(count)
       for (let i = 0; i < count; i++) {
         tasks[i] = Filesystem.readJson(files[start + i])
       }
       const results = await Promise.allSettled(tasks)
+      // oxlint-disable-next-line unicorn/no-new-array -- pre-allocated for index-based batch fill
       const items = new Array(count)
       for (let i = 0; i < results.length; i++) {
         const result = results[i]
@@ -146,7 +148,7 @@ export namespace JsonMigration {
 
     progress?.({ current, total, label: "starting" })
 
-    sqlite.exec("BEGIN TRANSACTION")
+    db.run("BEGIN TRANSACTION")
 
     // Migrate projects first (no FK deps)
     // Derive all IDs from file paths, not JSON content
@@ -243,6 +245,7 @@ export namespace JsonMigration {
     for (let i = 0; i < allMessageFiles.length; i += batchSize) {
       const end = Math.min(i + batchSize, allMessageFiles.length)
       const batch = await read(allMessageFiles, i, end)
+      // oxlint-disable-next-line unicorn/no-new-array -- pre-allocated for index-based batch fill
       const values = new Array(batch.length)
       let count = 0
       for (let j = 0; j < batch.length; j++) {
@@ -273,6 +276,7 @@ export namespace JsonMigration {
     for (let i = 0; i < partFiles.length; i += batchSize) {
       const end = Math.min(i + batchSize, partFiles.length)
       const batch = await read(partFiles, i, end)
+      // oxlint-disable-next-line unicorn/no-new-array -- pre-allocated for index-based batch fill
       const values = new Array(batch.length)
       let count = 0
       for (let j = 0; j < batch.length; j++) {
@@ -400,7 +404,7 @@ export namespace JsonMigration {
       log.warn("skipped orphaned session shares", { count: orphans.shares })
     }
 
-    sqlite.exec("COMMIT")
+    db.run("COMMIT")
 
     log.info("json migration complete", {
       projects: stats.projects,

@@ -2,16 +2,17 @@ import { type SQLiteBunDatabase } from "drizzle-orm/bun-sqlite"
 import { migrate } from "drizzle-orm/bun-sqlite/migrator"
 import { type SQLiteTransaction } from "drizzle-orm/sqlite-core"
 export * from "drizzle-orm"
-import { Context } from "../util/context"
+import { LocalContext } from "../util"
 import { lazy } from "../util/lazy"
 import { Global } from "../global"
-import { Log } from "../util/log"
-import { NamedError } from "@opencode-ai/util/error"
+import { Log } from "../util"
+import { NamedError } from "@opencode-ai/shared/util/error"
 import z from "zod"
 import path from "path"
 import { readFileSync, readdirSync, existsSync } from "fs"
-import { Installation } from "../installation"
 import { Flag } from "../flag/flag"
+import { CHANNEL } from "../installation/meta"
+import { InstanceState } from "@/effect"
 import { iife } from "@/util/iife"
 import { init } from "#db"
 
@@ -27,12 +28,19 @@ export const NotFoundError = NamedError.create(
 const log = Log.create({ service: "db" })
 
 export namespace Database {
-  export const Path = iife(() => {
-    const channel = Installation.CHANNEL
-    if (["latest", "beta"].includes(channel) || Flag.OPENCODE_DISABLE_CHANNEL_DB)
+  export function getChannelPath() {
+    if (["latest", "beta", "prod"].includes(CHANNEL) || Flag.OPENCODE_DISABLE_CHANNEL_DB)
       return path.join(Global.Path.data, "opencode.db")
-    const safe = channel.replace(/[^a-zA-Z0-9._-]/g, "-")
+    const safe = CHANNEL.replace(/[^a-zA-Z0-9._-]/g, "-")
     return path.join(Global.Path.data, `opencode-${safe}.db`)
+  }
+
+  export const Path = iife(() => {
+    if (Flag.OPENCODE_DB) {
+      if (Flag.OPENCODE_DB === ":memory:" || path.isAbsolute(Flag.OPENCODE_DB)) return Flag.OPENCODE_DB
+      return path.join(Global.Path.data, Flag.OPENCODE_DB)
+    }
+    return getChannelPath()
   })
 
   export type Transaction = SQLiteTransaction<"sync", void>
@@ -114,7 +122,7 @@ export namespace Database {
 
   export type TxOrDb = Transaction | Client
 
-  const ctx = Context.create<{
+  const ctx = LocalContext.create<{
     tx: TxOrDb
     effects: (() => void | Promise<void>)[]
   }>("database")
@@ -123,7 +131,7 @@ export namespace Database {
     try {
       return callback(ctx.use().tx)
     } catch (err) {
-      if (err instanceof Context.NotFound) {
+      if (err instanceof LocalContext.NotFound) {
         const effects: (() => void | Promise<void>)[] = []
         const result = ctx.provide({ effects, tx: Client() }, () => callback(Client()))
         for (const effect of effects) effect()
@@ -134,24 +142,31 @@ export namespace Database {
   }
 
   export function effect(fn: () => any | Promise<any>) {
+    const bound = InstanceState.bind(fn)
     try {
-      ctx.use().effects.push(fn)
+      ctx.use().effects.push(bound)
     } catch {
-      fn()
+      bound()
     }
   }
 
-  export function transaction<T>(callback: (tx: TxOrDb) => T): T {
+  type NotPromise<T> = T extends Promise<any> ? never : T
+
+  export function transaction<T>(
+    callback: (tx: TxOrDb) => NotPromise<T>,
+    options?: {
+      behavior?: "deferred" | "immediate" | "exclusive"
+    },
+  ): NotPromise<T> {
     try {
       return callback(ctx.use().tx)
     } catch (err) {
-      if (err instanceof Context.NotFound) {
+      if (err instanceof LocalContext.NotFound) {
         const effects: (() => void | Promise<void>)[] = []
-        const result = (Client().transaction as any)((tx: TxOrDb) => {
-          return ctx.provide({ tx, effects }, () => callback(tx))
-        })
+        const txCallback = InstanceState.bind((tx: TxOrDb) => ctx.provide({ tx, effects }, () => callback(tx)))
+        const result = Client().transaction(txCallback, { behavior: options?.behavior })
         for (const effect of effects) effect()
-        return result
+        return result as NotPromise<T>
       }
       throw err
     }

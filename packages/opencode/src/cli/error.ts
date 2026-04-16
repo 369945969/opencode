@@ -1,12 +1,17 @@
+import { AccountServiceError, AccountTransportError } from "@/account"
 import { ConfigMarkdown } from "@/config/markdown"
-import { Config } from "../config/config"
+import { errorFormat } from "@/util/error"
+import { Config } from "../config"
 import { MCP } from "../mcp"
-import { Provider } from "../provider/provider"
+import { Provider } from "../provider"
 import { UI } from "./ui"
 
 export function FormatError(input: unknown) {
   if (MCP.Failed.isInstance(input))
     return `MCP server "${input.data.name}" failed. Note, opencode does not support MCP authentication yet.`
+  if (input instanceof AccountTransportError || input instanceof AccountServiceError) {
+    return input.message
+  }
   if (Provider.ModelNotFoundError.isInstance(input)) {
     const { providerID, modelID, suggestions } = input.data
     return [
@@ -41,17 +46,5 @@ export function FormatError(input: unknown) {
 }
 
 export function FormatUnknownError(input: unknown): string {
-  if (input instanceof Error) {
-    return input.stack ?? `${input.name}: ${input.message}`
-  }
-
-  if (typeof input === "object" && input !== null) {
-    try {
-      return JSON.stringify(input, null, 2)
-    } catch {
-      return "Unexpected error (unserializable)"
-    }
-  }
-
-  return String(input)
+  return errorFormat(input)
 }
