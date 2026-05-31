@@ -1,7 +1,6 @@
-import { BusEvent } from "@/bus/bus-event"
-import z from "zod"
+import { EventV2 } from "@opencode-ai/core/event"
 
 export const Event = {
-  Connected: BusEvent.define("server.connected", z.object({})),
-  Disposed: BusEvent.define("global.disposed", z.object({})),
+  Connected: EventV2.define({ type: "server.connected", schema: {} }),
+  Disposed: EventV2.define({ type: "global.disposed", schema: {} }),
 }
