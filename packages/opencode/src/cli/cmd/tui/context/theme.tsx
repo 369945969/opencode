@@ -1,8 +1,8 @@
-import { SyntaxStyle, RGBA, type TerminalColors } from "@opentui/core"
+import { CliRenderEvents, SyntaxStyle, RGBA, type TerminalColors } from "@opentui/core"
 import path from "path"
-import { createEffect, createMemo, onMount } from "solid-js"
+import { createEffect, createMemo, onCleanup, onMount } from "solid-js"
 import { createSimpleContext } from "./helper"
-import { Glob } from "../../../../util/glob"
+import { Glob } from "@opencode-ai/core/util/glob"
 import aura from "./theme/aura.json" with { type: "json" }
 import ayu from "./theme/ayu.json" with { type: "json" }
 import catppuccin from "./theme/catppuccin.json" with { type: "json" }
@@ -39,69 +39,18 @@ import carbonfox from "./theme/carbonfox.json" with { type: "json" }
 import { useKV } from "./kv"
 import { useRenderer } from "@opentui/solid"
 import { createStore, produce } from "solid-js/store"
-import { Global } from "@/global"
+import { Global } from "@opencode-ai/core/global"
 import { Filesystem } from "@/util/filesystem"
 import { useTuiConfig } from "./tui-config"
+import { isRecord } from "@/util/record"
+import type { TuiThemeCurrent } from "@opencode-ai/plugin/tui"
 
-type ThemeColors = {
-  primary: RGBA
-  secondary: RGBA
-  accent: RGBA
-  error: RGBA
-  warning: RGBA
-  success: RGBA
-  info: RGBA
-  text: RGBA
-  textMuted: RGBA
-  selectedListItemText: RGBA
-  background: RGBA
-  backgroundPanel: RGBA
-  backgroundElement: RGBA
-  backgroundMenu: RGBA
-  border: RGBA
-  borderActive: RGBA
-  borderSubtle: RGBA
-  diffAdded: RGBA
-  diffRemoved: RGBA
-  diffContext: RGBA
-  diffHunkHeader: RGBA
-  diffHighlightAdded: RGBA
-  diffHighlightRemoved: RGBA
-  diffAddedBg: RGBA
-  diffRemovedBg: RGBA
-  diffContextBg: RGBA
-  diffLineNumber: RGBA
-  diffAddedLineNumberBg: RGBA
-  diffRemovedLineNumberBg: RGBA
-  markdownText: RGBA
-  markdownHeading: RGBA
-  markdownLink: RGBA
-  markdownLinkText: RGBA
-  markdownCode: RGBA
-  markdownBlockQuote: RGBA
-  markdownEmph: RGBA
-  markdownStrong: RGBA
-  markdownHorizontalRule: RGBA
-  markdownListItem: RGBA
-  markdownListEnumeration: RGBA
-  markdownImage: RGBA
-  markdownImageText: RGBA
-  markdownCodeBlock: RGBA
-  syntaxComment: RGBA
-  syntaxKeyword: RGBA
-  syntaxFunction: RGBA
-  syntaxVariable: RGBA
-  syntaxString: RGBA
-  syntaxNumber: RGBA
-  syntaxType: RGBA
-  syntaxOperator: RGBA
-  syntaxPunctuation: RGBA
-}
-
-type Theme = ThemeColors & {
+type Theme = TuiThemeCurrent & {
   _hasSelectedListItemText: boolean
-  thinkingOpacity: number
 }
+type ThemeColor = Exclude<keyof TuiThemeCurrent, "thinkingOpacity">
+type SyntaxStyleOverrides = Record<string, { italic?: boolean }>
+const THEME_REFRESH_DELAYS = [250, 1000] as const
 
 export function selectedForeground(theme: Theme, bg?: RGBA): RGBA {
   // If theme explicitly defines selectedListItemText, use it
@@ -128,10 +77,10 @@ type Variant = {
   light: HexColor | RefName
 }
 type ColorValue = HexColor | RefName | Variant | RGBA
-type ThemeJson = {
+export type ThemeJson = {
   $schema?: string
   defs?: Record<string, HexColor | RefName>
-  theme: Omit<Record<keyof ThemeColors, ColorValue>, "selectedListItemText" | "backgroundMenu"> & {
+  theme: Omit<Record<ThemeColor, ColorValue>, "selectedListItemText" | "backgroundMenu"> & {
     selectedListItemText?: ColorValue
     backgroundMenu?: ColorValue
     thinkingOpacity?: number
@@ -174,27 +123,103 @@ export const DEFAULT_THEMES: Record<string, ThemeJson> = {
   carbonfox,
 }
 
-function resolveTheme(theme: ThemeJson, mode: "dark" | "light") {
+type State = {
+  themes: Record<string, ThemeJson>
+  mode: "dark" | "light"
+  lock: "dark" | "light" | undefined
+  active: string
+  ready: boolean
+}
+
+const pluginThemes: Record<string, ThemeJson> = {}
+let customThemes: Record<string, ThemeJson> = {}
+let systemTheme: ThemeJson | undefined
+
+function listThemes() {
+  // Priority: defaults < plugin installs < custom files < generated system.
+  const themes = {
+    ...DEFAULT_THEMES,
+    ...pluginThemes,
+    ...customThemes,
+  }
+  if (!systemTheme) return themes
+  return {
+    ...themes,
+    system: systemTheme,
+  }
+}
+
+function syncThemes() {
+  setStore("themes", listThemes())
+}
+
+const [store, setStore] = createStore<State>({
+  themes: listThemes(),
+  mode: "dark",
+  lock: undefined,
+  active: "opencode",
+  ready: false,
+})
+
+export function allThemes() {
+  return store.themes
+}
+
+function isTheme(theme: unknown): theme is ThemeJson {
+  if (!isRecord(theme)) return false
+  if (!isRecord(theme.theme)) return false
+  return true
+}
+
+export function hasTheme(name: string) {
+  if (!name) return false
+  return allThemes()[name] !== undefined
+}
+
+export function addTheme(name: string, theme: unknown) {
+  if (!name) return false
+  if (!isTheme(theme)) return false
+  if (hasTheme(name)) return false
+  pluginThemes[name] = theme
+  syncThemes()
+  return true
+}
+
+export function upsertTheme(name: string, theme: unknown) {
+  if (!name) return false
+  if (!isTheme(theme)) return false
+  if (customThemes[name] !== undefined) {
+    customThemes[name] = theme
+  } else {
+    pluginThemes[name] = theme
+  }
+  syncThemes()
+  return true
+}
+
+export function resolveTheme(theme: ThemeJson, mode: "dark" | "light") {
   const defs = theme.defs ?? {}
-  function resolveColor(c: ColorValue): RGBA {
+  function resolveColor(c: ColorValue, chain: string[] = []): RGBA {
     if (c instanceof RGBA) return c
     if (typeof c === "string") {
       if (c === "transparent" || c === "none") return RGBA.fromInts(0, 0, 0, 0)
 
       if (c.startsWith("#")) return RGBA.fromHex(c)
 
-      if (defs[c] != null) {
-        return resolveColor(defs[c])
-      } else if (theme.theme[c as keyof ThemeColors] !== undefined) {
-        return resolveColor(theme.theme[c as keyof ThemeColors]!)
-      } else {
+      if (chain.includes(c)) {
+        throw new Error(`Circular color reference: ${[...chain, c].join(" -> ")}`)
+      }
+
+      const next = defs[c] ?? theme.theme[c as ThemeColor]
+      if (next === undefined) {
         throw new Error(`Color reference "${c}" not found in defs or theme`)
       }
+      return resolveColor(next, [...chain, c])
     }
     if (typeof c === "number") {
       return ansiToRgba(c)
     }
-    return resolveColor(c[mode])
+    return resolveColor(c[mode], chain)
   }
 
   const resolved = Object.fromEntries(
@@ -203,7 +228,7 @@ function resolveTheme(theme: ThemeJson, mode: "dark" | "light") {
       .map(([key, value]) => {
         return [key, resolveColor(value as ColorValue)]
       }),
-  ) as Partial<ThemeColors>
+  ) as Partial<Record<ThemeColor, RGBA>>
 
   // Handle selectedListItemText separately since it's optional
   const hasSelectedListItemText = theme.theme.selectedListItemText !== undefined
@@ -280,84 +305,192 @@ function ansiToRgba(code: number): RGBA {
 export const { use: useTheme, provider: ThemeProvider } = createSimpleContext({
   name: "Theme",
   init: (props: { mode: "dark" | "light" }) => {
+    const renderer = useRenderer()
     const config = useTuiConfig()
     const kv = useKV()
-    const [store, setStore] = createStore({
-      themes: DEFAULT_THEMES,
-      mode: kv.get("theme_mode", props.mode),
-      active: (config.theme ?? kv.get("theme", "opencode")) as string,
-      ready: false,
-    })
+    const pick = (value: unknown) => {
+      if (value === "dark" || value === "light") return value
+      return
+    }
+
+    setStore(
+      produce((draft) => {
+        const lock = pick(kv.get("theme_mode_lock"))
+        const mode = lock ?? pick(renderer.themeMode) ?? props.mode
+        if (!lock && pick(kv.get("theme_mode")) !== undefined) {
+          kv.set("theme_mode", undefined)
+        }
+        draft.mode = mode
+        draft.lock = lock
+        const active = config.theme ?? kv.get("theme", "opencode")
+        draft.active = typeof active === "string" ? active : "opencode"
+        draft.ready = false
+      }),
+    )
 
     createEffect(() => {
       const theme = config.theme
       if (theme) setStore("active", theme)
     })
 
-    function init() {
-      resolveSystemTheme()
-      getCustomThemes()
+    function syncCustomThemes() {
+      return getCustomThemes()
         .then((custom) => {
-          setStore(
-            produce((draft) => {
-              Object.assign(draft.themes, custom)
-            }),
-          )
+          customThemes = custom
+          syncThemes()
         })
         .catch(() => {
           setStore("active", "opencode")
         })
-        .finally(() => {
-          if (store.active !== "system") {
-            setStore("ready", true)
-          }
-        })
     }
 
-    onMount(init)
+    onMount(() => {
+      void Promise.allSettled([resolveSystemTheme(store.mode), syncCustomThemes()]).finally(() => {
+        setStore("ready", true)
+      })
+    })
 
-    function resolveSystemTheme() {
-      console.log("resolveSystemTheme")
-      renderer
+    let systemThemeSignature: string | undefined
+    let systemThemeMode: "dark" | "light" | undefined
+    let hasResolvedSystemTheme = false
+    function resolveSystemTheme(mode: "dark" | "light" = store.mode) {
+      return renderer
         .getPalette({
           size: 16,
         })
-        .then((colors) => {
-          console.log(colors.palette)
+        .then((colors: TerminalColors) => {
           if (!colors.palette[0]) {
+            // Keep the last known good generated theme during runtime reloads.
+            // A terminal config swap can briefly make OSC palette probes fail.
+            if (hasResolvedSystemTheme) return
+            systemTheme = undefined
+            syncThemes()
             if (store.active === "system") {
-              setStore(
-                produce((draft) => {
-                  draft.active = "opencode"
-                  draft.ready = true
-                }),
-              )
+              setStore("active", "opencode")
             }
             return
           }
-          setStore(
-            produce((draft) => {
-              draft.themes.system = generateSystem(colors, store.mode)
-              if (store.active === "system") {
-                draft.ready = true
-              }
-            }),
-          )
+          const next = store.lock ?? terminalMode(colors) ?? mode
+          if (store.mode !== next) setStore("mode", next)
+          const signature = JSON.stringify(colors)
+          hasResolvedSystemTheme = true
+          // Delayed reload retries commonly observe the same palette. Avoid
+          // rebuilding native syntax styles unless the generated theme changed.
+          if (systemTheme && systemThemeSignature === signature && systemThemeMode === next) return
+          systemThemeSignature = signature
+          systemThemeMode = next
+          systemTheme = generateSystem(colors, next)
+          syncThemes()
+        })
+        .catch(() => {
+          if (hasResolvedSystemTheme) return
+          systemTheme = undefined
+          syncThemes()
+          if (store.active === "system") {
+            setStore("active", "opencode")
+          }
         })
     }
 
-    const renderer = useRenderer()
-    process.on("SIGUSR2", async () => {
+    let systemRefreshRunning = false
+    let systemRefreshQueued = false
+    let systemRefreshMode = store.mode
+    function refreshSystemTheme(mode: "dark" | "light" = store.mode) {
+      systemRefreshMode = mode
+      if (systemRefreshRunning) {
+        systemRefreshQueued = true
+        return
+      }
+
+      systemRefreshRunning = true
+      // clearPaletteCache() does not cancel an older in-flight detection.
+      const retry = renderer.paletteDetectionStatus === "detecting"
       renderer.clearPaletteCache()
-      init()
+      void resolveSystemTheme(mode).finally(() => {
+        systemRefreshRunning = false
+        if (!retry && !systemRefreshQueued) return
+        systemRefreshQueued = false
+        refreshSystemTheme(systemRefreshMode)
+      })
+    }
+
+    function apply(mode: "dark" | "light") {
+      if (store.lock !== undefined) kv.set("theme_mode", mode)
+      if (store.mode === mode) return
+      setStore("mode", mode)
+      refreshSystemTheme(mode)
+    }
+
+    function pin(mode: "dark" | "light" = store.mode) {
+      setStore("lock", mode)
+      kv.set("theme_mode_lock", mode)
+      apply(mode)
+    }
+
+    function free() {
+      setStore("lock", undefined)
+      kv.set("theme_mode_lock", undefined)
+      kv.set("theme_mode", undefined)
+      refreshSystemTheme(renderer.themeMode ?? store.mode)
+    }
+
+    const handle = (mode: "dark" | "light") => {
+      if (store.lock) return
+      apply(mode)
+    }
+    renderer.on(CliRenderEvents.THEME_MODE, handle)
+
+    const handleThemeNotification = (sequence: string) => {
+      if (sequence !== "\x1b[?997;1n" && sequence !== "\x1b[?997;2n") return false
+      queueMicrotask(() => refreshSystemTheme())
+      return false
+    }
+    renderer.prependInputHandler(handleThemeNotification)
+
+    let themeRefreshTimeouts: ReturnType<typeof setTimeout>[] = []
+    const refresh = () => {
+      // Omarchy signals immediately after requesting a terminal config reload.
+      for (const timeout of themeRefreshTimeouts) clearTimeout(timeout)
+      themeRefreshTimeouts = THEME_REFRESH_DELAYS.map((delay) =>
+        setTimeout(() => {
+          refreshSystemTheme()
+          if (delay === THEME_REFRESH_DELAYS[THEME_REFRESH_DELAYS.length - 1]) void syncCustomThemes()
+        }, delay),
+      )
+    }
+    process.on("SIGUSR2", refresh)
+
+    onCleanup(() => {
+      renderer.off(CliRenderEvents.THEME_MODE, handle)
+      renderer.removeInputHandler(handleThemeNotification)
+      process.off("SIGUSR2", refresh)
+      for (const timeout of themeRefreshTimeouts) clearTimeout(timeout)
+      themeRefreshTimeouts.length = 0
     })
 
     const values = createMemo(() => {
-      return resolveTheme(store.themes[store.active] ?? store.themes.opencode, store.mode)
+      const active = store.themes[store.active]
+      if (active) {
+        return resolveTheme(active, store.mode)
+      }
+
+      const saved = kv.get("theme")
+      if (typeof saved === "string") {
+        const theme = store.themes[saved]
+        if (theme) {
+          return resolveTheme(theme, store.mode)
+        }
+      }
+
+      return resolveTheme(store.themes.opencode, store.mode)
     })
 
-    const syntax = createMemo(() => generateSyntax(values()))
-    const subtleSyntax = createMemo(() => generateSubtleSyntax(values()))
+    createEffect(() => {
+      renderer.setBackgroundColor(values().background)
+    })
+
+    const syntax = createSyntaxStyleMemo(() => generateSyntax(values()))
+    const subtleSyntax = createSyntaxStyleMemo(() => generateSubtleSyntax(values()))
 
     return {
       theme: new Proxy(values(), {
@@ -370,20 +503,33 @@ export const { use: useTheme, provider: ThemeProvider } = createSimpleContext({
         return store.active
       },
       all() {
-        return store.themes
+        return allThemes()
+      },
+      has(name: string) {
+        return hasTheme(name)
       },
       syntax,
       subtleSyntax,
       mode() {
         return store.mode
       },
+      locked() {
+        return store.lock !== undefined
+      },
+      lock() {
+        pin(store.mode)
+      },
+      unlock() {
+        free()
+      },
       setMode(mode: "dark" | "light") {
-        setStore("mode", mode)
-        kv.set("theme_mode", mode)
+        pin(mode)
       },
       set(theme: string) {
+        if (!hasTheme(theme)) return false
         setStore("active", theme)
         kv.set("theme", theme)
+        return true
       },
       get ready() {
         return store.ready
@@ -412,7 +558,8 @@ async function getCustomThemes() {
       symlink: true,
     })) {
       const name = path.basename(item, ".json")
-      result[name] = await Filesystem.readJson(item)
+      const theme = await Filesystem.readJson(item)
+      if (isTheme(theme)) result[name] = theme
     }
   }
   return result
@@ -425,10 +572,17 @@ export function tint(base: RGBA, overlay: RGBA, alpha: number): RGBA {
   return RGBA.fromInts(Math.round(r * 255), Math.round(g * 255), Math.round(b * 255))
 }
 
-function generateSystem(colors: TerminalColors, mode: "dark" | "light"): ThemeJson {
+export function terminalMode(colors: TerminalColors): "dark" | "light" | undefined {
+  const bg = colors.defaultBackground
+  if (!bg) return
+  const { r, g, b } = RGBA.fromHex(bg)
+  return 0.299 * r + 0.587 * g + 0.114 * b > 0.5 ? "light" : "dark"
+}
+
+export function generateSystem(colors: TerminalColors, mode: "dark" | "light"): ThemeJson {
   const bg = RGBA.fromHex(colors.defaultBackground ?? colors.palette[0]!)
   const fg = RGBA.fromHex(colors.defaultForeground ?? colors.palette[7]!)
-  const transparent = RGBA.fromInts(0, 0, 0, 0)
+  const transparent = RGBA.fromValues(bg.r, bg.g, bg.b, 0)
   const isDark = mode == "dark"
 
   const col = (i: number) => {
@@ -458,8 +612,10 @@ function generateSystem(colors: TerminalColors, mode: "dark" | "light"): ThemeJs
   const diffAlpha = isDark ? 0.22 : 0.14
   const diffAddedBg = tint(bg, ansiColors.green, diffAlpha)
   const diffRemovedBg = tint(bg, ansiColors.red, diffAlpha)
-  const diffAddedLineNumberBg = tint(grays[3], ansiColors.green, diffAlpha)
-  const diffRemovedLineNumberBg = tint(grays[3], ansiColors.red, diffAlpha)
+  const diffContextBg = grays[2]
+  const diffAddedLineNumberBg = tint(diffContextBg, ansiColors.green, diffAlpha)
+  const diffRemovedLineNumberBg = tint(diffContextBg, ansiColors.red, diffAlpha)
+  const diffLineNumber = textMuted
 
   return {
     theme: {
@@ -499,8 +655,8 @@ function generateSystem(colors: TerminalColors, mode: "dark" | "light"): ThemeJs
       diffHighlightRemoved: ansiColors.redBright,
       diffAddedBg,
       diffRemovedBg,
-      diffContextBg: grays[1],
-      diffLineNumber: grays[6],
+      diffContextBg,
+      diffLineNumber,
       diffAddedLineNumberBg,
       diffRemovedLineNumberBg,
 
@@ -619,20 +775,50 @@ function generateMutedTextColor(bg: RGBA, isDark: boolean): RGBA {
   return RGBA.fromInts(grayValue, grayValue, grayValue)
 }
 
-function generateSyntax(theme: Theme) {
+export function generateSyntax(theme: Theme) {
   return SyntaxStyle.fromTheme(getSyntaxRules(theme))
 }
 
-function generateSubtleSyntax(theme: Theme) {
+export function createSyntaxStyleMemo(factory: () => SyntaxStyle) {
+  const renderer = useRenderer()
+  const retained = new Set<SyntaxStyle>()
+  let current: SyntaxStyle | undefined
+
+  const release = (style: SyntaxStyle) => {
+    retained.add(style)
+    void renderer
+      .idle()
+      .catch(() => {})
+      .finally(() => {
+        if (!retained.delete(style)) return
+        style.destroy()
+      })
+  }
+
+  onCleanup(() => {
+    if (current) release(current)
+  })
+
+  return createMemo(() => {
+    const previous = current
+    current = factory()
+    if (previous) release(previous)
+    return current
+  })
+}
+
+export function generateSubtleSyntax(theme: Theme, overrides?: SyntaxStyleOverrides) {
   const rules = getSyntaxRules(theme)
   return SyntaxStyle.fromTheme(
     rules.map((rule) => {
+      const override = rule.scope.reduce((acc, scope) => ({ ...acc, ...overrides?.[scope] }), {})
       if (rule.style.foreground) {
         const fg = rule.style.foreground
         return {
           ...rule,
           style: {
             ...rule.style,
+            ...override,
             foreground: RGBA.fromInts(
               Math.round(fg.r * 255),
               Math.round(fg.g * 255),
@@ -678,7 +864,7 @@ function getSyntaxRules(theme: Theme) {
     {
       scope: ["extmark.paste"],
       style: {
-        foreground: theme.background,
+        foreground: selectedForeground(theme, theme.warning),
         background: theme.warning,
         bold: true,
       },
@@ -867,6 +1053,7 @@ function getSyntaxRules(theme: Theme) {
       style: {
         foreground: theme.markdownHeading,
         bold: true,
+        underline: true,
       },
     },
     {
