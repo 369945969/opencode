@@ -10,9 +10,14 @@
     },
     "opencode#test": {
       "dependsOn": ["^build"],
-      "outputs": []
+      "outputs": [],
+      "passThroughEnv": ["*"]
     },
     "@opencode-ai/app#test": {
+      "dependsOn": ["^build"],
+      "outputs": []
+    },
+    "@opencode-ai/ui#test": {
       "dependsOn": ["^build"],
       "outputs": []
     }
