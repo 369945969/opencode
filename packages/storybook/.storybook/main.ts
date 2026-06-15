@@ -2,6 +2,7 @@ import { defineMain } from "storybook-solidjs-vite"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 import tailwindcss from "@tailwindcss/vite"
+import { playgroundCss } from "./playground-css-plugin"
 
 const here = path.dirname(fileURLToPath(import.meta.url))
 const ui = path.resolve(here, "../../ui")
@@ -20,11 +21,11 @@ export default defineMain({
     "@storybook/addon-a11y",
     "@storybook/addon-vitest",
   ],
-  stories: ["../../ui/src/**/*.stories.@(js|jsx|mjs|ts|tsx)"],
+  stories: ["../../ui/src/**/*.stories.@(js|jsx|mjs|ts|tsx)", "../../app/src/**/*.stories.@(js|jsx|mjs|ts|tsx)"],
   async viteFinal(config) {
     const { mergeConfig, searchForWorkspaceRoot } = await import("vite")
     return mergeConfig(config, {
-      plugins: [tailwindcss()],
+      plugins: [tailwindcss(), playgroundCss()],
       resolve: {
         dedupe: ["solid-js", "solid-js/web", "@solidjs/meta"],
         alias: [
