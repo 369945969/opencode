@@ -1,4 +1,4 @@
-import type { ProviderAuthAuthorization } from "@opencode-ai/sdk/v2/client"
+import type { ProviderAuthAuthorization, ProviderAuthMethod } from "@opencode-ai/sdk/v2/client"
 import { Button } from "@opencode-ai/ui/button"
 import { useDialog } from "@opencode-ai/ui/context/dialog"
 import { Dialog } from "@opencode-ai/ui/dialog"
@@ -8,21 +8,27 @@ import { List, type ListRef } from "@opencode-ai/ui/list"
 import { ProviderIcon } from "@opencode-ai/ui/provider-icon"
 import { Spinner } from "@opencode-ai/ui/spinner"
 import { TextField } from "@opencode-ai/ui/text-field"
-import { showToast } from "@opencode-ai/ui/toast"
-import { createMemo, Match, onCleanup, onMount, Switch } from "solid-js"
+import { showToast } from "@/utils/toast"
+import { createEffect, createMemo, createResource, Match, onCleanup, onMount, Switch } from "solid-js"
 import { createStore, produce } from "solid-js/store"
 import { Link } from "@/components/link"
+import { useServerSDK } from "@/context/server-sdk"
+import { useServerSync } from "@/context/server-sync"
 import { useLanguage } from "@/context/language"
-import { useGlobalSDK } from "@/context/global-sdk"
-import { useGlobalSync } from "@/context/global-sync"
-import { DialogSelectModel } from "./dialog-select-model"
-import { DialogSelectProvider } from "./dialog-select-provider"
+import { useProviders } from "@/hooks/use-providers"
 
 export function DialogConnectProvider(props: { provider: string }) {
   const dialog = useDialog()
-  const globalSync = useGlobalSync()
-  const globalSDK = useGlobalSDK()
+  const serverSync = useServerSync()
+  const serverSDK = useServerSDK()
   const language = useLanguage()
+  const providers = useProviders()
+
+  const all = () => {
+    void import("./dialog-select-provider").then((x) => {
+      dialog.show(() => <x.DialogSelectProvider />)
+    })
+  }
 
   const alive = { value: true }
   const timer = { current: undefined as ReturnType<typeof setTimeout> | undefined }
@@ -34,16 +40,28 @@ export function DialogConnectProvider(props: { provider: string }) {
     timer.current = undefined
   })
 
-  const provider = createMemo(() => globalSync.data.provider.all.find((x) => x.id === props.provider)!)
-  const methods = createMemo(
-    () =>
-      globalSync.data.provider_auth[props.provider] ?? [
-        {
-          type: "api",
-          label: language.t("provider.connect.method.apiKey"),
-        },
-      ],
+  const provider = createMemo(
+    () => providers.all().get(props.provider) ?? serverSync().data.provider.all.get(props.provider)!,
   )
+  const fallback = createMemo<ProviderAuthMethod[]>(() => [
+    {
+      type: "api" as const,
+      label: language.t("provider.connect.method.apiKey"),
+    },
+  ])
+  const [auth] = createResource(
+    () => props.provider,
+    async () => {
+      const cached = serverSync().data.provider_auth[props.provider]
+      if (cached) return cached
+      const res = await serverSDK().client.provider.auth()
+      if (!alive.value) return fallback()
+      serverSync().set("provider_auth", res.data ?? {})
+      return res.data?.[props.provider] ?? fallback()
+    },
+  )
+  const loading = createMemo(() => auth.loading && !serverSync().data.provider_auth[props.provider])
+  const methods = createMemo(() => auth.latest ?? serverSync().data.provider_auth[props.provider] ?? fallback())
   const [store, setStore] = createStore({
     methodIndex: undefined as undefined | number,
     authorization: undefined as undefined | ProviderAuthAuthorization,
@@ -140,8 +158,8 @@ export function DialogConnectProvider(props: { provider: string }) {
       }
       dispatch({ type: "auth.pending" })
       const start = Date.now()
-      await globalSDK.client.provider.oauth
-        .authorize(
+      await serverSDK()
+        .client.provider.oauth.authorize(
           {
             providerID: props.provider,
             method: index,
@@ -178,7 +196,11 @@ export function DialogConnectProvider(props: { provider: string }) {
       index: 0,
     })
 
-    const prompts = createMemo(() => method()?.prompts ?? [])
+    const prompts = createMemo<NonNullable<ProviderAuthMethod["prompts"]>>(() => {
+      const value = method()
+      if (value?.type !== "oauth") return []
+      return value.prompts ?? []
+    })
     const matches = (prompt: NonNullable<ReturnType<typeof prompts>[number]>, value: Record<string, string>) => {
       if (!prompt.when) return true
       const actual = value[prompt.when.key]
@@ -255,6 +277,7 @@ export function DialogConnectProvider(props: { provider: string }) {
               <div class="text-14-regular text-text-base">{select()?.message}</div>
               <div>
                 <List
+                  class="px-3"
                   items={select()?.options ?? []}
                   key={(x) => x.value}
                   current={select()?.options.find((x) => x.value === formStore.value[select()!.key])}
@@ -297,14 +320,18 @@ export function DialogConnectProvider(props: { provider: string }) {
     listRef?.onKeyDown(e)
   }
 
-  onMount(() => {
+  let auto = false
+  createEffect(() => {
+    if (auto) return
+    if (loading()) return
     if (methods().length === 1) {
-      selectMethod(0)
+      auto = true
+      void selectMethod(0)
     }
   })
 
   async function complete() {
-    await globalSDK.client.global.dispose()
+    await serverSDK().client.global.dispose()
     dialog.close()
     showToast({
       variant: "success",
@@ -316,7 +343,7 @@ export function DialogConnectProvider(props: { provider: string }) {
 
   function goBack() {
     if (methods().length === 1) {
-      dialog.show(() => <DialogSelectProvider />)
+      all()
       return
     }
     if (store.authorization) {
@@ -327,7 +354,7 @@ export function DialogConnectProvider(props: { provider: string }) {
       dispatch({ type: "method.reset" })
       return
     }
-    dialog.show(() => <DialogSelectProvider />)
+    all()
   }
 
   function MethodSelection() {
@@ -338,6 +365,7 @@ export function DialogConnectProvider(props: { provider: string }) {
         </div>
         <div>
           <List
+            class="px-3"
             ref={(ref) => {
               listRef = ref
             }}
@@ -345,7 +373,7 @@ export function DialogConnectProvider(props: { provider: string }) {
             key={(m) => m?.label}
             onSelect={async (selected, index) => {
               if (!selected) return
-              selectMethod(index)
+              void selectMethod(index)
             }}
           >
             {(i) => (
@@ -381,7 +409,7 @@ export function DialogConnectProvider(props: { provider: string }) {
       }
 
       setFormStore("error", undefined)
-      await globalSDK.client.auth.set({
+      await serverSDK().client.auth.set({
         providerID: props.provider,
         auth: {
           type: "api",
@@ -452,8 +480,8 @@ export function DialogConnectProvider(props: { provider: string }) {
       }
 
       setFormStore("error", undefined)
-      const result = await globalSDK.client.provider.oauth
-        .callback({
+      const result = await serverSDK()
+        .client.provider.oauth.callback({
           providerID: props.provider,
           method: store.methodIndex,
           code,
@@ -498,15 +526,15 @@ export function DialogConnectProvider(props: { provider: string }) {
     const code = createMemo(() => {
       const instructions = store.authorization?.instructions
       if (instructions?.includes(":")) {
-        return instructions.split(":")[1]?.trim()
+        return instructions.split(":").pop()?.trim()
       }
       return instructions
     })
 
     onMount(() => {
       void (async () => {
-        const result = await globalSDK.client.provider.oauth
-          .callback({
+        const result = await serverSDK()
+          .client.provider.oauth.callback({
             providerID: props.provider,
             method: store.methodIndex,
           })
@@ -574,6 +602,14 @@ export function DialogConnectProvider(props: { provider: string }) {
         <div class="px-2.5 pb-10 flex flex-col gap-6">
           <div onKeyDown={handleKey} tabIndex={0} autofocus={store.methodIndex === undefined ? true : undefined}>
             <Switch>
+              <Match when={loading()}>
+                <div class="text-14-regular text-text-base">
+                  <div class="flex items-center gap-x-2">
+                    <Spinner />
+                    <span>{language.t("provider.connect.status.inProgress")}</span>
+                  </div>
+                </div>
+              </Match>
               <Match when={store.methodIndex === undefined}>
                 <MethodSelection />
               </Match>
