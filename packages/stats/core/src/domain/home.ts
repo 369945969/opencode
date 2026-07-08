@@ -538,11 +538,11 @@ function buildMarketShare(rows: ProviderMetricRow[], product: UsageProduct, rang
     return [
       {
         date: bucket.label,
-        total: round(totalTokens / 1_000_000_000_000, 2),
+        total: round(totalTokens / 1_000_000_000_000, 6),
         authors: withOther.map((item) => ({
           author: item.provider === "Other" ? "Other" : formatProvider(item.provider),
           share: round((item.tokens / totalTokens) * 100, 1),
-          tokens: round(item.tokens / 1_000_000_000_000, 2),
+          tokens: round(item.tokens / 1_000_000_000_000, 6),
         })),
       },
     ]
@@ -646,8 +646,8 @@ function buildModelTokenMix(aggregate: ModelAggregate): ModelMixEntry[] {
 }
 
 function buildModelPeers(peers: ModelAggregate[], rank: number, totalTokens: number): ModelPeerEntry[] {
-  const start = Math.max(0, Math.min(rank - 4, Math.max(peers.length - 7, 0)))
-  return peers.slice(start, start + 7).map((item, index) => ({
+  const start = Math.max(0, Math.min(rank - 5, Math.max(peers.length - 10, 0)))
+  return peers.slice(start, start + 10).map((item, index) => ({
     model: item.model,
     provider: item.provider,
     author: formatProvider(item.provider),
