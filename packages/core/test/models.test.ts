@@ -1,11 +1,12 @@
-import { describe, expect, beforeAll, beforeEach, afterAll } from "bun:test"
-import { Effect, Layer, Ref } from "effect"
+import { describe, expect, beforeAll, beforeEach, afterAll, test } from "bun:test"
+import { Effect, Layer, Ref, Schema } from "effect"
 import { HttpClient, HttpClientResponse } from "effect/unstable/http"
-import { FSUtil } from "@opencode-ai/core/fs-util"
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
+import { LayerNodePlatform } from "@opencode-ai/core/effect/app-node-platform"
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { Global } from "@opencode-ai/core/global"
 import { ModelsDev } from "@opencode-ai/core/models-dev"
-import { EventV2 } from "@opencode-ai/core/event"
 import { it } from "./lib/effect"
 import { readFile, rm, writeFile, utimes, mkdir } from "fs/promises"
 import path from "path"
@@ -87,13 +88,13 @@ const makeMockClient = (state: Ref.Ref<MockState>) =>
   )
 
 const buildLayer = (state: Ref.Ref<MockState>) =>
-  // Layer.fresh is required: ModelsDev.layer is a module-level Layer constant,
+  // Layer.fresh is required because the ModelsDev implementation is a module-level Layer constant,
   // and Effect.provide uses a process-global MemoMap by default — without fresh,
   // every test would reuse the cachedInvalidateWithTTL state from the first run.
-  Layer.fresh(ModelsDev.layer).pipe(
-    Layer.provide(Layer.succeed(HttpClient.HttpClient, makeMockClient(state))),
-    Layer.provide(FSUtil.defaultLayer),
-    Layer.provide(EventV2.defaultLayer),
+  Layer.fresh(
+    AppNodeBuilder.build(ModelsDev.node, [
+      [LayerNodePlatform.httpClient, Layer.succeed(HttpClient.HttpClient, makeMockClient(state))],
+    ]),
   )
 
 const writeCacheText = (text: string, mtimeMs?: number) =>
@@ -124,6 +125,21 @@ const initialState: MockState = {
   status: 200,
   calls: [],
 }
+
+test("models.dev model schema keeps reasoning options permissive", () => {
+  const model = Schema.decodeUnknownSync(ModelsDev.Model)({
+    id: "acme-1",
+    name: "Acme One",
+    release_date: "2026-01-01",
+    attachment: false,
+    reasoning: true,
+    reasoning_options: [{ type: "future_control", value: { nested: true } }, "future-shape"],
+    temperature: true,
+    tool_call: true,
+    limit: { context: 128000, output: 8192 },
+  })
+  expect(model.reasoning_options).toEqual([{ type: "future_control", value: { nested: true } }, "future-shape"])
+})
 
 describe("ModelsDev Service", () => {
   it.live("get() returns providers from disk when cache file exists", () =>
@@ -157,15 +173,12 @@ describe("ModelsDev Service", () => {
     Effect.gen(function* () {
       yield* writeCacheText("{")
       const state = yield* Ref.make({ ...initialState, body: JSON.stringify(fixture2) })
+      const context = yield* Layer.build(buildLayer(state))
       const result = yield* Effect.acquireUseRelease(
         Effect.sync(() => {
           Flag.OPENCODE_DISABLE_MODELS_FETCH = false
         }),
-        () =>
-          provided(
-            state,
-            ModelsDev.Service.use((s) => s.get()),
-          ),
+        () => ModelsDev.Service.use((s) => s.get()).pipe(Effect.provide(context)),
         () =>
           Effect.sync(() => {
             Flag.OPENCODE_DISABLE_MODELS_FETCH = true
