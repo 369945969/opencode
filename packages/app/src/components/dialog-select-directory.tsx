@@ -49,7 +49,7 @@ function uniqueRows(rows: Row[]) {
 
 export function DialogSelectDirectory(props: DialogSelectDirectoryProps) {
   const global = useGlobal()
-  const { sync, sdk, ...serverCtx } = global.createServerCtx(props.server)
+  const { sync, sdk, ...serverCtx } = global.ensureServerCtx(props.server)
   const dialog = useDialog()
   const language = useLanguage()
 
@@ -60,10 +60,7 @@ export function DialogSelectDirectory(props: DialogSelectDirectoryProps) {
   const [fallbackPath] = createResource(
     () => (missingBase() ? true : undefined),
     async () => {
-      return sdk.client.path
-        .get()
-        .then((x) => x.data)
-        .catch(() => undefined)
+      return sdk.api.path.get().catch(() => undefined)
     },
     { initialValue: undefined },
   )
