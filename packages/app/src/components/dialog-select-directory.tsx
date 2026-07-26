@@ -9,6 +9,7 @@ import { useLanguage } from "@/context/language"
 import { ServerConnection } from "@/context/server"
 import { useGlobal } from "@/context/global"
 import { cleanPickerInput, createDirectorySearch, displayPickerPath } from "./directory-picker-domain"
+import type { Path } from "@opencode-ai/sdk/v2/client"
 
 interface DialogSelectDirectoryProps {
   title?: string
@@ -49,7 +50,7 @@ function uniqueRows(rows: Row[]) {
 
 export function DialogSelectDirectory(props: DialogSelectDirectoryProps) {
   const global = useGlobal()
-  const { sync, sdk, ...serverCtx } = global.createServerCtx(props.server)
+  const { sync, sdk, ...serverCtx } = global.ensureServerCtx(props.server)
   const dialog = useDialog()
   const language = useLanguage()
 
@@ -59,10 +60,11 @@ export function DialogSelectDirectory(props: DialogSelectDirectoryProps) {
   const missingBase = createMemo(() => !(sync.data.path.home || sync.data.path.directory))
   const [fallbackPath] = createResource(
     () => (missingBase() ? true : undefined),
-    async () => {
+    async (): Promise<Path | undefined> => {
+      if ((await sdk.protocol) !== "v1") return
       return sdk.client.path
         .get()
-        .then((x) => x.data)
+        .then((result) => result.data)
         .catch(() => undefined)
     },
     { initialValue: undefined },
