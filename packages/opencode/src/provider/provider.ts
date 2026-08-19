@@ -24,7 +24,7 @@ import { InstanceState } from "@/effect/instance-state"
 import { EffectPromise } from "@/effect/promise"
 import { FSUtil } from "@opencode-ai/core/fs-util"
 import { isRecord } from "@/util/record"
-import { optionalOmitUndefined } from "@opencode-ai/core/schema"
+import { optional } from "@opencode-ai/core/schema"
 import { ProviderTransform } from "./transform"
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import { ModelV2 } from "@opencode-ai/core/model"
@@ -32,7 +32,7 @@ import { ModelStatus } from "./model-status"
 import { RuntimeFlags } from "@/effect/runtime-flags"
 import { ProviderError } from "./error"
 
-const OPENAI_HEADER_TIMEOUT_DEFAULT = 10_000
+const OPENAI_HEADER_TIMEOUT_DEFAULT = 300_000
 
 function wrapSSE(res: Response, ms: number, ctl: AbortController) {
   if (typeof ms !== "number" || ms <= 0) return res
@@ -207,6 +207,13 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
         },
         options: { headerTimeout: OPENAI_HEADER_TIMEOUT_DEFAULT },
       }),
+    meta: () =>
+      Effect.succeed({
+        autoload: false,
+        async getModel(sdk: any, modelID: string, _options?: Record<string, any>) {
+          return sdk.responses(modelID)
+        },
+      }),
     xai: () =>
       Effect.succeed({
         autoload: false,
@@ -218,8 +225,12 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
     "github-copilot": () =>
       Effect.succeed({
         autoload: false,
-        async getModel(sdk: any, modelID: string, _options?: Record<string, any>) {
+        async getModel(sdk: any, modelID: string, _options?: Record<string, any>, model?: Model) {
           if (sdk.responses === undefined && sdk.chat === undefined) return sdk.languageModel(modelID)
+          if (model && "endpoint" in model.api) {
+            if (model.api.endpoint === "responses" && sdk.responses) return sdk.responses(modelID)
+            if (model.api.endpoint === "chat" && sdk.chat) return sdk.chat(modelID)
+          }
           const match = /^gpt-(\d+)/.exec(modelID)
           if (match && Number(match[1]) >= 5 && !modelID.startsWith("gpt-5-mini")) return sdk.responses(modelID)
           return sdk.chat(modelID)
@@ -266,7 +277,7 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
         },
       }
     }),
-    "azure-cognitive-services": Effect.fnUntraced(function* () {
+    "azure-cognitive-services": Effect.fnUntraced(function* (provider: Info) {
       const resourceName = yield* dep.get("AZURE_COGNITIVE_SERVICES_RESOURCE_NAME")
       return {
         autoload: false,
@@ -274,7 +285,9 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
           return selectAzureLanguageModel(sdk, modelID, Boolean(options?.["useCompletionUrls"]))
         },
         options: {
-          baseURL: resourceName ? `https://${resourceName}.cognitiveservices.azure.com/openai` : undefined,
+          baseURL: resourceName
+            ? `https://${resourceName}.cognitiveservices.azure.com/openai${provider.options?.useDeploymentBasedUrls ? "" : "/v1"}`
+            : undefined,
         },
       }
     }),
@@ -787,9 +800,10 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
         )
       }
 
-      // Use official ai-gateway-provider package (v2.x for AI SDK v5 compatibility)
       const { createAiGateway } = yield* Effect.promise(() => import("ai-gateway-provider"))
       const { createUnified } = yield* Effect.promise(() => import("ai-gateway-provider/providers/unified"))
+      const { createOpenAI } = yield* Effect.promise(() => import("ai-gateway-provider/providers/openai"))
+      const { createAnthropic } = yield* Effect.promise(() => import("ai-gateway-provider/providers/anthropic"))
 
       const metadata = iife(() => {
         if (input.options?.metadata) return input.options.metadata
@@ -816,12 +830,23 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
         apiKey: apiToken,
         ...(Object.values(opts).some((v) => v !== undefined) ? { options: opts } : {}),
       })
-      const unified = createUnified({ apiKey: apiToken })
-
       return {
         autoload: true,
         async getModel(_sdk: any, modelID: string, _options?: Record<string, any>) {
-          // Model IDs use Unified API format: provider/model (e.g., "anthropic/claude-sonnet-4-5")
+          // Model IDs use Unified API format: provider/model (e.g., "anthropic/claude-sonnet-4-5").
+          // OpenAI and Anthropic ride their native passthrough routes so agents get the Responses
+          // and Messages APIs; new OpenAI models reject tools+reasoning_effort on chat completions.
+          // The passthrough wrappers inject a CF_TEMP_TOKEN sentinel that the gateway strips before
+          // dispatch, so upstream billing stays on the gateway (Unified Billing / stored BYOK).
+          if (modelID.startsWith("openai/")) return aigateway(createOpenAI()(modelID.slice("openai/".length)))
+          if (modelID.startsWith("anthropic/")) return aigateway(createAnthropic()(modelID.slice("anthropic/".length)))
+          // Workers AI is the only first-party provider whose upstream is Cloudflare itself, so it is
+          // the only one that should receive the Cloudflare token as its upstream Authorization header.
+          // The Unified API addresses Workers AI both with the explicit "workers-ai/" prefix and as
+          // bare "@cf/..." ids. Third-party providers must not receive the token; they rely on the
+          // gateway's stored/BYOK keys instead.
+          const isWorkersAi = modelID.startsWith("workers-ai/") || modelID.startsWith("@cf/")
+          const unified = createUnified(isWorkersAi ? { apiKey: apiToken } : {})
           return aigateway(unified(modelID))
         },
         options: {},
@@ -963,10 +988,15 @@ const ProviderModalities = Schema.Struct({
   pdf: Schema.Boolean,
 })
 
+const ProviderInterleavedField = Schema.Union([
+  Schema.Literals(["reasoning", "reasoning_content", "reasoning_text"]),
+  Schema.String,
+])
+
 const ProviderInterleaved = Schema.Union([
   Schema.Boolean,
   Schema.Struct({
-    field: Schema.Literals(["reasoning", "reasoning_content", "reasoning_details"]),
+    field: ProviderInterleavedField,
   }),
 ])
 
@@ -999,8 +1029,8 @@ const ProviderCost = Schema.Struct({
   input: Schema.Finite,
   output: Schema.Finite,
   cache: ProviderCacheCost,
-  tiers: optionalOmitUndefined(Schema.Array(ProviderCostTier)),
-  experimentalOver200K: optionalOmitUndefined(
+  tiers: optional(Schema.Array(ProviderCostTier)),
+  experimentalOver200K: optional(
     Schema.Struct({
       input: Schema.Finite,
       output: Schema.Finite,
@@ -1011,7 +1041,7 @@ const ProviderCost = Schema.Struct({
 
 const ProviderLimit = Schema.Struct({
   context: Schema.Finite,
-  input: optionalOmitUndefined(Schema.Finite),
+  input: optional(Schema.Finite),
   output: Schema.Finite,
 })
 
@@ -1020,7 +1050,7 @@ export const Model = Schema.Struct({
   providerID: ProviderV2.ID,
   api: ProviderApiInfo,
   name: Schema.String,
-  family: optionalOmitUndefined(Schema.String),
+  family: optional(Schema.String),
   capabilities: ProviderCapabilities,
   cost: ProviderCost,
   limit: ProviderLimit,
@@ -1028,7 +1058,7 @@ export const Model = Schema.Struct({
   options: Schema.Record(Schema.String, Schema.Any),
   headers: Schema.Record(Schema.String, Schema.String),
   release_date: Schema.String,
-  variants: optionalOmitUndefined(Schema.Record(Schema.String, Schema.Record(Schema.String, Schema.Any))),
+  variants: optional(Schema.Record(Schema.String, Schema.Record(Schema.String, Schema.Any))),
 }).annotate({ identifier: "Model" })
 export type Model = Types.DeepMutable<Schema.Schema.Type<typeof Model>>
 
@@ -1037,7 +1067,7 @@ export const Info = Schema.Struct({
   name: Schema.String,
   source: Schema.Literals(["env", "config", "custom", "api"]),
   env: Schema.Array(Schema.String),
-  key: optionalOmitUndefined(Schema.String),
+  key: optional(Schema.String),
   options: Schema.Record(Schema.String, Schema.Any),
   models: Schema.Record(Schema.String, Model),
 }).annotate({ identifier: "Provider" })
@@ -1060,11 +1090,17 @@ export type ConfigProvidersResult = Types.DeepMutable<Schema.Schema.Type<typeof 
 
 export function toPublicInfo(provider: Info): Info {
   return JSON.parse(
-    JSON.stringify(provider, (_, value) => {
-      if (typeof value === "function" || typeof value === "symbol" || value === undefined) return undefined
-      if (typeof value === "bigint") return value.toString()
-      return value
-    }),
+    JSON.stringify(
+      {
+        ...provider,
+        models: Object.fromEntries(Object.entries(provider.models).filter(([, model]) => Schema.is(Model)(model))),
+      },
+      (_, value) => {
+        if (typeof value === "function" || typeof value === "symbol" || value === undefined) return undefined
+        if (typeof value === "bigint") return value.toString()
+        return value
+      },
+    ),
   )
 }
 
@@ -1078,6 +1114,11 @@ export class ModelNotFoundError extends Schema.TaggedErrorClass<ModelNotFoundErr
   suggestions: Schema.optional(Schema.Array(Schema.String)),
   cause: Schema.optional(Schema.Defect()),
 }) {
+  override get message() {
+    const suggestions = this.suggestions?.length ? ` Did you mean: ${this.suggestions.join(", ")}?` : ""
+    return `Model not found: ${this.providerID}/${this.modelID}.${suggestions}`
+  }
+
   static isInstance(input: unknown): input is ModelNotFoundError {
     return input instanceof ModelNotFoundError
   }
@@ -1087,12 +1128,20 @@ export class InitError extends Schema.TaggedErrorClass<InitError>()("ProviderIni
   providerID: ProviderV2.ID,
   cause: Schema.optional(Schema.Defect()),
 }) {
+  override get message() {
+    return `Failed to initialize provider: ${this.providerID}`
+  }
+
   static isInstance(input: unknown): input is InitError {
     return input instanceof InitError
   }
 }
 
 export class NoProvidersError extends Schema.TaggedErrorClass<NoProvidersError>()("ProviderNoProvidersError", {}) {
+  override get message() {
+    return "No providers are available"
+  }
+
   static isInstance(input: unknown): input is NoProvidersError {
     return input instanceof NoProvidersError
   }
@@ -1101,6 +1150,10 @@ export class NoProvidersError extends Schema.TaggedErrorClass<NoProvidersError>(
 export class NoModelsError extends Schema.TaggedErrorClass<NoModelsError>()("ProviderNoModelsError", {
   providerID: ProviderV2.ID,
 }) {
+  override get message() {
+    return `No models are available for provider: ${this.providerID}`
+  }
+
   static isInstance(input: unknown): input is NoModelsError {
     return input instanceof NoModelsError
   }
@@ -1168,6 +1221,17 @@ function cost(c: ModelsDev.Model["cost"]): Model["cost"] {
   return result
 }
 
+// Cloudflare AI Gateway routes OpenAI and Anthropic models through their native
+// passthrough SDKs (Responses / Messages APIs). Resolving the native npm before
+// variants are computed makes reasoning variants produce payloads the native
+// SDKs understand (e.g. anthropic `effort` instead of compat `reasoningEffort`).
+function cloudflareGatewayNpm(providerID: string, modelID: string) {
+  if (providerID !== "cloudflare-ai-gateway") return undefined
+  if (modelID.startsWith("openai/")) return "@ai-sdk/openai"
+  if (modelID.startsWith("anthropic/")) return "@ai-sdk/anthropic"
+  return undefined
+}
+
 function fromModelsDevModel(provider: ModelsDev.Provider, model: ModelsDev.Model): Model {
   const base: Model = {
     id: ModelV2.ID.make(model.id),
@@ -1177,7 +1241,11 @@ function fromModelsDevModel(provider: ModelsDev.Provider, model: ModelsDev.Model
     api: {
       id: model.id,
       url: model.provider?.api ?? provider.api ?? "",
-      npm: model.provider?.npm ?? provider.npm ?? "@ai-sdk/openai-compatible",
+      npm:
+        cloudflareGatewayNpm(provider.id, model.id) ??
+        model.provider?.npm ??
+        provider.npm ??
+        "@ai-sdk/openai-compatible",
     },
     status: model.status ?? "active",
     headers: {},
@@ -1207,15 +1275,17 @@ function fromModelsDevModel(provider: ModelsDev.Provider, model: ModelsDev.Model
         video: model.modalities?.output?.includes("video") ?? false,
         pdf: model.modalities?.output?.includes("pdf") ?? false,
       },
-      interleaved: model.interleaved ?? false,
+      interleaved: typeof model.interleaved === "string" ? { field: model.interleaved } : (model.interleaved ?? false),
     },
     release_date: model.release_date ?? "",
     variants: {},
   }
 
+  const variants = ProviderTransform.reasoningVariants(model, base) ?? ProviderTransform.variants(base)
+
   return {
     ...base,
-    variants: mapValues(ProviderTransform.variants(base), (v) => v),
+    variants: mapValues(variants, (v) => v),
   }
 }
 
@@ -1231,14 +1301,7 @@ export function fromModelsDevProvider(provider: ModelsDev.Provider): Info {
         id: ModelV2.ID.make(id),
         name: `${model.name} ${mode[0].toUpperCase()}${mode.slice(1)}`,
         cost: opts.cost ? mergeDeep(base.cost, cost(opts.cost)) : base.cost,
-        options: opts.provider?.body
-          ? Object.fromEntries(
-              Object.entries(opts.provider.body).map(([k, v]) => [
-                k.replace(/_([a-z])/g, (_, c) => c.toUpperCase()),
-                v,
-              ]),
-            )
-          : base.options,
+        options: modeOptions(base, opts.provider?.body),
         headers: opts.provider?.headers ?? base.headers,
       }
     }
@@ -1251,6 +1314,17 @@ export function fromModelsDevProvider(provider: ModelsDev.Provider): Info {
     options: {},
     models,
   }
+}
+
+function modeOptions(model: Model, body: Record<string, unknown> | undefined) {
+  if (!body) return model.options
+  const options = Object.fromEntries(
+    Object.entries(body).map(([key, value]) => [key.replace(/_([a-z])/g, (_, char) => char.toUpperCase()), value]),
+  )
+  const reasoning = body.reasoning
+  if (model.api.npm !== "@ai-sdk/openai" || !isRecord(reasoning) || typeof reasoning.mode !== "string") return options
+  const { reasoning: _, ...rest } = options
+  return { ...rest, reasoningMode: reasoning.mode }
 }
 
 function modelSuggestions(provider: Info | undefined, modelID: ModelV2.ID, enableExperimentalModels: boolean) {
@@ -1282,7 +1356,7 @@ function modelSuggestions(provider: Info | undefined, modelID: ModelV2.ID, enabl
     .map((item) => item.id)
 }
 
-export const layer = Layer.effect(
+const layer = Layer.effect(
   Service,
   Effect.gen(function* () {
     const fs = yield* FSUtil.Service
@@ -1393,6 +1467,9 @@ export const layer = Layer.effect(
               model.provider?.npm ??
               provider.npm ??
               existingModel?.api.npm ??
+              // Config-defined gateway models bypass fromModelsDevModel, so resolve the
+              // native passthrough npm here before falling back to the catalog default.
+              cloudflareGatewayNpm(providerID, apiID) ??
               modelsDev[providerID]?.npm ??
               "@ai-sdk/openai-compatible"
             const name = iife(() => {
@@ -1433,7 +1510,7 @@ export const layer = Layer.effect(
                   pdf: model.modalities?.output?.includes("pdf") ?? existingModel?.capabilities.output.pdf ?? false,
                 },
                 interleaved:
-                  model.interleaved ??
+                  (typeof model.interleaved === "string" ? { field: model.interleaved } : model.interleaved) ??
                   existingModel?.capabilities.interleaved ??
                   (!existingModel && apiNpm === "@ai-sdk/openai-compatible" && apiID.includes("deepseek")
                     ? { field: "reasoning_content" }
@@ -1458,7 +1535,11 @@ export const layer = Layer.effect(
               release_date: model.release_date ?? existingModel?.release_date ?? "",
               variants: {},
             }
-            const merged = mergeDeep(ProviderTransform.variants(parsedModel), model.variants ?? {})
+            const variants =
+              existingModel?.api.npm === parsedModel.api.npm
+                ? (existingModel.variants ?? ProviderTransform.variants(parsedModel))
+                : ProviderTransform.variants(parsedModel)
+            const merged = mergeDeep(variants, model.variants ?? {})
             parsedModel.variants = mapValues(
               pickBy(merged, (v) => !v.disabled),
               (v) => omit(v, ["disabled"]),
@@ -1568,6 +1649,7 @@ export const layer = Layer.effect(
 
           for (const [modelID, model] of Object.entries(provider.models)) {
             model.api.id = model.api.id ?? model.id ?? modelID
+
             if (
               // These chat aliases are invalid for the special handling in the
               // built-in providers below, but custom providers may support them.
@@ -1586,7 +1668,7 @@ export const layer = Layer.effect(
             )
               delete provider.models[modelID]
 
-            if (!model.variants || Object.keys(model.variants).length === 0) {
+            if (model.variants === undefined) {
               model.variants = mapValues(ProviderTransform.variants(model), (v) => v)
             }
 
@@ -1851,44 +1933,43 @@ export const layer = Layer.effect(
         }
       }
 
-      const defaultPriority = [
-        "claude-haiku-4-5",
-        "claude-haiku-4.5",
-        "3-5-haiku",
-        "3.5-haiku",
-        "gemini-3-flash",
-        "gemini-2.5-flash",
-        "gpt-5-nano",
-      ]
+      // TODO: Remove these provider-specific assumptions once model syncing reliably reports available deployments.
+      if (providerID === ProviderV2.ID.azure || providerID === ProviderV2.ID.make("azure-cognitive-services")) {
+        return undefined
+      }
+
       const priority = providerID.startsWith("opencode")
-        ? ["gpt-5-nano"]
+        ? ["gpt-nano"]
         : providerID.startsWith("github-copilot")
-          ? ["gpt-5-mini", "claude-haiku-4.5", ...defaultPriority]
-          : defaultPriority
-      for (const item of priority) {
+          ? ["gpt-mini", ...smallModelFamilyPriority]
+          : smallModelFamilyPriority
+      const models = sortBy(
+        Object.values(provider.models),
+        [(model) => model.release_date, "desc"],
+        [(model) => model.id, "desc"],
+      )
+      for (const family of priority) {
+        const candidates = models.filter((model) => model.family === family)
         if (providerID === ProviderV2.ID.amazonBedrock) {
           const crossRegionPrefixes = ["global.", "us.", "eu."]
-          const candidates = Object.keys(provider.models).filter((m) => m.includes(item))
 
-          const globalMatch = candidates.find((m) => m.startsWith("global."))
-          if (globalMatch) return provider.models[globalMatch]
+          const globalMatch = candidates.find((model) => model.id.startsWith("global."))
+          if (globalMatch) return globalMatch
 
           const region = provider.options?.region
           if (region) {
             const regionPrefix = region.split("-")[0]
             if (regionPrefix === "us" || regionPrefix === "eu") {
-              const regionalMatch = candidates.find((m) => m.startsWith(`${regionPrefix}.`))
-              if (regionalMatch) return provider.models[regionalMatch]
+              const regionalMatch = candidates.find((model) => model.id.startsWith(`${regionPrefix}.`))
+              if (regionalMatch) return regionalMatch
             }
           }
 
-          const unprefixed = candidates.find((m) => !crossRegionPrefixes.some((p) => m.startsWith(p)))
-          if (unprefixed) return provider.models[unprefixed]
-        } else {
-          for (const model of Object.keys(provider.models)) {
-            if (model.includes(item)) return provider.models[model]
-          }
+          const unprefixed = candidates.find((model) => !crossRegionPrefixes.some((p) => model.id.startsWith(p)))
+          if (unprefixed) return unprefixed
+          continue
         }
+        if (candidates[0]) return candidates[0]
       }
 
       return undefined
@@ -1918,7 +1999,8 @@ export const layer = Layer.effect(
         return { providerID: entry.providerID, modelID: entry.modelID }
       }
 
-      const provider = Object.values(s.providers).find((p) => !cfg.provider || Object.keys(cfg.provider).includes(p.id))
+      const configured = Object.keys(cfg.provider ?? {})
+      const provider = Object.values(s.providers).find((p) => configured.length === 0 || configured.includes(p.id))
       if (!provider) return yield* new NoProvidersError()
       const [model] = sort(Object.values(provider.models))
       if (!model) return yield* new NoModelsError({ providerID: provider.id })
@@ -1932,19 +2014,8 @@ export const layer = Layer.effect(
   }),
 )
 
-export const defaultLayer = Layer.suspend(() =>
-  layer.pipe(
-    Layer.provide(FSUtil.defaultLayer),
-    Layer.provide(Env.defaultLayer),
-    Layer.provide(Config.defaultLayer),
-    Layer.provide(Auth.defaultLayer),
-    Layer.provide(Plugin.defaultLayer),
-    Layer.provide(ModelsDev.defaultLayer),
-    Layer.provide(RuntimeFlags.defaultLayer),
-  ),
-)
-
 const priority = ["gpt-5", "claude-sonnet-4", "big-pickle", "gemini-3-pro"]
+const smallModelFamilyPriority = ["gemini-flash", "gpt-nano", "claude-haiku"]
 export function sort<T extends { id: string }>(models: T[]) {
   return sortBy(
     models,
@@ -1962,14 +2033,10 @@ export function parseModel(model: string) {
   }
 }
 
-export const node = LayerNode.make(layer, [
-  FSUtil.node,
-  Config.node,
-  Auth.node,
-  Env.node,
-  Plugin.node,
-  ModelsDev.node,
-  RuntimeFlags.node,
-])
+export const node = LayerNode.make({
+  service: Service,
+  layer: layer,
+  deps: [FSUtil.node, Config.node, Auth.node, Env.node, Plugin.node, ModelsDev.node, RuntimeFlags.node],
+})
 
 export * as Provider from "./provider"
