@@ -1,14 +1,17 @@
 export * as Npm from "./npm"
 
 import path from "path"
+import { createRequire } from "module"
+import { pathToFileURL } from "url"
 import npa from "npm-package-arg"
 import { Effect, Schema, Context, Layer, Option, FileSystem } from "effect"
 import { NodeFileSystem } from "@effect/platform-node"
 import { FSUtil } from "./fs-util"
 import { Global } from "./global"
 import { EffectFlock } from "./util/effect-flock"
+import { makeGlobalNode } from "./effect/app-node"
+import { filesystem } from "./effect/app-node-platform"
 import { LayerNode } from "./effect/layer-node"
-import { filesystem } from "./effect/layer-node-platform"
 import { makeRuntime } from "./effect/runtime"
 import { NpmConfig } from "./npm-config"
 
@@ -49,7 +52,13 @@ export function sanitize(pkg: string) {
 const resolveEntryPoint = (name: string, dir: string): EntryPoint => {
   let entrypoint: string | undefined
   try {
-    entrypoint = typeof Bun !== "undefined" ? import.meta.resolve(name, dir) : import.meta.resolve(dir)
+    // Node only honors the parent argument behind --experimental-import-meta-resolve, and
+    // import() of the bare package directory fails with ERR_UNSUPPORTED_DIR_IMPORT. require
+    // resolution picks the "require"/"default" export target, which import() loads fine.
+    entrypoint =
+      typeof Bun !== "undefined"
+        ? import.meta.resolve(name, dir)
+        : pathToFileURL(createRequire(path.join(dir, "package.json")).resolve(name)).href
   } catch {
     entrypoint = undefined
   }
@@ -68,7 +77,7 @@ interface ArboristTree {
   edgesOut: Map<string, { to?: ArboristNode }>
 }
 
-export const layer = Layer.effect(
+const layer = Layer.effect(
   Service,
   Effect.gen(function* () {
     const afs = yield* FSUtil.Service
@@ -247,15 +256,13 @@ export const layer = Layer.effect(
   }),
 )
 
-export const defaultLayer = layer.pipe(
-  Layer.provide(EffectFlock.layer),
-  Layer.provide(FSUtil.layer),
-  Layer.provide(Global.layer),
-  Layer.provide(NodeFileSystem.layer),
-)
-export const node = LayerNode.make(layer, [FSUtil.node, Global.node, filesystem, EffectFlock.node])
+export const node = makeGlobalNode({
+  service: Service,
+  layer: layer,
+  deps: [FSUtil.node, Global.node, filesystem, EffectFlock.node],
+})
 
-const { runPromise } = makeRuntime(Service, defaultLayer)
+const { runPromise } = makeRuntime(Service, LayerNode.compile(node))
 
 export async function install(...args: Parameters<Interface["install"]>) {
   return runPromise((svc) => svc.install(...args))

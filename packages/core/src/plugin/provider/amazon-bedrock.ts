@@ -1,6 +1,6 @@
 import { Effect } from "effect"
 import type { LanguageModelV3 } from "@ai-sdk/provider"
-import { define } from "@opencode-ai/plugin/v2/effect"
+import { define } from "../internal"
 import { ProviderV2 } from "../../provider"
 
 type MantleSDK = {
@@ -13,15 +13,23 @@ type MantleSDK = {
 // specific model/region combinations. Keep the mapping narrow and avoid
 // double-prefixing model IDs that models.dev already marks as global/us/eu/etc.
 function resolveModelID(modelID: string, region: string | undefined) {
+  if (modelID.startsWith("arn:")) return modelID
+
   const crossRegionPrefixes = ["global.", "us.", "eu.", "jp.", "apac.", "au."]
   if (crossRegionPrefixes.some((prefix) => modelID.startsWith(prefix))) return modelID
 
   const resolvedRegion = region ?? "us-east-1"
   const regionPrefix = resolvedRegion.split("-")[0]
   if (regionPrefix === "us") {
-    const requiresPrefix = ["nova-micro", "nova-lite", "nova-pro", "nova-premier", "nova-2", "claude", "deepseek"].some(
-      (item) => modelID.includes(item),
-    )
+    const requiresPrefix = [
+      "nova-micro",
+      "nova-lite",
+      "nova-pro",
+      "nova-premier",
+      "nova-2",
+      "claude",
+      "deepseek.r1",
+    ].some((item) => modelID.includes(item))
     if (requiresPrefix && !resolvedRegion.startsWith("us-gov")) return `${regionPrefix}.${modelID}`
     return modelID
   }
@@ -78,8 +86,7 @@ export const AmazonBedrockPlugin = define({
         }
       }),
     )
-    yield* ctx.aisdk.hook(
-      "sdk",
+    yield* ctx.aisdk.sdk(
       Effect.fn(function* (evt) {
         if (!["@ai-sdk/amazon-bedrock", "@ai-sdk/amazon-bedrock/mantle"].includes(evt.package)) return
         const options = { ...evt.options }
@@ -112,8 +119,7 @@ export const AmazonBedrockPlugin = define({
         evt.sdk = mod.createAmazonBedrock(options)
       }),
     )
-    yield* ctx.aisdk.hook(
-      "language",
+    yield* ctx.aisdk.language(
       Effect.fn(function* (evt) {
         if (evt.model.providerID !== ProviderV2.ID.amazonBedrock) return
         if (evt.model.api.type === "aisdk" && evt.model.api.package === "@ai-sdk/amazon-bedrock/mantle") {
