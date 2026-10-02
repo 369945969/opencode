@@ -2,14 +2,16 @@ import "sst/resource"
 
 declare module "sst/resource" {
   export interface Resource {
-    InferenceEvent: {
-      catalog: string
-      database: string
-      region: string
+    R2Sql: {
+      accountId: string
+      bucket: string
+      namespace: string
       table: string
-      tableBucket: string
       type: "sst.sst.Linkable"
-      workgroup: string
+    }
+    R2SqlAuthToken: {
+      type: "sst.sst.Secret"
+      value: string
     }
     StatsSyncConfig: {
       dataset: string
